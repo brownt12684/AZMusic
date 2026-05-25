@@ -130,6 +130,7 @@ Build private release packages:
 .\scripts\dev.ps1 -Task build-client-windows-release
 .\scripts\dev.ps1 -Task build-client-android-apk
 .\scripts\dev.ps1 -Task build-client-android-aab
+.\scripts\dev.ps1 -Task package-release-assets
 ```
 
 Release build outputs:
@@ -137,8 +138,11 @@ Release build outputs:
 - Windows: `client/build/windows/x64/runner/Release/azmusic.exe`
 - Android APK: `client/build/app/outputs/flutter-apk/app-release.apk`
 - Android app bundle: `client/build/app/outputs/bundle/release/app-release.aab`
+- Release assets: `dist/AZMusic-server-windows-v0.1.0-pretesting.zip`, `dist/AZMusic-windows-v0.1.0-pretesting.zip`, `dist/AZMusic-android-v0.1.0-pretesting.apk`, and `dist/SHA256SUMS.txt`
 
 These build tasks pass `AZMUSIC_PRODUCTION=true` into the client. Android release signing reads `client/android/key.properties` when present; otherwise it uses debug signing only for internal development installs.
+
+The Windows server package is a portable ZIP. Extract it on the server PC, run `Setup AZMusic Server.cmd`, then run `Start AZMusic Server.cmd`. The package includes helper scripts for opening Audiveris, MuseScore, and Tesseract installer pages, but those tools remain separately installed and configured.
 
 Start the sandbox target for fast client iteration:
 
@@ -170,7 +174,7 @@ Use this sequence when you want to validate the current milestone end to end:
 6. Approve the candidate and push the ready piece to one or more student profiles when you want to validate the server-backed flow.
 7. Switch to a student profile, open the piece from the student library or piece detail, and confirm the reader opens the local score.
 
-For first-time server setup, open `http://<server-address>:8000/setup` on the server or another device on the same network. That page shows the parent/admin QR code used to initialize the parent device. After the parent device is connected, use the parent section in the app to generate separate student-device QR codes for each student.
+For first-time server setup, open `http://<server-address>:8000/setup` on the server or another device on the same network. That page shows the parent/admin QR code used to initialize the parent device. After the parent device is connected, use the parent section in the app to generate separate student-device QR codes for each student. Android clients can scan pairing QR codes from the pairing dialog; Windows clients keep manual QR payload/code entry as the supported fallback.
 
 For real OMR testing, open the parent server-processing settings screen and configure Audiveris before importing the PDF. Without Audiveris, the development fallback can still generate stub MusicXML if `ALLOW_STUB_MUSICXML` remains enabled. Configure MuseScore when you want rendered review PDFs produced from MusicXML instead of raw-PDF fallback copies.
 

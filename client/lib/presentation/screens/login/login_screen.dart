@@ -7,9 +7,11 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../app/app_keys.dart';
 import '../../../app/routes/app_router.dart';
 import '../../../core/config/app_config.dart';
+import '../../../core/pairing/pairing_payload.dart';
 import '../../../domain/entities/profile.dart';
 import '../../../domain/entities/server_pairing.dart';
 import '../../providers/profile_providers.dart';
+import '../../widgets/pairing_qr_scanner.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
   const LoginScreen({super.key});
@@ -302,6 +304,23 @@ class _PairingDialogState extends State<_PairingDialog> {
               maxLines: 3,
               onChanged: _applyPayload,
             ),
+            const SizedBox(height: 10),
+            if (isPairingQrScanningSupported)
+              SizedBox(
+                width: double.infinity,
+                child: OutlinedButton.icon(
+                  onPressed: _scanQrCode,
+                  icon: const Icon(Icons.qr_code_scanner_outlined),
+                  label: const Text('Scan QR code'),
+                ),
+              )
+            else
+              Text(
+                'Camera QR scanning is not available on this platform yet. Use the QR payload, server URL, and pairing code fields.',
+                style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                      color: Theme.of(context).colorScheme.onSurfaceVariant,
+                    ),
+              ),
             const SizedBox(height: 12),
             TextField(
               controller: _serverUrlController,
@@ -341,18 +360,36 @@ class _PairingDialogState extends State<_PairingDialog> {
   }
 
   void _applyPayload(String value) {
-    final parsed = _PairingInput.tryParse(value);
+    final parsed = PairingPayload.tryParse(value);
     if (parsed == null) {
       return;
     }
-    _serverUrlController.text = parsed.serverUrl;
-    _codeController.text = parsed.pairingCode;
+    _applyPairingPayload(parsed);
+  }
+
+  Future<void> _scanQrCode() async {
+    final parsed = await Navigator.of(context).push<PairingPayload>(
+      MaterialPageRoute(
+        fullscreenDialog: true,
+        builder: (context) => const PairingQrScannerScreen(),
+      ),
+    );
+    if (parsed == null || !mounted) {
+      return;
+    }
+    _payloadController.text = parsed.displayPayload;
+    _applyPairingPayload(parsed);
+  }
+
+  void _applyPairingPayload(PairingPayload payload) {
+    _serverUrlController.text = payload.serverUrl;
+    _codeController.text = payload.pairingCode;
   }
 
   _PairingInput? _currentInput() {
-    final parsed = _PairingInput.tryParse(_payloadController.text);
+    final parsed = PairingPayload.tryParse(_payloadController.text);
     if (parsed != null) {
-      return parsed;
+      return _PairingInput.fromPayload(parsed);
     }
     final serverUrl = _serverUrlController.text.trim();
     final pairingCode = _codeController.text.trim();
@@ -372,21 +409,11 @@ class _PairingInput {
   final String serverUrl;
   final String pairingCode;
 
-  static _PairingInput? tryParse(String value) {
-    final normalized = value.trim();
-    if (normalized.isEmpty) {
-      return null;
-    }
-    final uri = Uri.tryParse(normalized);
-    if (uri == null) {
-      return null;
-    }
-    final serverUrl = uri.queryParameters['server_url'];
-    final code = uri.queryParameters['code'];
-    if (serverUrl == null || code == null) {
-      return null;
-    }
-    return _PairingInput(serverUrl: serverUrl, pairingCode: code);
+  factory _PairingInput.fromPayload(PairingPayload payload) {
+    return _PairingInput(
+      serverUrl: payload.serverUrl,
+      pairingCode: payload.pairingCode,
+    );
   }
 }
 

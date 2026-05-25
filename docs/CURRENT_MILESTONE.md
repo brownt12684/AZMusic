@@ -1,6 +1,6 @@
 # AZMusic Current Milestone
 
-Snapshot date: 2026-05-24
+Snapshot date: 2026-05-25
 
 ## Milestone summary
 
@@ -23,12 +23,13 @@ This is now a V1 package candidate, but it still needs a real-device E2E pass be
 - `.\scripts\dev.ps1 -Task check-client-windows` runs the full Windows client gate: `check-client` plus a sandbox smoke path that verifies the Windows shell starts cleanly.
 - `.\scripts\dev.ps1 -Task build-client-windows-release` builds the production-flagged Windows release app.
 - `.\scripts\dev.ps1 -Task build-client-android-apk` builds the production-flagged Android APK.
+- `.\scripts\dev.ps1 -Task package-release-assets` creates the Windows server ZIP, Windows client ZIP, Android APK copy, and `SHA256SUMS.txt`.
 - Parent tools can import local `pdf` and common image files into intake, keep the raw local copy immediately, and best-effort upload PDFs to the server.
 - The parent review queue and review-compare screen load server review items and submit approve or reject actions.
 - The parent review-compare screen can download the generated MusicXML/MXL candidate to the parent device, open it in a local MusicXML-capable app such as MuseScore, upload the edited file, and refresh the rendered review PDF through the server renderer.
 - The parent review-compare screen also exposes a coming-soon AI score review action that explains the future LLM correction loop without enqueueing fake processing.
 - Parent tools now include a server-processing settings surface for Audiveris, MuseScore, development stub fallback, server health, and experimental device-worker mode.
-- Server setup now hosts the first parent/admin QR code at `/setup`; parent tools then generate separate student-device QR codes that are tied to a specific student profile. Development launches with the local server override are treated as already paired.
+- Server setup now hosts the first parent/admin QR code at `/setup`; parent tools then generate separate student-device QR codes that are tied to a specific student profile. Android clients can scan these QR codes, Windows clients retain manual payload/code entry, and development launches with the local server override are treated as already paired.
 - Parent push marks student visibility locally immediately and retries the server push later if the server is unreachable.
 - The student library supports search plus a left-side drag alpha rail for `Title`, `Composer`, and `Book`.
 - Imported files are copied into app-managed local storage instead of being referenced in place.
@@ -38,6 +39,7 @@ This is now a V1 package candidate, but it still needs a real-device E2E pass be
 - The library banner now reports real `offline-ready`, `syncing`, `synced`, and `failed-usable` states from the current opportunistic sync flow.
 - The Windows release build completes at `client/build/windows/x64/runner/Release/azmusic.exe`.
 - The Android release APK builds at `client/build/app/outputs/flutter-apk/app-release.apk`.
+- The Windows server release package is created at `dist/AZMusic-server-windows-v0.1.0-pretesting.zip` with setup/start scripts and processing-tool installer helpers.
 - The sandbox launcher can reset the local sandbox library and jump directly into the library or review-queue surfaces. Piece detail and reader routing use the first local entry when one exists.
 - The automated client path now covers import cancellation, image-import persistence, app-config host and port resolution, sync banner state transitions, alpha-jump logic, reader spread layout rules, the local-library repository, and the core app-shell routes alongside the Windows sandbox smoke path.
 
@@ -79,7 +81,7 @@ This is now a V1 package candidate, but it still needs a real-device E2E pass be
 - Real reconstructed PDF rendering after parent MuseScore edits requires installing/configuring MuseScore on the server. The parent device only needs an app that can open/edit MusicXML/MXL.
 - AI score review is currently wired only as a coming-soon affordance; direct score reprocess requests return a clear placeholder result rather than pretending to run LLM correction.
 - Experimental device-worker registration exists, but no dispatch queue sends processing work packages to devices yet.
-- Device pairing supports generated QR payloads and manual payload/code entry, but camera-based QR scanning is not wired yet. Parent setup and student-device pairing are separate flows.
+- Device pairing supports generated QR payloads, manual payload/code entry, and Android camera scanning. Windows camera scanning is not available through the selected scanner dependency, so Windows pairing remains manual.
 - Piece research metadata beyond MusicXML extraction, such as composer biography, work catalog numbers, publisher/source history, and pedagogical notes, is not implemented yet.
 - LAN auth now has an enforced paired-device-token mode, but production deployments still need a final decision on LAN HTTP versus HTTPS.
 - The current client and server tests cover targeted behavior, but the final real-device parent-import to student-reader flow still needs a manual E2E gate.

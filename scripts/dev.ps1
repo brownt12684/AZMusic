@@ -19,6 +19,10 @@ param(
         "build-client-windows-release",
         "build-client-android-apk",
         "build-client-android-aab",
+        "package-server-windows-release",
+        "package-client-windows-release",
+        "package-client-android-apk",
+        "package-release-assets",
         "check",
         "clean"
     )]
@@ -29,6 +33,8 @@ param(
     [string]$ClientServerHost,
 
     [string]$ClientServerPort,
+
+    [string]$ReleaseVersion = "v0.1.0-pretesting",
 
     [ValidateSet("sandbox", "library", "piece-detail", "reader", "review-queue")]
     [string]$SandboxSurface = "sandbox",
@@ -44,6 +50,7 @@ if ($PSVersionTable.PSVersion.Major -ge 7) {
 $RepoRoot = [System.IO.Path]::GetFullPath((Join-Path $PSScriptRoot ".."))
 $ClientDir = Join-Path $RepoRoot "client"
 $ServerDir = Join-Path $RepoRoot "server"
+$DistDir = Join-Path $RepoRoot "dist"
 $LocalFlutter = Join-Path $RepoRoot ".tooling\\flutter\\bin\\flutter.bat"
 $ClientHooksDir = Join-Path $ClientDir ".dart_tool\\hooks_runner"
 $ClientBuildDir = Join-Path $ClientDir "build"
@@ -432,6 +439,142 @@ function Invoke-ClientAndroidAppBundleBuild {
     Invoke-Flutter -Arguments $clientArguments
 }
 
+function Reset-Directory {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$Path
+    )
+
+    $resolvedParent = [System.IO.Path]::GetFullPath((Split-Path -Parent $Path))
+    $resolvedRepo = [System.IO.Path]::GetFullPath($RepoRoot)
+    if (-not $resolvedParent.StartsWith($resolvedRepo, [System.StringComparison]::OrdinalIgnoreCase)) {
+        throw "Refusing to reset a directory outside the repository: $Path"
+    }
+
+    if (Test-Path $Path) {
+        Remove-Item -LiteralPath $Path -Recurse -Force
+    }
+    New-Item -ItemType Directory -Path $Path -Force | Out-Null
+}
+
+function Compress-ReleaseFolder {
+    param(
+        [Parameter(Mandatory = $true)]
+        [string]$SourceFolder,
+
+        [Parameter(Mandatory = $true)]
+        [string]$DestinationZip
+    )
+
+    if (Test-Path $DestinationZip) {
+        Remove-Item -LiteralPath $DestinationZip -Force
+    }
+
+    Compress-Archive -Path $SourceFolder -DestinationPath $DestinationZip -CompressionLevel Optimal
+    Write-Host "Created $DestinationZip"
+}
+
+function Get-ReleaseEnvTemplate {
+    $template = Get-Content (Join-Path $ServerDir ".env.example") -Raw
+    $template = $template.Replace("PRODUCTION_MODE=false", "PRODUCTION_MODE=true")
+    $template = $template.Replace("REQUIRE_DEVICE_AUTH=false", "REQUIRE_DEVICE_AUTH=true")
+    $template = $template.Replace("ALLOW_STUB_MUSICXML=true", "ALLOW_STUB_MUSICXML=false")
+    return $template
+}
+
+function Invoke-ServerWindowsReleasePackage {
+    $packageName = "AZMusic-server-windows-$ReleaseVersion"
+    $stagingRoot = Join-Path $DistDir "staging"
+    $packageRoot = Join-Path $stagingRoot $packageName
+    $packageServerDir = Join-Path $packageRoot "server"
+    $destinationZip = Join-Path $DistDir "$packageName.zip"
+    $templateDir = Join-Path $RepoRoot "scripts\server-package"
+
+    Reset-Directory -Path $packageRoot
+    New-Item -ItemType Directory -Path $packageServerDir | Out-Null
+
+    Copy-Item -Path (Join-Path $templateDir "*") -Destination $packageRoot -Recurse -Force
+
+    foreach ($fileName in @("__init__.py", "main.py", "config.py", "database.py", "requirements.txt")) {
+        Copy-Item -LiteralPath (Join-Path $ServerDir $fileName) -Destination $packageServerDir -Force
+    }
+
+    foreach ($folderName in @("jobs", "models", "providers", "repositories", "routers", "services")) {
+        Copy-Item -LiteralPath (Join-Path $ServerDir $folderName) -Destination $packageServerDir -Recurse -Force
+    }
+
+    Get-ChildItem -LiteralPath $packageServerDir -Recurse -Directory -Filter "__pycache__" |
+        Remove-Item -Recurse -Force
+    Get-ChildItem -LiteralPath $packageServerDir -Recurse -File |
+        Where-Object { $_.Extension -in @(".pyc", ".pyo") } |
+        Remove-Item -Force
+
+    Set-Content -LiteralPath (Join-Path $packageServerDir ".env.example") -Value (Get-ReleaseEnvTemplate) -Encoding utf8
+    Compress-ReleaseFolder -SourceFolder $packageRoot -DestinationZip $destinationZip
+}
+
+function Invoke-ClientWindowsReleasePackage {
+    $releaseDir = Join-Path $ClientBuildDir "windows\x64\runner\Release"
+    if (-not (Test-Path (Join-Path $releaseDir "azmusic.exe"))) {
+        Invoke-ClientWindowsReleaseBuild
+    }
+
+    $packageName = "AZMusic-windows-$ReleaseVersion"
+    $stagingRoot = Join-Path $DistDir "staging"
+    $packageRoot = Join-Path $stagingRoot $packageName
+    $destinationZip = Join-Path $DistDir "$packageName.zip"
+
+    Reset-Directory -Path $packageRoot
+    Copy-Item -Path (Join-Path $releaseDir "*") -Destination $packageRoot -Recurse -Force
+    Compress-ReleaseFolder -SourceFolder $packageRoot -DestinationZip $destinationZip
+}
+
+function Invoke-ClientAndroidApkPackage {
+    $apkPath = Join-Path $ClientBuildDir "app\outputs\flutter-apk\app-release.apk"
+    if (-not (Test-Path $apkPath)) {
+        Invoke-ClientAndroidApkBuild
+    }
+
+    if (-not (Test-Path $DistDir)) {
+        New-Item -ItemType Directory -Path $DistDir | Out-Null
+    }
+
+    $destinationApk = Join-Path $DistDir "AZMusic-android-$ReleaseVersion.apk"
+    Copy-Item -LiteralPath $apkPath -Destination $destinationApk -Force
+    Write-Host "Created $destinationApk"
+}
+
+function Invoke-ReleaseChecksums {
+    if (-not (Test-Path $DistDir)) {
+        throw "Missing dist directory. Package release assets first."
+    }
+
+    $assets = Get-ChildItem -LiteralPath $DistDir -File |
+        Where-Object { $_.Name -like "AZMusic-*-$ReleaseVersion.*" } |
+        Sort-Object Name
+    if ($assets.Count -eq 0) {
+        throw "No release assets found for $ReleaseVersion."
+    }
+
+    $lines = foreach ($asset in $assets) {
+        $hash = Get-FileHash -Algorithm SHA256 -LiteralPath $asset.FullName
+        "{0}  {1}" -f $hash.Hash.ToLowerInvariant(), $asset.Name
+    }
+
+    $checksumPath = Join-Path $DistDir "SHA256SUMS.txt"
+    Set-Content -LiteralPath $checksumPath -Value $lines -Encoding utf8
+    Write-Host "Created $checksumPath"
+}
+
+function Invoke-ReleaseAssetPackage {
+    Invoke-ClientWindowsReleaseBuild
+    Invoke-ClientAndroidApkBuild
+    Invoke-ServerWindowsReleasePackage
+    Invoke-ClientWindowsReleasePackage
+    Invoke-ClientAndroidApkPackage
+    Invoke-ReleaseChecksums
+}
+
 switch ($Task) {
     "bootstrap" {
         Bootstrap-Server
@@ -521,6 +664,22 @@ switch ($Task) {
 
     "build-client-android-aab" {
         Invoke-ClientAndroidAppBundleBuild
+    }
+
+    "package-server-windows-release" {
+        Invoke-ServerWindowsReleasePackage
+    }
+
+    "package-client-windows-release" {
+        Invoke-ClientWindowsReleasePackage
+    }
+
+    "package-client-android-apk" {
+        Invoke-ClientAndroidApkPackage
+    }
+
+    "package-release-assets" {
+        Invoke-ReleaseAssetPackage
     }
 
     "check" {
