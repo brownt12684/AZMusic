@@ -16,12 +16,19 @@ param(
         "test-client",
         "check-client",
         "check-client-windows",
+        "build-client-windows-release",
+        "build-client-android-apk",
+        "build-client-android-aab",
         "check",
         "clean"
     )]
     [string]$Task,
 
     [string]$ClientDevice,
+
+    [string]$ClientServerHost,
+
+    [string]$ClientServerPort,
 
     [ValidateSet("sandbox", "library", "piece-detail", "reader", "review-queue")]
     [string]$SandboxSurface = "sandbox",
@@ -61,6 +68,24 @@ function Get-ServerPython {
     }
 
     return $ServerVenvPython
+}
+
+function Get-ClientRuntimeDartDefines {
+    $dartDefines = @()
+
+    if (-not [string]::IsNullOrWhiteSpace($ClientServerHost)) {
+        $dartDefines += "--dart-define=AZMUSIC_SERVER_HOST=$ClientServerHost"
+    }
+
+    if (-not [string]::IsNullOrWhiteSpace($ClientServerPort)) {
+        $dartDefines += "--dart-define=AZMUSIC_SERVER_PORT=$ClientServerPort"
+    }
+
+    return $dartDefines
+}
+
+function Get-ClientProductionDartDefines {
+    return @("--dart-define=AZMUSIC_PRODUCTION=true") + (Get-ClientRuntimeDartDefines)
 }
 
 function Invoke-Flutter {
@@ -167,7 +192,7 @@ function Bootstrap-Client {
     Push-Location $ClientDir
     try {
         if ($missingPlatforms.Count -gt 0) {
-            & $flutter create . "--platforms=$($missingPlatforms -join ',')"
+            & $flutter create --org com.azmusic . "--platforms=$($missingPlatforms -join ',')"
             if ($LASTEXITCODE -ne 0) {
                 exit $LASTEXITCODE
             }
@@ -211,6 +236,9 @@ function Stop-ClientRuntimeProcesses {
 }
 
 function Invoke-ClientWindowsPdfSmoke {
+    Stop-ClientRuntimeProcesses
+    Start-Sleep -Milliseconds 500
+
     $runId = [guid]::NewGuid().ToString("N")
     $stdoutPath = Join-Path $ClientDir "smoke_client_windows_pdf_stdout_$runId.log"
     $stderrPath = Join-Path $ClientDir "smoke_client_windows_pdf_stderr_$runId.log"
@@ -244,19 +272,29 @@ function Invoke-ClientWindowsPdfSmoke {
     }
 
     try {
+        $runnerArguments = @(
+            '-NoProfile',
+            '-ExecutionPolicy',
+            'Bypass',
+            '-File',
+            $PSCommandPath,
+            '-Task',
+            'run-client-sandbox',
+            '-SandboxSurface',
+            'library',
+            '-ResetSandboxOnLaunch'
+        )
+
+        if (-not [string]::IsNullOrWhiteSpace($ClientServerHost)) {
+            $runnerArguments += @('-ClientServerHost', $ClientServerHost)
+        }
+
+        if (-not [string]::IsNullOrWhiteSpace($ClientServerPort)) {
+            $runnerArguments += @('-ClientServerPort', $ClientServerPort)
+        }
+
         $runner = Start-Process -FilePath powershell `
-            -ArgumentList @(
-                '-NoProfile',
-                '-ExecutionPolicy',
-                'Bypass',
-                '-File',
-                $PSCommandPath,
-                '-Task',
-                'run-client-sandbox',
-                '-SandboxSurface',
-                'reader',
-                '-ResetSandboxOnLaunch'
-            ) `
+            -ArgumentList $runnerArguments `
             -RedirectStandardOutput $stdoutPath `
             -RedirectStandardError $stderrPath `
             -WindowStyle Hidden `
@@ -358,7 +396,7 @@ function Invoke-ClientWindowsPdfSmoke {
             Write-Host $logs
         }
 
-        throw "Windows PDF smoke test failed while launching the sandbox reader."
+        throw "Windows sandbox smoke test failed while launching the empty library."
     }
 
     if ($restoredStandardBuild) {
@@ -374,6 +412,24 @@ function Invoke-ClientCheck {
 function Invoke-ClientWindowsCheck {
     Invoke-ClientCheck
     Invoke-ClientWindowsPdfSmoke
+}
+
+function Invoke-ClientWindowsReleaseBuild {
+    Bootstrap-Client
+    $clientArguments = @("build", "windows", "--release") + (Get-ClientProductionDartDefines)
+    Invoke-Flutter -Arguments $clientArguments
+}
+
+function Invoke-ClientAndroidApkBuild {
+    Bootstrap-Client
+    $clientArguments = @("build", "apk", "--release") + (Get-ClientProductionDartDefines)
+    Invoke-Flutter -Arguments $clientArguments
+}
+
+function Invoke-ClientAndroidAppBundleBuild {
+    Bootstrap-Client
+    $clientArguments = @("build", "appbundle", "--release") + (Get-ClientProductionDartDefines)
+    Invoke-Flutter -Arguments $clientArguments
 }
 
 switch ($Task) {
@@ -411,13 +467,14 @@ switch ($Task) {
 
     "run-client" {
         $device = if ([string]::IsNullOrWhiteSpace($ClientDevice)) { "windows" } else { $ClientDevice }
-        Invoke-Flutter -Arguments @("run", "-d", $device)
+        $clientArguments = @("run", "-d", $device) + (Get-ClientRuntimeDartDefines)
+        Invoke-Flutter -Arguments $clientArguments
     }
 
     "run-client-sandbox" {
         $device = if ([string]::IsNullOrWhiteSpace($ClientDevice)) { "windows" } else { $ClientDevice }
         $resetFlag = if ($ResetSandboxOnLaunch.IsPresent) { "true" } else { "false" }
-        Invoke-Flutter -Arguments @(
+        $clientArguments = @(
             "run",
             "-d",
             $device,
@@ -425,7 +482,8 @@ switch ($Task) {
             "lib/main_sandbox.dart",
             "--dart-define=AZMUSIC_SANDBOX_SURFACE=$SandboxSurface",
             "--dart-define=AZMUSIC_RESET_SANDBOX_ON_LAUNCH=$resetFlag"
-        )
+        ) + (Get-ClientRuntimeDartDefines)
+        Invoke-Flutter -Arguments $clientArguments
     }
 
     "smoke-client-windows-pdf" {
@@ -451,6 +509,18 @@ switch ($Task) {
 
     "check-client-windows" {
         Invoke-ClientWindowsCheck
+    }
+
+    "build-client-windows-release" {
+        Invoke-ClientWindowsReleaseBuild
+    }
+
+    "build-client-android-apk" {
+        Invoke-ClientAndroidApkBuild
+    }
+
+    "build-client-android-aab" {
+        Invoke-ClientAndroidAppBundleBuild
     }
 
     "check" {

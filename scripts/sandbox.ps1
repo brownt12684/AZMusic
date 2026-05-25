@@ -105,9 +105,6 @@ function Invoke-FixtureGeneration {
 function Invoke-ClientCheck {
     Write-Step "Client Check (lint + test)"
 
-    $env:AZMUSIC_SERVER_HOST = "127.0.0.1"
-    $env:AZMUSIC_SERVER_PORT = "8000"
-
     $pythonPath = if (Test-Path (Join-Path $ServerDir ".venv\Scripts\python.exe")) {
         Join-Path $ServerDir ".venv\Scripts\python.exe"
     } else {
@@ -132,11 +129,44 @@ function Invoke-ClientCheck {
     }
 
     if (Test-Path $ScriptDir\dev.ps1) {
-        $devResult = & $ScriptDir\dev.ps1 -Task check-client 2>&1
-        if ($LASTEXITCODE -eq 0) {
-            Write-Result "Client check (lint+test)" $true ""
-        } else {
-            Write-Result "Client check (lint+test)" $false "Exit code $LASTEXITCODE"
+        $stdoutPath = [System.IO.Path]::GetTempFileName()
+        $stderrPath = [System.IO.Path]::GetTempFileName()
+        try {
+            $devProcess = Start-Process -FilePath powershell `
+                -ArgumentList @(
+                    '-NoProfile',
+                    '-ExecutionPolicy',
+                    'Bypass',
+                    '-File',
+                    (Join-Path $ScriptDir 'dev.ps1'),
+                    '-Task',
+                    'check-client'
+                ) `
+                -Wait `
+                -PassThru `
+                -RedirectStandardOutput $stdoutPath `
+                -RedirectStandardError $stderrPath
+
+            if ($devProcess.ExitCode -eq 0) {
+                Write-Result "Client check (lint+test)" $true ""
+            } else {
+                $stdout = if (Test-Path $stdoutPath) { Get-Content $stdoutPath -Raw } else { '' }
+                $stderr = if (Test-Path $stderrPath) { Get-Content $stderrPath -Raw } else { '' }
+                if ($stdout) {
+                    Write-Host $stdout
+                }
+                if ($stderr) {
+                    Write-Host $stderr
+                }
+                Write-Result "Client check (lint+test)" $false "Exit code $($devProcess.ExitCode)"
+            }
+        }
+        finally {
+            foreach ($path in @($stdoutPath, $stderrPath)) {
+                if (Test-Path $path) {
+                    Remove-Item -LiteralPath $path -Force -ErrorAction SilentlyContinue
+                }
+            }
         }
     } else {
         Write-Result "Client check (lint+test)" $false "dev.ps1 not available"

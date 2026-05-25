@@ -3,9 +3,11 @@ import 'dart:io';
 import 'package:azmusic/app/app.dart';
 import 'package:azmusic/app/app_keys.dart';
 import 'package:azmusic/app/launch_options.dart';
+import 'package:azmusic/core/network/network_info.dart';
 import 'package:azmusic/data/repositories/server_piece_sync_repository.dart';
 import 'package:azmusic/domain/entities/review_candidate_package.dart';
 import 'package:azmusic/injection/container.dart';
+import 'package:azmusic/presentation/providers/app_providers.dart';
 import 'package:azmusic/presentation/providers/review_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -28,7 +30,6 @@ void main() {
     WidgetTester tester, {
     AppLaunchOptions launchOptions = const AppLaunchOptions(
       sandboxMode: false,
-      seedDemoLibrary: false,
       resetLibraryOnLaunch: false,
       initialSurface: AppLaunchSurface.login,
     ),
@@ -40,6 +41,14 @@ void main() {
           launchOptionsProvider.overrideWith((ref) => launchOptions),
           serverPieceSyncRepositoryProvider.overrideWith(
             (ref) => _FakeServerPieceSyncRepository(),
+          ),
+          networkInfoProvider.overrideWith((ref) => _FakeNetworkInfo()),
+          serverHealthProvider.overrideWith(
+            (ref) async => const ServerHealthState(
+              status: ServerHealthStatus.online,
+              serverUrl: 'http://test-server',
+              message: 'AZMusic server',
+            ),
           ),
         ],
         child: const AzMusicApp(),
@@ -72,7 +81,8 @@ void main() {
     expect(find.byKey(AppKeys.profileButton('parent-main')), findsOneWidget);
   });
 
-  testWidgets('student login opens the library shell', (WidgetTester tester) async {
+  testWidgets('student login opens the library shell',
+      (WidgetTester tester) async {
     await pumpApp(tester);
     await tester.tap(find.byKey(AppKeys.profileButton('student-alyse')));
     await pumpUntilFound(tester, find.byKey(AppKeys.libraryScreen));
@@ -83,20 +93,25 @@ void main() {
     expect(find.text("Alyse's library"), findsOneWidget);
   });
 
-  testWidgets('parent login opens the review-focused home', (
+  testWidgets('parent login opens the tabbed parent home', (
     WidgetTester tester,
   ) async {
     await pumpApp(tester);
     await tester.tap(find.byKey(AppKeys.profileButton('parent-main')));
     await tester.pumpAndSettle();
-    await tester.enterText(find.byType(TextField).last, '1357');
+    await tester.enterText(find.byType(TextField).last, '0000');
     await tester.tap(find.text('Unlock'));
     await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
 
     expect(find.byKey(AppKeys.parentHomeScreen), findsOneWidget);
     expect(find.byKey(AppKeys.parentReviewCard), findsOneWidget);
     expect(find.byKey(AppKeys.parentImportButton), findsOneWidget);
-    expect(find.text('Intake and push'), findsOneWidget);
+    expect(find.text('Process, review, push'), findsOneWidget);
+
+    await tester.tap(find.text('Server'));
+    await tester.pumpAndSettle();
+
+    expect(find.byKey(AppKeys.parentServerStatus), findsOneWidget);
   });
 
   testWidgets('shows sandbox launcher actions', (WidgetTester tester) async {
@@ -104,15 +119,13 @@ void main() {
       tester,
       launchOptions: const AppLaunchOptions(
         sandboxMode: true,
-        seedDemoLibrary: false,
         resetLibraryOnLaunch: false,
         initialSurface: AppLaunchSurface.sandbox,
       ),
     );
-    await pumpUntilFound(tester, find.byKey(AppKeys.sandboxLoadDemoButton));
+    await pumpUntilFound(tester, find.byKey(AppKeys.sandboxResetLibraryButton));
 
     expect(find.byKey(AppKeys.sandboxLauncherScreen), findsOneWidget);
-    expect(find.byKey(AppKeys.sandboxLoadDemoButton), findsOneWidget);
     expect(find.byKey(AppKeys.sandboxOpenReaderButton), findsOneWidget);
     expect(find.byKey(AppKeys.sandboxOpenReviewQueueButton), findsOneWidget);
   });
@@ -124,7 +137,6 @@ void main() {
       tester,
       launchOptions: const AppLaunchOptions(
         sandboxMode: true,
-        seedDemoLibrary: true,
         resetLibraryOnLaunch: false,
         initialSurface: AppLaunchSurface.reviewQueue,
       ),
@@ -139,6 +151,11 @@ void main() {
 class _FakeServerPieceSyncRepository extends ServerPieceSyncRepository {
   @override
   Future<List<RemotePieceSummary>> fetchAssignedPieces(String profileId) async {
+    return const [];
+  }
+
+  @override
+  Future<List<RemotePieceSummary>> fetchAllPieces() async {
     return const [];
   }
 
@@ -165,4 +182,12 @@ class _FakeServerPieceSyncRepository extends ServerPieceSyncRepository {
   ) async {
     throw UnimplementedError('Push is not used in widget tests.');
   }
+}
+
+class _FakeNetworkInfo implements NetworkInfo {
+  @override
+  Future<bool> get isConnected async => true;
+
+  @override
+  Stream<bool> get onConnectivityChanged => Stream<bool>.value(true);
 }

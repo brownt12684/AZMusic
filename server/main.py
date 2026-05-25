@@ -2,10 +2,13 @@
 
 from contextlib import asynccontextmanager
 
-from fastapi import FastAPI
+from fastapi import Depends, FastAPI
 
+from server.config import settings
 from server.database import engine
-from server.routers import jobs, pieces, review, sync
+from server.jobs.dispatcher import JobDispatcher
+from server.routers import jobs, pairing, pieces, processing, review, setup, sync
+from server.services.auth import require_paired_device
 
 
 @asynccontextmanager
@@ -14,8 +17,14 @@ async def lifespan(app: FastAPI):
     from server.database import init_db  # noqa: PLC0414
 
     await init_db()
+    dispatcher: JobDispatcher | None = None
+    if settings.job_dispatcher_enabled:
+        dispatcher = JobDispatcher()
+        await dispatcher.start()
     yield
     # Shutdown: drain job queue, close connections
+    if dispatcher:
+        await dispatcher.stop()
     await engine.dispose()
 
 
@@ -27,10 +36,39 @@ app = FastAPI(
 )
 
 # Register routers
-app.include_router(pieces.router, prefix="/api/v1/pieces", tags=["pieces"])
-app.include_router(review.router, prefix="/api/v1/review", tags=["review"])
-app.include_router(jobs.router, prefix="/api/v1/jobs", tags=["jobs"])
-app.include_router(sync.router, prefix="/api/v1/sync", tags=["sync"])
+_protected_dependencies = [Depends(require_paired_device)]
+app.include_router(
+    pieces.router,
+    prefix="/api/v1/pieces",
+    tags=["pieces"],
+    dependencies=_protected_dependencies,
+)
+app.include_router(
+    review.router,
+    prefix="/api/v1/review",
+    tags=["review"],
+    dependencies=_protected_dependencies,
+)
+app.include_router(
+    jobs.router,
+    prefix="/api/v1/jobs",
+    tags=["jobs"],
+    dependencies=_protected_dependencies,
+)
+app.include_router(
+    sync.router,
+    prefix="/api/v1/sync",
+    tags=["sync"],
+    dependencies=_protected_dependencies,
+)
+app.include_router(
+    processing.router,
+    prefix="/api/v1/processing",
+    tags=["processing"],
+    dependencies=_protected_dependencies,
+)
+app.include_router(pairing.router, prefix="/api/v1/pairing", tags=["pairing"])
+app.include_router(setup.router, tags=["setup"])
 
 
 @app.get("/health")

@@ -9,7 +9,13 @@ from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.database import get_db
 from server.models.orm import BackgroundJob, JobStatus
-from server.models.schemas import JobResponse, JobTriggerRequest, JobUpdateRequest
+from server.models.schemas import (
+    JobResponse,
+    JobSummaryResponse,
+    JobTriggerRequest,
+    JobUpdateRequest,
+)
+from server.services.job_summary import build_job_summary
 
 router = APIRouter()
 
@@ -22,6 +28,7 @@ def _job_to_response(job: BackgroundJob) -> JobResponse:
         status=job.status,
         progress=job.progress,
         error_message=job.error_message,
+        result_data=job.result_data,
         created_at=job.created_at,
         updated_at=job.updated_at,
     )
@@ -34,6 +41,12 @@ async def list_jobs(db: AsyncSession = Depends(get_db)):
         select(BackgroundJob).order_by(BackgroundJob.created_at.desc())
     )
     return [_job_to_response(j) for j in result.scalars().all()]
+
+
+@router.get("/summary", response_model=JobSummaryResponse)
+async def get_job_summary(db: AsyncSession = Depends(get_db)):
+    """Return parent-facing job queue counts and latest failure."""
+    return await build_job_summary(db)
 
 
 @router.get("/{job_id}")

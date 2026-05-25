@@ -9,12 +9,19 @@ Future<void> main() async {
 
   try {
     final repository = LocalLibraryRepository(appDirectory: appDirectory);
-    final importedEntry = await repository.importDemoScore();
+    final sourceFile = File(
+      '${appDirectory.path}${Platform.pathSeparator}smoke_score.pdf',
+    );
+    await sourceFile.writeAsBytes(const <int>[37, 80, 68, 70], flush: true);
+
+    final importedEntry = await repository.importScore(
+      sourcePath: sourceFile.path,
+    );
     final library = await repository.loadLibrary();
 
     if (library.length != 1) {
       throw StateError(
-        'Expected exactly one library entry after demo import, found ${library.length}.',
+        'Expected exactly one library entry after import, found ${library.length}.',
       );
     }
 
@@ -22,13 +29,13 @@ Future<void> main() async {
     final importedFile = File(importedEntry.primaryScore.filePath);
     if (!importedFile.existsSync()) {
       throw StateError(
-        'Expected imported demo score file to exist at ${importedFile.path}.',
+        'Expected imported score file to exist at ${importedFile.path}.',
       );
     }
 
-    if (reloadedEntry.piece.title != 'AZMusic Sandbox Demo Score') {
+    if (reloadedEntry.piece.title != 'smoke score') {
       throw StateError(
-        'Unexpected demo piece title: ${reloadedEntry.piece.title}.',
+        'Unexpected piece title: ${reloadedEntry.piece.title}.',
       );
     }
 

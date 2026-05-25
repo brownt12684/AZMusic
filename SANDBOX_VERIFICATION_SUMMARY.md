@@ -58,7 +58,7 @@ Only `dart --version` works. The Dart SDK binary is functional but the package r
 ## Manual Code Review Findings
 
 ### Import Flow (`lib/presentation/screens/import_score_screen.dart`)
-- Uses `importDemoScore()` which generates a PDF locally — does not require server or native file picker
+- Uses explicit temporary sample files in tests; the app no longer generates a local sandbox score
 - All 13 entity files in `lib/domain/entities/` have `toMap` factories
 - The stale `analyze_output.txt` contained `undefined_method` errors that were false positives from an earlier code state — always run fresh analysis
 

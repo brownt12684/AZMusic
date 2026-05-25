@@ -18,3 +18,12 @@ pydantic>=2.0.0
 
 # File upload
 python-multipart>=0.0.9
+
+# PDF page-range extraction for book imports
+pypdf>=4.3.0
+
+# Optional scanned-PDF page rendering for OCR when Tesseract is configured
+pypdfium2>=4.30.0
+
+# Pairing QR generation
+qrcode[pil]>=7.4.2

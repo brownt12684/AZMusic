@@ -21,6 +21,8 @@ client/android/.gradle/
 client/android/build/
 client/android/.idea/
 client/android/*.keystore
+client/android/*.jks
+client/android/key.properties
 client/android/keystore.properties
 
 # iOS
@@ -62,8 +64,8 @@ dist/
 downloads/
 eggs/
 .eggs/
-lib/
-lib64/
+/lib/
+/lib64/
 parts/
 sdist/
 var/
@@ -89,6 +91,8 @@ env/
 # Server storage
 server/storage/
 server/*.db
+server/*.db-shm
+server/*.db-wal
 server/.env
 
 # IDEs
@@ -107,9 +111,9 @@ Thumbs.db
 desktop.ini
 
 # Flutter/Drift generated files
-lib/**/*.g.dart
-lib/**/*.freezed.dart
-lib/**/*.generated.dart
+/lib/**/*.g.dart
+/lib/**/*.freezed.dart
+/lib/**/*.generated.dart
 
 # Coverage
 coverage/

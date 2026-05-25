@@ -4,7 +4,7 @@ Private family music practice system for violin-family students.
 
 ## Overview
 
-AZMusic is a greenfield private monorepo with two main parts:
+AZMusic is an existing private monorepo being extended in place with two main parts:
 
 - `client/`: Flutter app for offline score import, reading, annotation, practice media, and LAN sync.
 - `server/`: FastAPI service for LAN-only processing, review workflows, and sync coordination.
@@ -62,13 +62,14 @@ Run repo tasks from the root with PowerShell:
 
 ## Build Status
 
-- `Milestone`: Foundations phase is active. The current import-first offline workflow remains the primary target.
+- `Milestone`: Foundations phase is still active, but the current slice now includes parent intake/review/push, student library alpha-jump browsing, explicit reader write mode, PDF spread layout rules, opportunistic sync status messaging, and server processing configuration.
 - `Windows build`: Green. `.\scripts\dev.ps1 -Task check-client-windows` passes and the Windows debug build produces `client\build\windows\x64\runner\Debug\azmusic.exe`.
 - `Client import flow`: Green for the offline-first local library path, including the first-import case that previously failed on an immutable empty library list.
-- `Automated coverage`: Green. `check-client` covers the import workflow cancellation path, local image import persistence, the local-library repository, and the core app-shell routes. `check-client-windows` adds the Windows PDF reader smoke path with the sandbox fixture.
-- `Prototype loop`: Green. `.\scripts\dev.ps1 -Task run-client-sandbox` launches a seeded local sandbox with a fake import path and direct routing into library, piece-detail, reader, and review-queue surfaces.
+- `Automated coverage`: Green. `check-client` covers the import workflow cancellation path, local image import persistence, app-config host and port resolution, library sync banner states, alpha-jump behavior, reader spread layout rules, the local-library repository, and the core app-shell routes. `check-client-windows` adds a Windows empty-sandbox launch smoke path.
+- `Prototype loop`: Green. `.\scripts\dev.ps1 -Task run-client-sandbox` launches an empty local sandbox with direct routing into the library and review-queue surfaces. Piece-detail and reader routes require an imported piece.
 - `Next`: Manual Windows QA of the real file-picker import flow versus the sandbox fast path.
-- `Next`: Wire real sync/review behavior and reduce reliance on the native file picker for broader automation.
+- `Next`: Install/configure Audiveris and MuseScore for real OMR/rendering, then replace the current development MusicXML fallback with the real processing path during manual QA.
+- `Next`: Decide how much of the client banner state should move onto the server `/api/v1/sync` contract and replace JSON client persistence with a stronger local database layer.
 
 ## Toolchain
 
@@ -83,6 +84,7 @@ Run repo tasks from the root with PowerShell:
 - Use root-relative commands. Shared automation assumes the current directory is the repo root.
 - Server environment state lives in `server/.env`.
 - Relative server paths are resolved from `server/`, so database and storage locations stay stable regardless of shell working directory.
+- `run-client`, `run-client-sandbox`, and `check-client-windows` accept `-ClientServerHost` and `-ClientServerPort` so same-machine testing can override the checked-in LAN target without editing source or saved preferences.
 - Repo-wide formatting defaults live in `.editorconfig`.
 - Python test and lint configuration lives in `pyproject.toml`.
 
@@ -94,9 +96,9 @@ Run repo tasks from the root with PowerShell:
 .\scripts\dev.ps1 -Task check-client-windows
 ```
 
-`lint-server` runs Python bytecode compilation plus Ruff. `check-server` runs the server smoke path: bytecode compilation plus pytest coverage for `/health` and the documented `/api/v1/pieces`, `/review`, `/jobs`, and `/sync` route groups. `check-client` runs `flutter analyze` plus `flutter test --no-pub --no-test-assets --no-dds -r expanded`.
+`lint-server` runs Python bytecode compilation plus Ruff. `check-server` runs the server smoke path: bytecode compilation plus pytest coverage for `/health` and the documented `/api/v1/pieces`, `/review`, `/jobs`, `/sync`, and `/processing` route groups, including score-version download metadata, sync-state retry bookkeeping, processing settings/capabilities, device-worker registration, and raw-preserving processing failure behavior. `check-client` runs `flutter analyze` plus `flutter test --no-pub --no-test-assets --no-dds -r expanded`.
 
-`check-client-windows` runs `check-client` first, then launches the sandbox reader on Windows, waits for the generated demo PDF to load, and fails on the class of Syncfusion viewer crashes that previously blanked the PDF screen.
+`check-client-windows` runs `check-client` first, then launches the sandbox library on Windows to verify the desktop shell starts cleanly.
 
 ## Prototype Loop
 
@@ -104,17 +106,20 @@ Use the sandbox target when iterating on client UI or local-library behavior:
 
 ```powershell
 .\scripts\dev.ps1 -Task run-client-sandbox
-.\scripts\dev.ps1 -Task run-client-sandbox -SandboxSurface reader
+.\scripts\dev.ps1 -Task run-client-sandbox -SandboxSurface library
 .\scripts\dev.ps1 -Task run-client-sandbox -SandboxSurface sandbox -ResetSandboxOnLaunch
+.\scripts\dev.ps1 -Task run-client-sandbox -SandboxSurface review-queue -ClientServerHost 127.0.0.1 -ClientServerPort 8000
 ```
 
-`run-client-sandbox` skips the native file picker dependency for day-to-day prototyping. It seeds a local demo score on demand, exposes a fake import button, and can route directly into the library, piece detail, reader, or review queue.
+`run-client-sandbox` starts the app with sandbox routing and can be pointed at a local server session with the host and port override flags. It no longer seeds sample music; import real test files through the library or parent intake flow before opening piece-detail or reader surfaces.
 
 ## Documentation
 
 - [Setup Guide](docs/SETUP_GUIDE.md)
 - [Repository Foundations](docs/REPO_FOUNDATIONS.md)
 - [Architecture](docs/ARCHITECTURE.md)
+- [V1 Delta Scope](docs/V1_DELTA_SCOPE.md)
+- [V1 Delta Implementation Checklist](docs/V1_DELTA_IMPLEMENTATION_CHECKLIST.md)
 
 ## License
 

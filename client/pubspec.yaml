@@ -16,6 +16,7 @@ dependencies:
 
   # Local persistence
   drift: ^2.15.0
+  sqlite3: ^2.4.0
   sqlite3_flutter_libs: ^0.5.20
 
   # Networking
@@ -25,12 +26,12 @@ dependencies:
   # File handling
   path_provider: ^2.1.1
   path: ^1.8.3
-  file_picker: ^6.1.1
+  file_picker: ^11.0.2
+  open_filex: ^4.5.0
 
   # PDF rendering
-  pdf: ^3.10.8
   printing: ^5.11.1
-  syncfusion_flutter_pdfviewer: ^25.2.5
+  syncfusion_flutter_pdfviewer: ^33.2.7
 
   # Media playback
   just_audio: ^0.9.36
@@ -60,12 +61,6 @@ dev_dependencies:
   riverpod_generator: ^2.3.9
   envied_generator: ^0.5.3
   mocktail: ^1.0.3
-
-dependency_overrides:
-  # Syncfusion 25.2.7 leaves the platform-interface dependency unconstrained.
-  # Without this pin, pub resolves a newer interface that the 25.x Windows
-  # plugin cannot fully implement, which breaks PDF rendering on Windows.
-  syncfusion_pdfviewer_platform_interface: 25.2.7
 
 flutter:
   uses-material-design: true

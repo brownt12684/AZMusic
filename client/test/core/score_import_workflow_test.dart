@@ -16,6 +16,7 @@ void main() {
   });
 
   tearDown(() async {
+    await repository.close();
     if (tempDir.existsSync()) {
       await tempDir.delete(recursive: true);
     }
@@ -55,6 +56,7 @@ void main() {
     final entry = await workflow.importPickedScore();
     final reloadedRepository = LocalLibraryRepository(appDirectory: tempDir);
     final entries = await reloadedRepository.loadLibrary();
+    await reloadedRepository.close();
 
     expect(entry, isNotNull);
     expect(entries, hasLength(1));

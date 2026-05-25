@@ -49,6 +49,7 @@ class Settings(BaseSettings):
     host: str = "0.0.0.0"
     port: int = 8000
     debug: bool = False
+    production_mode: bool = False
 
     # Database
     database_url: str = Field(default_factory=lambda: _sqlite_url_for(DEFAULT_DATABASE_PATH))
@@ -56,13 +57,23 @@ class Settings(BaseSettings):
     # File storage
     storage_path: Path = DEFAULT_STORAGE_PATH
 
-    # LAN auth (v1 placeholder)
+    # LAN auth / device pairing
     lan_auth_token: str = ""
+    require_device_auth: bool = False
 
     # AI / provider settings
     ai_enabled: bool = True
     max_concurrent_jobs: int = 2
+    audiveris_cli_path: str | None = None
     musescore_cli_path: str | None = None
+    ocr_cli_path: str | None = None
+    ocr_language: str = "eng"
+    processing_mode: str = "server_only"
+    allow_stub_musicxml: bool = True
+    job_dispatcher_enabled: bool = True
+    job_dispatcher_poll_interval_seconds: float = 2.0
+    job_dispatcher_stale_after_seconds: int = 600
+    job_dispatcher_max_retries: int = 2
 
     @model_validator(mode="after")
     def normalize_paths(self) -> "Settings":
