@@ -125,7 +125,7 @@ Important notes about the current API shape:
 - Piece detail responses now include per-score-version download metadata: `file_url`, `content_type`, `file_size_bytes`, and `content_sha256`.
 - The sync router now supports `GET`, `PATCH`, and upload/download counter updates, with retry and error metadata persisted under `server/storage/sync_state/`.
 - The processing router supports durable server settings, executable validation, server capability reporting, and experimental device-worker registration.
-- The pairing router creates short-lived parent/admin and student-device QR payloads. Android clients can scan these in-app; Windows clients use the same payload/code manually until a Windows camera backend is selected.
+- The pairing router creates short-lived parent/admin and student-device QR payloads. Android clients scan with `mobile_scanner`; Windows clients scan by capturing camera snapshots through `camera_windows` and decoding them with the Dart QR decoder. Manual payload/code entry remains available on all platforms.
 - Piece history draft routes currently use `history_drafts` with an underscore in the path.
 
 ### Processing boundary

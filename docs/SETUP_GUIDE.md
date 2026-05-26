@@ -174,7 +174,7 @@ Use this sequence when you want to validate the current milestone end to end:
 6. Approve the candidate and push the ready piece to one or more student profiles when you want to validate the server-backed flow.
 7. Switch to a student profile, open the piece from the student library or piece detail, and confirm the reader opens the local score.
 
-For first-time server setup, open `http://<server-address>:8000/setup` on the server or another device on the same network. That page shows the parent/admin QR code used to initialize the parent device. After the parent device is connected, use the parent section in the app to generate separate student-device QR codes for each student. Android clients can scan pairing QR codes from the pairing dialog; Windows clients keep manual QR payload/code entry as the supported fallback.
+For first-time server setup, open `http://<server-address>:8000/setup` on the server or another device on the same network. That page shows the parent/admin QR code used to initialize the parent device. After the parent device is connected, use the parent section in the app to generate separate student-device QR codes for each student. Android and Windows clients can scan pairing QR codes from the pairing dialog; manual QR payload/code entry remains available as a fallback.
 
 For real OMR testing, open the parent server-processing settings screen and configure Audiveris before importing the PDF. Without Audiveris, the development fallback can still generate stub MusicXML if `ALLOW_STUB_MUSICXML` remains enabled. Configure MuseScore when you want rendered review PDFs produced from MusicXML instead of raw-PDF fallback copies.
 

@@ -29,7 +29,7 @@ This is now a V1 package candidate, but it still needs a real-device E2E pass be
 - The parent review-compare screen can download the generated MusicXML/MXL candidate to the parent device, open it in a local MusicXML-capable app such as MuseScore, upload the edited file, and refresh the rendered review PDF through the server renderer.
 - The parent review-compare screen also exposes a coming-soon AI score review action that explains the future LLM correction loop without enqueueing fake processing.
 - Parent tools now include a server-processing settings surface for Audiveris, MuseScore, development stub fallback, server health, and experimental device-worker mode.
-- Server setup now hosts the first parent/admin QR code at `/setup`; parent tools then generate separate student-device QR codes that are tied to a specific student profile. Android clients can scan these QR codes, Windows clients retain manual payload/code entry, and development launches with the local server override are treated as already paired.
+- Server setup now hosts the first parent/admin QR code at `/setup`; parent tools then generate separate student-device QR codes that are tied to a specific student profile. Android and Windows clients can scan these QR codes, manual payload/code entry remains available, and development launches with the local server override are treated as already paired.
 - Parent push marks student visibility locally immediately and retries the server push later if the server is unreachable.
 - The student library supports search plus a left-side drag alpha rail for `Title`, `Composer`, and `Book`.
 - Imported files are copied into app-managed local storage instead of being referenced in place.
@@ -81,7 +81,7 @@ This is now a V1 package candidate, but it still needs a real-device E2E pass be
 - Real reconstructed PDF rendering after parent MuseScore edits requires installing/configuring MuseScore on the server. The parent device only needs an app that can open/edit MusicXML/MXL.
 - AI score review is currently wired only as a coming-soon affordance; direct score reprocess requests return a clear placeholder result rather than pretending to run LLM correction.
 - Experimental device-worker registration exists, but no dispatch queue sends processing work packages to devices yet.
-- Device pairing supports generated QR payloads, manual payload/code entry, and Android camera scanning. Windows camera scanning is not available through the selected scanner dependency, so Windows pairing remains manual.
+- Device pairing supports generated QR payloads, manual payload/code entry, Android camera scanning, and Windows tablet camera scanning.
 - Piece research metadata beyond MusicXML extraction, such as composer biography, work catalog numbers, publisher/source history, and pedagogical notes, is not implemented yet.
 - LAN auth now has an enforced paired-device-token mode, but production deployments still need a final decision on LAN HTTP versus HTTPS.
 - The current client and server tests cover targeted behavior, but the final real-device parent-import to student-reader flow still needs a manual E2E gate.

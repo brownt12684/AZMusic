@@ -298,7 +298,8 @@ class _PairingDialogState extends State<_PairingDialog> {
               controller: _payloadController,
               decoration: const InputDecoration(
                 labelText: 'QR payload or pairing link',
-                helperText: 'Paste the azmusic://pair link from a QR scanner.',
+                helperText:
+                    'Paste the azmusic://pair link if camera scanning is unavailable.',
               ),
               minLines: 1,
               maxLines: 3,
