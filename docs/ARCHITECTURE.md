@@ -57,7 +57,7 @@ This boundary is important for later workers: keep UI code behind repository con
 ### Config and sync scaffolding
 
 - `AppConfig` loads from `SharedPreferences` and optional compile-time overrides.
-- The default server base URL is `http://192.168.1.100:8000`.
+- The legacy default server base URL is `http://192.168.1.100:8000`, but first-run pairing should come from the QR payload rather than that fallback.
 - `scripts/dev.ps1` can override that target at launch time with `-ClientServerHost` and `-ClientServerPort`, which become `AZMUSIC_SERVER_HOST` and `AZMUSIC_SERVER_PORT` Dart defines.
 - `ApiClient` and `NetworkInfo` are active today; `NetworkInfo` probes the currently configured server host for reachability.
 - `SyncManager.sync()` is still a TODO, but `PieceListNotifier` already runs opportunistic sync on app load, refresh, post-import, parent push, and connectivity return.
@@ -88,6 +88,7 @@ The intended next steps are:
 - Relative database and storage paths are normalized against `server/`, not against the shell working directory.
 - `REQUIRE_DEVICE_AUTH=true` enforces QR-paired device tokens on protected API route groups.
 - Pairing, setup, and health endpoints remain open so new devices can be paired and health can be checked.
+- `PUBLIC_SERVER_URL` can force the server URL encoded into QR payloads; otherwise local `/setup` requests use best-effort LAN IPv4 detection instead of `localhost`.
 
 ### Domain model currently implemented on the server
 

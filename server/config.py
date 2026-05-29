@@ -60,6 +60,7 @@ class Settings(BaseSettings):
     # LAN auth / device pairing
     lan_auth_token: str = ""
     require_device_auth: bool = False
+    public_server_url: str = ""
 
     # AI / provider settings
     ai_enabled: bool = True

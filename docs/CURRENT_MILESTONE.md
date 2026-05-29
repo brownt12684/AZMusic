@@ -29,7 +29,7 @@ This is now a V1 package candidate, but it still needs a real-device E2E pass be
 - The parent review-compare screen can download the generated MusicXML/MXL candidate to the parent device, open it in a local MusicXML-capable app such as MuseScore, upload the edited file, and refresh the rendered review PDF through the server renderer.
 - The parent review-compare screen also exposes a coming-soon AI score review action that explains the future LLM correction loop without enqueueing fake processing.
 - Parent tools now include a server-processing settings surface for Audiveris, MuseScore, development stub fallback, server health, and experimental device-worker mode.
-- Server setup now hosts the first parent/admin QR code at `/setup`; parent tools then generate separate student-device QR codes that are tied to a specific student profile. Android and Windows clients can scan these QR codes, manual payload/code entry remains available, and development launches with the local server override are treated as already paired.
+- Server setup now hosts the first parent/admin QR code at `/setup`; local setup-page launches encode a detected LAN URL instead of `localhost`, and `PUBLIC_SERVER_URL` can override detection. Parent tools then generate separate student-device QR codes that are tied to a specific student profile. Android and Windows clients can scan these QR codes, manual payload/code entry remains available, and development launches with the local server override are treated as already paired.
 - Parent push marks student visibility locally immediately and retries the server push later if the server is unreachable.
 - The student library supports search plus a left-side drag alpha rail for `Title`, `Composer`, and `Book`.
 - Imported files are copied into app-managed local storage instead of being referenced in place.
@@ -94,7 +94,7 @@ This is now a V1 package candidate, but it still needs a real-device E2E pass be
 - Windows Surface Book is the primary target. Android tablets are secondary.
 - Flutter Windows and Android platform folders now exist and are part of the packaging path; they can still be regenerated, but release edits under `client/android` should be preserved.
 - Server database and storage paths resolve relative to `server/`.
-- The checked-in client network default is `http://192.168.1.100:8000`; same-machine server runs do not automatically retarget the client to `localhost` unless the stored config or launch-time overrides change it.
+- The checked-in client network fallback is `http://192.168.1.100:8000`, but first-run pairing starts blank and should be populated by the QR payload.
 
 ## Handoff notes for later workers
 

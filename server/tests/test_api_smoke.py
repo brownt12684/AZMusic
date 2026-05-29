@@ -8,6 +8,7 @@ import pytest
 import server.database as database_module
 import server.main as main_module
 import server.routers.pieces as pieces_router_module
+import server.services.server_urls as server_urls_module
 from fastapi.testclient import TestClient
 from pypdf import PdfWriter
 from server.config import settings
@@ -1703,12 +1704,38 @@ def test_pairing_code_claim_flow(api_client) -> None:
 def test_server_setup_page_hosts_pairing_qr(api_client) -> None:
     client, _ = api_client
 
-    setup_response = client.get("/setup")
+    setup_response = client.get("http://localhost:8000/setup")
     assert setup_response.status_code == 200
     assert "Pair an AZMusic device" in setup_response.text
     assert "azmusic://pair?" in setup_response.text
     assert "parent_setup" in setup_response.text
     assert "/api/v1/pairing/code.png?code=" in setup_response.text
+
+
+def test_local_setup_page_pairs_with_detected_lan_url(api_client, monkeypatch) -> None:
+    client, _ = api_client
+    monkeypatch.setattr(server_urls_module, "detect_lan_ipv4", lambda: "192.168.50.25")
+
+    setup_response = client.get("http://localhost:8000/setup")
+
+    assert setup_response.status_code == 200
+    assert "server_url=http%3A%2F%2F192.168.50.25%3A8000" in setup_response.text
+    assert "Opened from:" in setup_response.text
+
+
+def test_public_server_url_overrides_pairing_payload(api_client, monkeypatch) -> None:
+    client, _ = api_client
+    monkeypatch.setattr(settings, "public_server_url", "http://music-server.local:8000/")
+
+    code_response = client.get("/api/v1/pairing/code")
+
+    assert code_response.status_code == 200
+    code_payload = code_response.json()
+    assert code_payload["server_url"] == "http://music-server.local:8000"
+    assert (
+        "server_url=http%3A%2F%2Fmusic-server.local%3A8000"
+        in code_payload["pairing_uri"]
+    )
 
 
 def test_student_device_pairing_code_includes_profile_assignment(api_client) -> None:

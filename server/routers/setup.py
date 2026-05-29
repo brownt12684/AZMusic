@@ -8,6 +8,7 @@ from fastapi.responses import HTMLResponse
 
 from server.config import settings
 from server.services.pairing import PairingService
+from server.services.server_urls import reachable_server_url
 
 router = APIRouter()
 _pairing_service = PairingService()
@@ -16,7 +17,8 @@ _pairing_service = PairingService()
 @router.get("/setup", response_class=HTMLResponse)
 async def setup_page(request: Request):
     """Display the server-side QR code that family devices scan to pair."""
-    server_url = str(request.base_url).rstrip("/")
+    request_url = str(request.base_url).rstrip("/")
+    server_url = reachable_server_url(request)
     qr_url = str(request.url_for("get_pairing_qr_png"))
     pairing_code = _pairing_service.create_code(
         server_url=server_url,
@@ -31,6 +33,7 @@ async def setup_page(request: Request):
         _setup_html(
             server_name=settings.app_name,
             server_url=server_url,
+            request_url=request_url,
             pairing_code=pairing_code.pairing_code,
             pairing_uri=pairing_code.pairing_uri,
             qr_png_url=qr_png_url,
@@ -43,11 +46,20 @@ def _setup_html(
     *,
     server_name: str,
     server_url: str,
+    request_url: str,
     pairing_code: str,
     pairing_uri: str,
     qr_png_url: str,
     expires_at: str,
 ) -> str:
+    opened_from_note = ""
+    if request_url != server_url:
+        opened_from_note = (
+            f"<p><strong>Opened from:</strong> {escape(request_url)}</p>"
+            "<p>This QR uses the detected network address so phones and tablets "
+            "can reach the server.</p>"
+        )
+
     return f"""<!doctype html>
 <html lang="en">
 <head>
@@ -132,6 +144,7 @@ def _setup_html(
         QR codes from the parent section.
       </p>
       <p><strong>Server:</strong> {escape(server_url)}</p>
+      {opened_from_note}
       <p><strong>Pairing code:</strong> <code>{escape(pairing_code)}</code></p>
       <p><strong>Expires UTC:</strong> {escape(expires_at)}</p>
       <p class="payload">{escape(pairing_uri)}</p>

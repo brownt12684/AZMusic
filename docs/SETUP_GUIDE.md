@@ -82,6 +82,7 @@ Key settings in `server/.env`:
 | `LAN_AUTH_TOKEN` | *(empty)* | Placeholder only; routes do not enforce auth yet |
 | `PRODUCTION_MODE` | `false` | When `true`, stub MusicXML is disabled and real processing tools are required |
 | `REQUIRE_DEVICE_AUTH` | `false` | When `true`, protected API routes require a QR-paired device token |
+| `PUBLIC_SERVER_URL` | *(empty)* | Optional URL to encode in QR pairing payloads when auto-detection chooses the wrong network address |
 | `AI_ENABLED` | `true` | Enables processing-related code paths |
 | `MAX_CONCURRENT_JOBS` | `2` | Background job concurrency limit |
 | `AUDIVERIS_CLI_PATH` | *(empty)* | Optional real OMR engine path; can also be set from the parent processing settings screen |
@@ -174,7 +175,7 @@ Use this sequence when you want to validate the current milestone end to end:
 6. Approve the candidate and push the ready piece to one or more student profiles when you want to validate the server-backed flow.
 7. Switch to a student profile, open the piece from the student library or piece detail, and confirm the reader opens the local score.
 
-For first-time server setup, open `http://<server-address>:8000/setup` on the server or another device on the same network. That page shows the parent/admin QR code used to initialize the parent device. After the parent device is connected, use the parent section in the app to generate separate student-device QR codes for each student. Android and Windows clients can scan pairing QR codes from the pairing dialog; manual QR payload/code entry remains available as a fallback.
+For first-time server setup, open `http://<server-address>:8000/setup` on the server or another device on the same network. That page shows the parent/admin QR code used to initialize the parent device. If the page is opened as `localhost` on the server PC, the QR payload uses the detected LAN address instead of `localhost` so tablets can reach the server. If the displayed server URL is still wrong, set `PUBLIC_SERVER_URL=http://<server-lan-ip>:8000` in `server/.env` and restart the server. After the parent device is connected, use the parent section in the app to generate separate student-device QR codes for each student. Android and Windows clients can scan pairing QR codes from the pairing dialog; manual QR payload/code entry remains available as a fallback.
 
 For real OMR testing, open the parent server-processing settings screen and configure Audiveris before importing the PDF. Without Audiveris, the development fallback can still generate stub MusicXML if `ALLOW_STUB_MUSICXML` remains enabled. Configure MuseScore when you want rendered review PDFs produced from MusicXML instead of raw-PDF fallback copies.
 
@@ -218,7 +219,7 @@ The current milestone splits cleanly into a fast sandbox path and one still-manu
 ## Client config notes
 
 - Runtime config is in `client/lib/core/config/app_config.dart`.
-- The default server base URL is `http://192.168.1.100:8000`.
+- The old checked-in server base URL is `http://192.168.1.100:8000`, but unpaired devices no longer prefill it in the pairing dialog.
 - `-ClientServerHost` and `-ClientServerPort` override that value for a single launch by passing `AZMUSIC_SERVER_HOST` and `AZMUSIC_SERVER_PORT` as compile-time Dart defines.
 - There is no settings UI yet for changing host and port; treat that value as a development default.
 - Do not assume a local `run-server` session will be discovered automatically by the client; same-machine testing requires the configured host to match the actual server address.
@@ -266,6 +267,7 @@ Verification caveats:
 | `client/windows` or `client/android` is missing | Rerun `.\scripts\dev.ps1 -Task bootstrap-client` |
 | You want to iterate without the native file picker | Use `.\scripts\dev.ps1 -Task run-client-sandbox` and optionally `-SandboxSurface` to jump straight into a screen |
 | Client cannot reach the intended server | Check the `AppConfig` host/port values and whether the client is still pointed at the checked-in LAN default `192.168.1.100:8000`. For same-machine testing, launch with `-ClientServerHost 127.0.0.1 -ClientServerPort 8000`. |
+| QR pairing scans but claim fails on Android | Confirm the setup page shows the server LAN URL, not `localhost`. If it is wrong, set `PUBLIC_SERVER_URL=http://<server-lan-ip>:8000` in `server/.env`, restart the server, and generate a fresh QR. |
 
 ## Cleanup
 

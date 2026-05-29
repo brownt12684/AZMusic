@@ -12,6 +12,7 @@ from server.models.schemas import (
     PairingCodeResponse,
 )
 from server.services.pairing import PairingService
+from server.services.server_urls import reachable_server_url
 
 router = APIRouter()
 _pairing_service = PairingService()
@@ -76,4 +77,4 @@ async def claim_pairing_code(body: PairingClaimRequest):
 
 
 def _server_url_from_request(request: Request) -> str:
-    return str(request.base_url).rstrip("/")
+    return reachable_server_url(request)

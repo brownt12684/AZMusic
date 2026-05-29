@@ -273,7 +273,7 @@ class _PairingDialog extends StatefulWidget {
 class _PairingDialogState extends State<_PairingDialog> {
   final TextEditingController _payloadController = TextEditingController();
   final TextEditingController _serverUrlController = TextEditingController(
-    text: AppConfig.serverBaseUrl,
+    text: AppConfig.isServerPaired ? AppConfig.serverBaseUrl : '',
   );
   final TextEditingController _codeController = TextEditingController();
 

@@ -17,6 +17,7 @@ AZMusic now has a verified private-package path for the current V1 candidate:
 - The server can run in production mode, where stub MusicXML is disabled and Audiveris, MuseScore, and Tesseract OCR are required before processing imports.
 - Protected server API groups can require QR-paired device tokens with `REQUIRE_DEVICE_AUTH=true`.
 - The server setup page creates the first parent/admin QR code. Paired parent devices create student-device QR codes from the parent section.
+- Local server setup pages encode a detected LAN URL instead of `localhost`; `PUBLIC_SERVER_URL` is available when the detected address must be overridden.
 - Android and Windows QR camera scanning are supported through the client pairing dialog. Manual QR payload/code entry remains available as a fallback.
 
 ## Verified Commands
