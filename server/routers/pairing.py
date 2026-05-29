@@ -12,7 +12,7 @@ from server.models.schemas import (
     PairingCodeResponse,
 )
 from server.services.pairing import PairingService
-from server.services.server_urls import reachable_server_url
+from server.services.server_urls import reachable_server_urls
 
 router = APIRouter()
 _pairing_service = PairingService()
@@ -27,10 +27,12 @@ async def create_pairing_code(
     role: str | None = "student",
 ):
     """Create a short-lived pairing code and QR payload for a family device."""
-    server_url = _server_url_from_request(request)
+    server_urls = reachable_server_urls(request)
+    server_url = server_urls[0]
     qr_url = str(request.url_for("get_pairing_qr_png"))
     placeholder = _pairing_service.create_code(
         server_url=server_url,
+        alternate_server_urls=server_urls[1:],
         qr_png_url=qr_url,
         purpose=purpose,
         profile_id=profile_id,
@@ -74,7 +76,3 @@ async def claim_pairing_code(body: PairingClaimRequest):
     if result is None:
         raise HTTPException(status_code=404, detail="Pairing code not found or expired.")
     return result
-
-
-def _server_url_from_request(request: Request) -> str:
-    return reachable_server_url(request)

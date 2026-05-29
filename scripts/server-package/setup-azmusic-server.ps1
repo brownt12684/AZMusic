@@ -61,7 +61,7 @@ if (-not $SkipDependencyInstall.IsPresent) {
 }
 
 & (Join-Path $PackageRoot "check-azmusic-server.ps1")
+& (Join-Path $PackageRoot "enable-azmusic-firewall.ps1") -Port 8000
 
 Write-Host ""
 Write-Host "Server setup complete. Run 'Start AZMusic Server.cmd', then open the setup page to pair the parent device."
-

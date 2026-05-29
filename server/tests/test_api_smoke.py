@@ -1849,12 +1849,18 @@ def test_server_setup_page_hosts_pairing_qr(api_client) -> None:
 
 def test_local_setup_page_pairs_with_detected_lan_url(api_client, monkeypatch) -> None:
     client, _ = api_client
-    monkeypatch.setattr(server_urls_module, "detect_lan_ipv4", lambda: "192.168.50.25")
+    monkeypatch.setattr(
+        server_urls_module,
+        "detect_lan_ipv4_candidates",
+        lambda: ["192.168.50.25", "10.0.0.8"],
+    )
 
     setup_response = client.get("http://localhost:8000/setup")
 
     assert setup_response.status_code == 200
     assert "server_url=http%3A%2F%2F192.168.50.25%3A8000" in setup_response.text
+    assert "alt_server_url=http%3A%2F%2F10.0.0.8%3A8000" in setup_response.text
+    assert "Alternate URLs if pairing times out" in setup_response.text
     assert "Opened from:" in setup_response.text
 
 
@@ -1867,6 +1873,7 @@ def test_public_server_url_overrides_pairing_payload(api_client, monkeypatch) ->
     assert code_response.status_code == 200
     code_payload = code_response.json()
     assert code_payload["server_url"] == "http://music-server.local:8000"
+    assert code_payload["alternate_server_urls"] == []
     assert (
         "server_url=http%3A%2F%2Fmusic-server.local%3A8000"
         in code_payload["pairing_uri"]

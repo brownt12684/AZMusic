@@ -315,6 +315,7 @@ class PairingCodeResponse(BaseModel):
     server_id: str
     server_name: str
     server_url: str
+    alternate_server_urls: list[str] = Field(default_factory=list)
     pairing_code: str
     pairing_uri: str
     qr_png_url: str

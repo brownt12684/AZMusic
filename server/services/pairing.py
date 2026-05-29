@@ -30,6 +30,7 @@ class PairingService:
         self,
         *,
         server_url: str,
+        alternate_server_urls: list[str] | None = None,
         qr_png_url: str,
         purpose: str = "student_device",
         profile_id: str | None = None,
@@ -41,8 +42,13 @@ class PairingService:
         code = _friendly_code()
         expires_at = now + timedelta(minutes=PAIRING_TTL_MINUTES)
         server_id = state["server_id"]
+        alternate_server_urls = _clean_alternate_server_urls(
+            server_url,
+            alternate_server_urls or [],
+        )
         pairing_uri = _pairing_uri(
             server_url=server_url,
+            alternate_server_urls=alternate_server_urls,
             server_id=server_id,
             pairing_code=code,
             purpose=purpose,
@@ -52,6 +58,7 @@ class PairingService:
         )
         state["codes"][code] = {
             "server_url": server_url,
+            "alternate_server_urls": alternate_server_urls,
             "pairing_uri": pairing_uri,
             "expires_at": expires_at.isoformat(),
             "claimed": False,
@@ -66,6 +73,7 @@ class PairingService:
             server_id=server_id,
             server_name=settings.app_name,
             server_url=server_url,
+            alternate_server_urls=alternate_server_urls,
             pairing_code=code,
             pairing_uri=pairing_uri,
             qr_png_url=qr_png_url,
@@ -181,6 +189,7 @@ def _friendly_code() -> str:
 def _pairing_uri(
     *,
     server_url: str,
+    alternate_server_urls: list[str],
     server_id: str,
     pairing_code: str,
     purpose: str,
@@ -190,6 +199,7 @@ def _pairing_uri(
 ) -> str:
     payload = {
         "server_url": server_url,
+        "alt_server_url": alternate_server_urls,
         "server_id": server_id,
         "code": pairing_code,
         "purpose": purpose,
@@ -200,4 +210,20 @@ def _pairing_uri(
         payload["profile_name"] = profile_name
     if role:
         payload["role"] = role
-    return "azmusic://pair?" + urlencode(payload)
+    return "azmusic://pair?" + urlencode(payload, doseq=True)
+
+
+def _clean_alternate_server_urls(
+    server_url: str,
+    alternate_server_urls: list[str],
+) -> list[str]:
+    primary = server_url.strip().rstrip("/")
+    cleaned: list[str] = []
+    seen = {primary}
+    for url in alternate_server_urls:
+        normalized = url.strip().rstrip("/")
+        if not normalized or normalized in seen:
+            continue
+        seen.add(normalized)
+        cleaned.append(normalized)
+    return cleaned

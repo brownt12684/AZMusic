@@ -219,26 +219,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     try {
-      final dio = Dio(
-        BaseOptions(
-          baseUrl: input.serverUrl,
-          connectTimeout: const Duration(seconds: 5),
-          receiveTimeout: const Duration(seconds: 10),
-          sendTimeout: const Duration(seconds: 5),
-        ),
-      );
-      final response = await dio.post<Map<String, dynamic>>(
-        '/api/v1/pairing/claim',
-        data: {
-          'pairing_code': input.pairingCode,
-          'device_id': 'azmusic-${Platform.localHostname}',
-          'device_name': Platform.localHostname,
-          'platform': Platform.operatingSystem,
-        },
-      );
-      final claim = ServerPairingClaim.fromJson(response.data!);
+      final result = await _claimPairing(input);
+      final claim = result.claim;
       await AppConfig.applyServerPairing(
-        serverUrl: claim.serverUrl,
+        serverUrl: result.serverUrl,
         serverId: claim.serverId,
         pairingToken: claim.deviceToken,
         profileId: claim.profileId,
@@ -260,6 +244,39 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         SnackBar(content: Text('Pairing failed: $error')),
       );
     }
+  }
+
+  Future<_PairingClaimResult> _claimPairing(_PairingInput input) async {
+    final failures = <String>[];
+    for (final serverUrl in input.serverUrls) {
+      try {
+        final dio = Dio(
+          BaseOptions(
+            baseUrl: serverUrl,
+            connectTimeout: const Duration(seconds: 4),
+            receiveTimeout: const Duration(seconds: 10),
+            sendTimeout: const Duration(seconds: 5),
+          ),
+        );
+        final response = await dio.post<Map<String, dynamic>>(
+          '/api/v1/pairing/claim',
+          data: {
+            'pairing_code': input.pairingCode,
+            'device_id': 'azmusic-${Platform.localHostname}',
+            'device_name': Platform.localHostname,
+            'platform': Platform.operatingSystem,
+          },
+        );
+        return _PairingClaimResult(
+          serverUrl: serverUrl,
+          claim: ServerPairingClaim.fromJson(response.data!),
+        );
+      } catch (error) {
+        failures.add('$serverUrl: ${_pairingFailureSummary(error)}');
+      }
+    }
+
+    throw _PairingConnectionException(failures);
   }
 }
 
@@ -405,17 +422,66 @@ class _PairingInput {
   const _PairingInput({
     required this.serverUrl,
     required this.pairingCode,
+    this.alternateServerUrls = const <String>[],
   });
 
   final String serverUrl;
   final String pairingCode;
+  final List<String> alternateServerUrls;
+
+  List<String> get serverUrls {
+    final urls = <String>[];
+    for (final url in [serverUrl, ...alternateServerUrls]) {
+      final normalized = url.trim().replaceFirst(RegExp(r'/$'), '');
+      if (normalized.isNotEmpty && !urls.contains(normalized)) {
+        urls.add(normalized);
+      }
+    }
+    return urls;
+  }
 
   factory _PairingInput.fromPayload(PairingPayload payload) {
     return _PairingInput(
       serverUrl: payload.serverUrl,
       pairingCode: payload.pairingCode,
+      alternateServerUrls: payload.alternateServerUrls,
     );
   }
+}
+
+class _PairingClaimResult {
+  const _PairingClaimResult({
+    required this.serverUrl,
+    required this.claim,
+  });
+
+  final String serverUrl;
+  final ServerPairingClaim claim;
+}
+
+class _PairingConnectionException implements Exception {
+  const _PairingConnectionException(this.failures);
+
+  final List<String> failures;
+
+  @override
+  String toString() {
+    final detail = failures.isEmpty
+        ? 'No server URLs were available.'
+        : failures.join(' | ');
+    return 'Could not reach the AZMusic server. Check that the phone/tablet is on the same Wi-Fi, the server window is still running, and Windows Firewall allows TCP port 8000. Tried: $detail';
+  }
+}
+
+String _pairingFailureSummary(Object error) {
+  if (error is DioException) {
+    final statusCode = error.response?.statusCode;
+    if (statusCode != null) {
+      return 'HTTP $statusCode';
+    }
+    return error.type.name;
+  }
+  return error.toString();
 }
 
 class _ProfileButton extends StatelessWidget {

@@ -8,6 +8,7 @@ class ServerPairingCode {
     required this.qrPngUrl,
     required this.expiresAt,
     required this.purpose,
+    this.alternateServerUrls = const <String>[],
     this.profileId,
     this.profileName,
     this.role,
@@ -21,6 +22,7 @@ class ServerPairingCode {
   final String qrPngUrl;
   final DateTime expiresAt;
   final String purpose;
+  final List<String> alternateServerUrls;
   final String? profileId;
   final String? profileName;
   final String? role;
@@ -35,6 +37,10 @@ class ServerPairingCode {
       qrPngUrl: json['qr_png_url'] as String,
       expiresAt: DateTime.parse(json['expires_at'] as String),
       purpose: json['purpose'] as String? ?? 'student_device',
+      alternateServerUrls:
+          (json['alternate_server_urls'] as List<dynamic>? ?? const [])
+              .map((item) => item.toString())
+              .toList(),
       profileId: json['profile_id'] as String?,
       profileName: json['profile_name'] as String?,
       role: json['role'] as String?,

@@ -8,7 +8,7 @@ from fastapi.responses import HTMLResponse
 
 from server.config import settings
 from server.services.pairing import PairingService
-from server.services.server_urls import reachable_server_url
+from server.services.server_urls import reachable_server_urls
 
 router = APIRouter()
 _pairing_service = PairingService()
@@ -18,10 +18,12 @@ _pairing_service = PairingService()
 async def setup_page(request: Request):
     """Display the server-side QR code that family devices scan to pair."""
     request_url = str(request.base_url).rstrip("/")
-    server_url = reachable_server_url(request)
+    server_urls = reachable_server_urls(request)
+    server_url = server_urls[0]
     qr_url = str(request.url_for("get_pairing_qr_png"))
     pairing_code = _pairing_service.create_code(
         server_url=server_url,
+        alternate_server_urls=server_urls[1:],
         qr_png_url=qr_url,
         purpose="parent_setup",
         profile_id="parent-main",
@@ -33,6 +35,7 @@ async def setup_page(request: Request):
         _setup_html(
             server_name=settings.app_name,
             server_url=server_url,
+            alternate_server_urls=server_urls[1:],
             request_url=request_url,
             pairing_code=pairing_code.pairing_code,
             pairing_uri=pairing_code.pairing_uri,
@@ -46,6 +49,7 @@ def _setup_html(
     *,
     server_name: str,
     server_url: str,
+    alternate_server_urls: list[str],
     request_url: str,
     pairing_code: str,
     pairing_uri: str,
@@ -58,6 +62,16 @@ def _setup_html(
             f"<p><strong>Opened from:</strong> {escape(request_url)}</p>"
             "<p>This QR uses the detected network address so phones and tablets "
             "can reach the server.</p>"
+        )
+
+    alternate_urls_html = ""
+    if alternate_server_urls:
+        alternate_urls_html = (
+            "<div class=\"alternates\"><strong>Alternate URLs if pairing times out:</strong><ul>"
+            + "".join(
+                f"<li><code>{escape(url)}</code></li>" for url in alternate_server_urls
+            )
+            + "</ul></div>"
         )
 
     return f"""<!doctype html>
@@ -124,6 +138,22 @@ def _setup_html(
       font-size: 12px;
       color: #777267;
     }}
+    .alternates {{
+      margin-top: 12px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: #f8f3ea;
+      color: #5d594f;
+    }}
+    .alternates ul {{
+      margin: 8px 0 0;
+      padding-left: 18px;
+    }}
+    .hint {{
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: #eaf6f0;
+    }}
     @media (max-width: 720px) {{
       main {{
         grid-template-columns: 1fr;
@@ -145,6 +175,12 @@ def _setup_html(
       </p>
       <p><strong>Server:</strong> {escape(server_url)}</p>
       {opened_from_note}
+      {alternate_urls_html}
+      <p class="hint">
+        If pairing times out, open the Server URL above in the phone/tablet
+        browser. If it does not load, allow AZMusic/Python through Windows
+        Firewall or make sure both devices are on the same Wi-Fi network.
+      </p>
       <p><strong>Pairing code:</strong> <code>{escape(pairing_code)}</code></p>
       <p><strong>Expires UTC:</strong> {escape(expires_at)}</p>
       <p class="payload">{escape(pairing_uri)}</p>
