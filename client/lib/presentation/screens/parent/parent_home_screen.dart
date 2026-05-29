@@ -72,6 +72,7 @@ class ParentHomeScreen extends ConsumerWidget {
               child: _IntakeAndPushTab(
                 theme: theme,
                 intakeEntries: intakeEntries,
+                syncedPieces: syncedPieces,
                 reviewQueue: reviewQueue,
                 reviewByPieceId: reviewByPieceId,
                 students: students,
@@ -87,6 +88,16 @@ class ParentHomeScreen extends ConsumerWidget {
                         pieceId: entry.piece.id,
                         profileId: profileId,
                       );
+                },
+                onPushRemoteToProfile: (piece, profileId) async {
+                  await ref
+                      .read(serverPieceSyncRepositoryProvider)
+                      .pushPieceToProfiles(piece.id, [profileId]);
+                  ref.invalidate(parentSyncedPiecesProvider);
+                  await ref.read(allPiecesProvider.notifier).loadPieces(
+                        trigger: SyncTrigger.manualRefresh,
+                      );
+                  await ref.read(parentReviewQueueProvider.notifier).refresh();
                 },
               ),
             ),
@@ -217,16 +228,19 @@ class _IntakeAndPushTab extends StatelessWidget {
   const _IntakeAndPushTab({
     required this.theme,
     required this.intakeEntries,
+    required this.syncedPieces,
     required this.reviewQueue,
     required this.reviewByPieceId,
     required this.students,
     required this.onImport,
     required this.onOpenReview,
     required this.onPushToProfile,
+    required this.onPushRemoteToProfile,
   });
 
   final ThemeData theme;
   final List<LibraryEntry> intakeEntries;
+  final AsyncValue<List<RemotePieceSummary>> syncedPieces;
   final AsyncValue<List<ReviewQueueEntry>> reviewQueue;
   final Map<String, ReviewQueueEntry> reviewByPieceId;
   final List<Profile> students;
@@ -234,6 +248,8 @@ class _IntakeAndPushTab extends StatelessWidget {
   final ValueChanged<String> onOpenReview;
   final Future<void> Function(LibraryEntry entry, String profileId)
       onPushToProfile;
+  final Future<void> Function(RemotePieceSummary piece, String profileId)
+      onPushRemoteToProfile;
 
   @override
   Widget build(BuildContext context) {
@@ -241,6 +257,10 @@ class _IntakeAndPushTab extends StatelessWidget {
       for (final entry in intakeEntries)
         if (reviewByPieceId[entry.piece.serverPieceId] != null)
           reviewByPieceId[entry.piece.serverPieceId]!.id,
+    };
+    final localServerPieceIds = {
+      for (final entry in intakeEntries)
+        if (entry.piece.serverPieceId != null) entry.piece.serverPieceId!,
     };
 
     return ListView(
@@ -288,6 +308,61 @@ class _IntakeAndPushTab extends StatelessWidget {
                 )
                 .toList(growable: false),
           ),
+        syncedPieces.when(
+          data: (pieces) {
+            final readyPieces = pieces.where((piece) {
+              if (localServerPieceIds.contains(piece.id)) {
+                return false;
+              }
+              if (piece.libraryStatus != 'ready') {
+                return false;
+              }
+              if (students.isEmpty) {
+                return piece.visibleToProfileIds.isEmpty;
+              }
+              return students.any(
+                (student) => !piece.visibleToProfileIds.contains(student.id),
+              );
+            }).toList(growable: false);
+            if (readyPieces.isEmpty) {
+              return const SizedBox.shrink();
+            }
+            return Column(
+              key: AppKeys.parentServerReadyList,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const SizedBox(height: 8),
+                Text(
+                  'Ready to push from server',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 8),
+                ...readyPieces.map(
+                  (piece) => Padding(
+                    padding: const EdgeInsets.only(bottom: 12),
+                    child: _ServerReadyPushCard(
+                      piece: piece,
+                      students: students,
+                      onPushToProfile: (profileId) {
+                        return onPushRemoteToProfile(piece, profileId);
+                      },
+                    ),
+                  ),
+                ),
+              ],
+            );
+          },
+          error: (error, _) => Padding(
+            padding: const EdgeInsets.only(top: 12),
+            child: _QueueErrorCard(error: error),
+          ),
+          loading: () => const Padding(
+            padding: EdgeInsets.all(24),
+            child: Center(child: CircularProgressIndicator()),
+          ),
+        ),
         reviewQueue.when(
           data: (items) {
             final unmatchedItems = items
@@ -577,6 +652,112 @@ class _IntakeEntryCard extends StatelessWidget {
       LibraryStatus.ready => 'Ready to push.',
       LibraryStatus.archived => 'Rejected or archived after parent review.',
     };
+  }
+}
+
+class _ServerReadyPushCard extends StatelessWidget {
+  const _ServerReadyPushCard({
+    required this.piece,
+    required this.students,
+    required this.onPushToProfile,
+  });
+
+  final RemotePieceSummary piece;
+  final List<Profile> students;
+  final Future<void> Function(String profileId) onPushToProfile;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final assignedNames = students
+        .where((student) => piece.visibleToProfileIds.contains(student.id))
+        .map((student) => student.displayName)
+        .toList(growable: false);
+    final subtitle = <String>[
+      if (piece.composer?.isNotEmpty ?? false) piece.composer!,
+      if (piece.primaryInstrument?.isNotEmpty ?? false)
+        piece.primaryInstrument!,
+      if (piece.bookOrCollection?.isNotEmpty ?? false) piece.bookOrCollection!,
+      if (assignedNames.isEmpty)
+        'Not assigned to a student'
+      else
+        'Assigned to ${assignedNames.join(', ')}',
+    ].join(' - ');
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      piece.title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    if (subtitle.isNotEmpty)
+                      Padding(
+                        padding: const EdgeInsets.only(top: 4),
+                        child: Text(
+                          subtitle,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                      ),
+                  ],
+                ),
+              ),
+              const Chip(label: Text('Ready')),
+            ],
+          ),
+          const SizedBox(height: 12),
+          if (students.isEmpty)
+            Text(
+              'Create a student profile before pushing this approved piece.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: students.map((student) {
+                final alreadyVisible =
+                    piece.visibleToProfileIds.contains(student.id);
+                return FilledButton.tonalIcon(
+                  key: AppKeys.pushToProfileButton(piece.id, student.id),
+                  onPressed:
+                      alreadyVisible ? null : () => onPushToProfile(student.id),
+                  icon: Icon(
+                    alreadyVisible
+                        ? Icons.check_circle_outline
+                        : Icons.send_outlined,
+                  ),
+                  label: Text(
+                    alreadyVisible
+                        ? '${student.displayName} added'
+                        : 'Push to ${student.displayName}',
+                  ),
+                );
+              }).toList(growable: false),
+            ),
+        ],
+      ),
+    );
   }
 }
 

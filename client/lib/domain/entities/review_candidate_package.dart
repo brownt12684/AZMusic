@@ -36,6 +36,41 @@ class ReviewQueueEntry {
   }
 }
 
+class ReviewBulkApprovalResult {
+  const ReviewBulkApprovalResult({
+    required this.sourceBookId,
+    required this.processingStage,
+    required this.approvedCount,
+    required this.skippedCount,
+    required this.failedCount,
+    this.approvedItemIds = const <String>[],
+    this.skippedItemIds = const <String>[],
+    this.failedItems = const <Map<String, dynamic>>[],
+  });
+
+  final String sourceBookId;
+  final String processingStage;
+  final int approvedCount;
+  final int skippedCount;
+  final int failedCount;
+  final List<String> approvedItemIds;
+  final List<String> skippedItemIds;
+  final List<Map<String, dynamic>> failedItems;
+
+  factory ReviewBulkApprovalResult.fromJson(Map<String, dynamic> json) {
+    return ReviewBulkApprovalResult(
+      sourceBookId: json['source_book_id'] as String? ?? '',
+      processingStage: json['processing_stage'] as String? ?? '',
+      approvedCount: json['approved_count'] as int? ?? 0,
+      skippedCount: json['skipped_count'] as int? ?? 0,
+      failedCount: json['failed_count'] as int? ?? 0,
+      approvedItemIds: _stringListFromJson(json['approved_item_ids']),
+      skippedItemIds: _stringListFromJson(json['skipped_item_ids']),
+      failedItems: _metadataListFromJson(json['failed_items']),
+    );
+  }
+}
+
 class RemotePieceSummary {
   const RemotePieceSummary({
     required this.id,

@@ -22,6 +22,8 @@ from server.models.orm import (
 )
 from server.models.schemas import (
     JobResponse,
+    ReviewBulkApprovalRequest,
+    ReviewBulkApprovalResponse,
     ReviewItemCreate,
     ReviewItemRequest,
     ReviewItemResponse,
@@ -40,6 +42,7 @@ from server.services.processing_settings import ProcessingSettingsStore
 router = APIRouter()
 _piece_state_service = PieceStateService()
 _processing_settings_store = ProcessingSettingsStore()
+_BULK_APPROVAL_STAGES = {"split_review_needed", "candidate_review_needed"}
 
 
 def _file_url(request: Request, piece_id: str, score_version_id: str) -> str:
@@ -147,6 +150,93 @@ async def get_review_item(
     return _review_item_to_response(request, item)
 
 
+@router.post("/bulk/approve", response_model=ReviewBulkApprovalResponse)
+async def bulk_approve_reviews(
+    body: ReviewBulkApprovalRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Approve all pending review items from one book at the requested stage."""
+    if body.processing_stage not in _BULK_APPROVAL_STAGES:
+        raise HTTPException(
+            status_code=400,
+            detail="processing_stage must be split_review_needed or candidate_review_needed.",
+        )
+
+    source_book_id = body.source_book_id
+    if not source_book_id and body.source_review_item_id:
+        source_item = await db.get(ReviewItem, body.source_review_item_id)
+        if source_item:
+            source_book_id = await _source_book_id_for_review_item(db, source_item)
+    if not source_book_id:
+        raise HTTPException(
+            status_code=400,
+            detail="source_book_id or a resolvable source_review_item_id is required.",
+        )
+
+    result = await db.execute(select(ReviewItem).order_by(ReviewItem.created_at.asc()))
+    approved_item_ids: list[str] = []
+    skipped_item_ids: list[str] = []
+    failed_items: list[dict] = []
+
+    for item in result.scalars().all():
+        candidate_data = dict(item.candidate_data or {})
+        item_source_book_id = await _source_book_id_for_review_item(db, item)
+        if item_source_book_id != source_book_id:
+            continue
+        if candidate_data.get("processing_stage") != body.processing_stage:
+            continue
+
+        if item.status != "pending":
+            skipped_item_ids.append(item.id)
+            continue
+
+        try:
+            await _apply_review_decision(
+                db,
+                item=item,
+                action=ReviewAction.approve,
+                correction=None,
+            )
+        except HTTPException as exc:
+            failed_items.append({"item_id": item.id, "error": str(exc.detail)})
+        else:
+            approved_item_ids.append(item.id)
+
+    await db.commit()
+    return ReviewBulkApprovalResponse(
+        source_book_id=source_book_id,
+        processing_stage=body.processing_stage,
+        approved_count=len(approved_item_ids),
+        skipped_count=len(skipped_item_ids),
+        failed_count=len(failed_items),
+        approved_item_ids=approved_item_ids,
+        skipped_item_ids=skipped_item_ids,
+        failed_items=failed_items,
+    )
+
+
+async def _source_book_id_for_review_item(
+    db: AsyncSession,
+    item: ReviewItem,
+) -> str | None:
+    candidate_data = dict(item.candidate_data or {})
+    source_book_id = candidate_data.get("source_book_id")
+    if isinstance(source_book_id, str) and source_book_id.strip():
+        return source_book_id.strip()
+
+    source_review_item_id = candidate_data.get("source_review_item_id")
+    if not isinstance(source_review_item_id, str) or not source_review_item_id.strip():
+        return None
+    source_item = await db.get(ReviewItem, source_review_item_id.strip())
+    if not source_item:
+        return None
+    source_candidate_data = dict(source_item.candidate_data or {})
+    source_book_id = source_candidate_data.get("source_book_id")
+    if isinstance(source_book_id, str) and source_book_id.strip():
+        return source_book_id.strip()
+    return None
+
+
 @router.post("/{item_id}")
 async def submit_review(
     item_id: str,
@@ -159,6 +249,25 @@ async def submit_review(
     if not item:
         raise HTTPException(status_code=404, detail="Review item not found")
 
+    await _apply_review_decision(
+        db,
+        item=item,
+        action=body.action,
+        correction=body.correction,
+    )
+    await db.commit()
+    await db.refresh(item)
+    return _review_item_to_response(request, item)
+
+
+async def _apply_review_decision(
+    db: AsyncSession,
+    *,
+    item: ReviewItem,
+    action: object,
+    correction: dict | None,
+) -> None:
+    action_value = getattr(action, "value", action)
     if item.status != "pending":
         raise HTTPException(status_code=409, detail="Review item already resolved")
 
@@ -167,10 +276,10 @@ async def submit_review(
     rendered_score_id = candidate_data.get("score_version_id")
     canonical_score_id = candidate_data.get("canonical_score_version_id")
 
-    if body.action == ReviewAction.approve:
+    if action_value == ReviewAction.approve.value:
         if candidate_data.get("processing_stage") == "split_review_needed":
             item.status = "approved"
-            candidate_data = _apply_review_correction(candidate_data, body.correction)
+            candidate_data = _apply_review_correction(candidate_data, correction)
             item.candidate_data = candidate_data
             piece = await db.get(Piece, item.piece_id)
             if piece:
@@ -203,17 +312,15 @@ async def submit_review(
                     updated_at=datetime.utcnow(),
                 )
             )
-            await db.commit()
-            await db.refresh(item)
-            return _review_item_to_response(request, item)
+            return
 
         item.status = "approved"
-        candidate_data = _apply_review_correction(candidate_data, body.correction)
+        candidate_data = _apply_review_correction(candidate_data, correction)
         item.candidate_data = candidate_data
         piece = await db.get(Piece, item.piece_id)
         if piece:
             _apply_catalog_metadata_to_piece(piece, candidate_data)
-            if item.item_type == ReviewItemType.score_candidate and body.correction:
+            if item.item_type == ReviewItemType.score_candidate and correction:
                 try:
                     candidate_data = await _refresh_candidate_output_for_metadata(
                         db,
@@ -263,7 +370,7 @@ async def submit_review(
             if piece:
                 piece.status = PieceStatus.approved
 
-    elif body.action == ReviewAction.reject:
+    elif action_value == ReviewAction.reject.value:
         item.status = "rejected"
 
         for score_version_id in (rendered_score_id, canonical_score_id):
@@ -287,10 +394,8 @@ async def submit_review(
             piece = await db.get(Piece, item.piece_id)
             if piece:
                 piece.status = PieceStatus.archived
-
-    await db.commit()
-    await db.refresh(item)
-    return _review_item_to_response(request, item)
+    else:
+        raise HTTPException(status_code=400, detail="Unsupported review action.")
 
 
 @router.post("/{item_id}/reprocess", response_model=JobResponse)

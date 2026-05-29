@@ -1146,7 +1146,10 @@ def test_musicxml_generation_uses_title_and_cello_instrument(tmp_path) -> None:
     assert "<work-title>The Troubadour / Hoedown</work-title>" in musicxml
     assert "<movement-title>The Troubadour</movement-title>" in musicxml
     assert "<movement-title>The Troubadour / Hoedown</movement-title>" not in musicxml
-    assert '<words font-weight="bold" font-size="16">Hoedown</words>' in musicxml
+    assert (
+        '<words default-x="500" font-weight="bold" font-size="16" '
+        'halign="center" justify="center">Hoedown</words>'
+    ) in musicxml
     assert '<creator type="composer">Rick Mooney</creator>' in musicxml
     assert "Voice" not in musicxml
     assert 'part-name print-object="no"' in musicxml
@@ -1344,11 +1347,143 @@ def test_async_dispatcher_processes_approved_book_split(api_client) -> None:
     )
     assert candidate_review["candidate_data"]["rendered_file_url"].endswith("/file")
     assert candidate_review["candidate_data"]["canonical_file_url"].endswith("/file")
+    assert candidate_review["candidate_data"]["source_book_id"] == book_id
 
     summary = client.get("/api/v1/jobs/summary").json()
     assert summary["queued_count"] == 0
     assert summary["running_count"] == 0
     assert summary["succeeded_count"] >= 1
+
+
+def test_bulk_approve_book_split_reviews_is_scoped_to_source_book(api_client) -> None:
+    client, _ = api_client
+    book = client.post(
+        "/api/v1/pieces/",
+        json={"title": "Bulk Book", "file_name": "bulk_book.pdf"},
+    ).json()
+    child_one = client.post(
+        "/api/v1/pieces/",
+        json={"title": "Bulk One", "file_name": "bulk_one.pdf"},
+    ).json()
+    child_two = client.post(
+        "/api/v1/pieces/",
+        json={"title": "Bulk Two", "file_name": "bulk_two.pdf"},
+    ).json()
+    unrelated = client.post(
+        "/api/v1/pieces/",
+        json={"title": "Other Book Piece", "file_name": "other.pdf"},
+    ).json()
+
+    def create_split_review(piece_id: str, source_book_id: str, title: str) -> str:
+        response = client.post(
+            "/api/v1/review/",
+            json={
+                "piece_id": piece_id,
+                "item_type": "score_candidate",
+                "title": f"Review book split for {title}",
+                "candidate_data": {
+                    "piece_title": title,
+                    "source_book_id": source_book_id,
+                    "processing_stage": "split_review_needed",
+                    "catalog_metadata": {"title": title},
+                },
+            },
+        )
+        assert response.status_code == 200
+        return response.json()["id"]
+
+    skipped_item_id = create_split_review(child_one["id"], book["id"], "Bulk One")
+    approved_item_id = create_split_review(child_two["id"], book["id"], "Bulk Two")
+    unrelated_item_id = create_split_review(unrelated["id"], "other-book", "Other Book Piece")
+
+    assert (
+        client.post(f"/api/v1/review/{skipped_item_id}", json={"action": "approve"}).status_code
+        == 200
+    )
+
+    bulk_response = client.post(
+        "/api/v1/review/bulk/approve",
+        json={
+            "source_book_id": book["id"],
+            "processing_stage": "split_review_needed",
+        },
+    )
+
+    assert bulk_response.status_code == 200
+    bulk = bulk_response.json()
+    assert bulk["approved_count"] == 1
+    assert bulk["skipped_count"] == 1
+    assert bulk["failed_count"] == 0
+    assert bulk["approved_item_ids"] == [approved_item_id]
+    assert bulk["skipped_item_ids"] == [skipped_item_id]
+
+    review_items = {
+        item["id"]: item for item in client.get("/api/v1/review/?include_resolved=true").json()
+    }
+    assert review_items[approved_item_id]["status"] == "approved"
+    assert review_items[skipped_item_id]["status"] == "approved"
+    assert review_items[unrelated_item_id]["status"] == "pending"
+
+
+def test_bulk_approve_book_candidate_reviews_marks_pieces_ready(api_client) -> None:
+    client, _ = api_client
+    book = client.post(
+        "/api/v1/pieces/",
+        json={"title": "Bulk Candidate Book", "file_name": "bulk_candidate_book.pdf"},
+    ).json()
+    source_review = client.post(
+        "/api/v1/review/",
+        json={
+            "piece_id": book["id"],
+            "item_type": "score_candidate",
+            "title": "Original split review",
+            "candidate_data": {
+                "piece_title": book["title"],
+                "source_book_id": book["id"],
+                "processing_stage": "split_review_needed",
+            },
+        },
+    ).json()
+    children = [
+        client.post(
+            "/api/v1/pieces/",
+            json={"title": title, "file_name": f"{title.lower().replace(' ', '_')}.pdf"},
+        ).json()
+        for title in ("Candidate One", "Candidate Two")
+    ]
+
+    for child in children:
+        response = client.post(
+            "/api/v1/review/",
+            json={
+                "piece_id": child["id"],
+                "item_type": "score_candidate",
+                "title": f"Review reconstructed score for {child['title']}",
+                "candidate_data": {
+                    "piece_title": child["title"],
+                    "source_review_item_id": source_review["id"],
+                    "processing_stage": "candidate_review_needed",
+                    "catalog_metadata": {"title": child["title"]},
+                },
+            },
+        )
+        assert response.status_code == 200
+
+    bulk_response = client.post(
+        "/api/v1/review/bulk/approve",
+        json={
+            "source_review_item_id": source_review["id"],
+            "processing_stage": "candidate_review_needed",
+        },
+    )
+
+    assert bulk_response.status_code == 200
+    assert bulk_response.json()["approved_count"] == 2
+    pieces = {piece["id"]: piece for piece in client.get("/api/v1/pieces/").json()}
+    assert pieces[children[0]["id"]]["status"] == "approved"
+    assert pieces[children[0]["id"]]["library_status"] == "ready"
+    assert pieces[children[1]["id"]]["status"] == "approved"
+    assert pieces[children[1]["id"]]["library_status"] == "ready"
 
 
 def test_async_dispatcher_retries_then_fails_visibly(api_client) -> None:

@@ -3,6 +3,7 @@ import 'dart:io';
 import 'package:azmusic/app/app.dart';
 import 'package:azmusic/app/app_keys.dart';
 import 'package:azmusic/app/launch_options.dart';
+import 'package:azmusic/core/config/app_config.dart';
 import 'package:azmusic/core/network/network_info.dart';
 import 'package:azmusic/data/repositories/server_piece_sync_repository.dart';
 import 'package:azmusic/domain/entities/review_candidate_package.dart';
@@ -12,11 +13,14 @@ import 'package:azmusic/presentation/providers/review_providers.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
   late Directory tempDir;
 
-  setUp(() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues(const <String, Object>{});
+    await AppConfig.initialize();
     tempDir = Directory.systemTemp.createTempSync('azmusic_widget_test_');
   });
 
@@ -33,6 +37,7 @@ void main() {
       resetLibraryOnLaunch: false,
       initialSurface: AppLaunchSurface.login,
     ),
+    _FakeServerPieceSyncRepository? repository,
   }) async {
     await tester.pumpWidget(
       ProviderScope(
@@ -40,7 +45,7 @@ void main() {
           appDirectoryProvider.overrideWith((ref) => tempDir),
           launchOptionsProvider.overrideWith((ref) => launchOptions),
           serverPieceSyncRepositoryProvider.overrideWith(
-            (ref) => _FakeServerPieceSyncRepository(),
+            (ref) => repository ?? _FakeServerPieceSyncRepository(),
           ),
           networkInfoProvider.overrideWith((ref) => _FakeNetworkInfo()),
           serverHealthProvider.overrideWith(
@@ -114,6 +119,44 @@ void main() {
     expect(find.byKey(AppKeys.parentServerStatus), findsOneWidget);
   });
 
+  testWidgets('parent intake shows server-ready pieces from remote sync', (
+    WidgetTester tester,
+  ) async {
+    final repository = _FakeServerPieceSyncRepository(
+      allPieces: const [
+        RemotePieceSummary(
+          id: 'server-ready-piece',
+          title: 'Ready Server Etude',
+          status: 'approved',
+          libraryStatus: 'ready',
+          visibleToProfileIds: [],
+          primaryInstrument: 'Cello',
+        ),
+      ],
+    );
+    await pumpApp(tester, repository: repository);
+    await tester.tap(find.byKey(AppKeys.profileButton('parent-main')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byType(TextField).last, '0000');
+    await tester.tap(find.text('Unlock'));
+    await pumpUntilFound(tester, find.byKey(AppKeys.parentServerReadyList));
+
+    expect(find.text('Ready to push from server'), findsOneWidget);
+    expect(find.text('Ready Server Etude'), findsOneWidget);
+
+    final pushButton = find.byKey(
+      AppKeys.pushToProfileButton('server-ready-piece', 'student-alyse'),
+    );
+    await tester.drag(find.byType(ListView).first, const Offset(0, -320));
+    await tester.pumpAndSettle();
+    await tester.tap(pushButton);
+    await tester.pump();
+
+    expect(repository.pushCalls, hasLength(1));
+    expect(repository.pushCalls.single.pieceId, 'server-ready-piece');
+    expect(repository.pushCalls.single.profileIds, ['student-alyse']);
+  });
+
   testWidgets('shows sandbox launcher actions', (WidgetTester tester) async {
     await pumpApp(
       tester,
@@ -149,6 +192,13 @@ void main() {
 }
 
 class _FakeServerPieceSyncRepository extends ServerPieceSyncRepository {
+  _FakeServerPieceSyncRepository({
+    this.allPieces = const <RemotePieceSummary>[],
+  });
+
+  final List<RemotePieceSummary> allPieces;
+  final List<_PushCall> pushCalls = [];
+
   @override
   Future<List<RemotePieceSummary>> fetchAssignedPieces(String profileId) async {
     return const [];
@@ -156,7 +206,7 @@ class _FakeServerPieceSyncRepository extends ServerPieceSyncRepository {
 
   @override
   Future<List<RemotePieceSummary>> fetchAllPieces() async {
-    return const [];
+    return allPieces;
   }
 
   @override
@@ -176,12 +226,42 @@ class _FakeServerPieceSyncRepository extends ServerPieceSyncRepository {
   Future<void> rejectReviewItem(String itemId) async {}
 
   @override
+  Future<ReviewBulkApprovalResult> approveBookReviewItems({
+    String? sourceBookId,
+    String? sourceReviewItemId,
+    required String processingStage,
+  }) async {
+    return ReviewBulkApprovalResult(
+      sourceBookId: sourceBookId ?? '',
+      processingStage: processingStage,
+      approvedCount: 0,
+      skippedCount: 0,
+      failedCount: 0,
+    );
+  }
+
+  @override
   Future<RemotePieceDetail> pushPieceToProfiles(
     String serverPieceId,
     List<String> profileIds,
   ) async {
-    throw UnimplementedError('Push is not used in widget tests.');
+    pushCalls.add(_PushCall(serverPieceId, profileIds));
+    return RemotePieceDetail(
+      id: serverPieceId,
+      title: 'Ready Server Etude',
+      status: 'approved',
+      libraryStatus: 'ready',
+      visibleToProfileIds: profileIds,
+      scoreVersions: const [],
+    );
   }
+}
+
+class _PushCall {
+  const _PushCall(this.pieceId, this.profileIds);
+
+  final String pieceId;
+  final List<String> profileIds;
 }
 
 class _FakeNetworkInfo implements NetworkInfo {

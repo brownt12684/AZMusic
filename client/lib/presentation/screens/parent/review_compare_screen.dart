@@ -170,6 +170,13 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                                     'Confidence ${(confidence * 100).round()}%')),
                         ],
                       ),
+                      ..._buildScoreReviewActionWidgets(
+                        item: item,
+                        canonicalUrl: canonicalUrl,
+                        canonicalScoreVersionId: canonicalScoreVersionId,
+                        renderedScoreVersionId: renderedScoreVersionId,
+                        pieceTitle: pieceTitle,
+                      ),
                       if (processedMetadata.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         _ExtractedMetadataPanel(
@@ -194,126 +201,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                         const SizedBox(height: 16),
                         _ReviewWarningsPanel(warnings: validationWarnings),
                       ],
-                      const SizedBox(height: 16),
-                      if (canonicalUrl.isNotEmpty)
-                        SelectableText(
-                          'MusicXML candidate\n$canonicalUrl',
-                          style: theme.textTheme.bodySmall,
-                        ),
-                      if (canonicalScoreVersionId.isNotEmpty) ...[
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          key: AppKeys.reviewOpenMuseScoreButton,
-                          onPressed: _submitting
-                              ? null
-                              : () => _openInMuseScore(
-                                    item,
-                                    canonicalScoreVersionId,
-                                    canonicalUrl,
-                                    pieceTitle,
-                                  ),
-                          icon: const Icon(Icons.library_music_outlined),
-                          label: const Text('Edit MusicXML in MuseScore'),
-                        ),
-                        const SizedBox(height: 12),
-                        OutlinedButton.icon(
-                          key: AppKeys.reviewUploadEditedMusicXmlButton,
-                          onPressed:
-                              _submitting || renderedScoreVersionId.isEmpty
-                                  ? null
-                                  : () => _uploadEditedMusicXml(
-                                        item,
-                                        canonicalScoreVersionId,
-                                        renderedScoreVersionId,
-                                      ),
-                          icon: const Icon(Icons.upload_file_outlined),
-                          label: const Text('Upload edited MusicXML'),
-                        ),
-                      ],
-                      const SizedBox(height: 20),
-                      SegmentedButton<_CompareMode>(
-                        segments: const [
-                          ButtonSegment(
-                            value: _CompareMode.original,
-                            icon: Icon(Icons.picture_as_pdf_outlined),
-                            label: Text('Original'),
-                          ),
-                          ButtonSegment(
-                            value: _CompareMode.overlay,
-                            icon: Icon(Icons.layers_outlined),
-                            label: Text('Overlay'),
-                          ),
-                          ButtonSegment(
-                            value: _CompareMode.sideBySide,
-                            icon: Icon(Icons.compare_arrows_outlined),
-                            label: Text('Side by side'),
-                          ),
-                          ButtonSegment(
-                            value: _CompareMode.processed,
-                            icon: Icon(Icons.auto_fix_high_outlined),
-                            label: Text('Processed'),
-                          ),
-                        ],
-                        selected: <_CompareMode>{_compareMode},
-                        onSelectionChanged: (selection) {
-                          setState(() {
-                            _compareMode = selection.first;
-                          });
-                        },
-                      ),
-                      const SizedBox(height: 20),
-                      OutlinedButton.icon(
-                        onPressed:
-                            _submitting ? null : () => _editMetadata(item),
-                        icon: const Icon(Icons.edit_note_outlined),
-                        label: const Text('Edit metadata'),
-                      ),
-                      const SizedBox(height: 12),
-                      FilledButton.icon(
-                        key: AppKeys.reviewOverlayToggle,
-                        onPressed: () {
-                          setState(() {
-                            _compareMode = _compareMode == _CompareMode.overlay
-                                ? _CompareMode.processed
-                                : _CompareMode.overlay;
-                          });
-                        },
-                        icon: const Icon(Icons.layers_outlined),
-                        label: Text(
-                          _compareMode == _CompareMode.overlay
-                              ? 'Hide overlay'
-                              : 'Show overlay',
-                        ),
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed:
-                            _submitting ? null : () => _requestReprocess(item),
-                        icon: const Icon(Icons.manage_search_outlined),
-                        label: const Text('Send back for metadata review'),
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        key: AppKeys.reviewAiScoreReviewButton,
-                        onPressed: _showAiScoreReviewComingSoon,
-                        icon: const Icon(Icons.auto_fix_high_outlined),
-                        label: const Text('Send back for AI score review'),
-                      ),
-                      const SizedBox(height: 12),
-                      OutlinedButton.icon(
-                        onPressed:
-                            _submitting ? null : () => _submitDecision(false),
-                        icon: const Icon(Icons.close_outlined),
-                        label: const Text('Reject candidate'),
-                      ),
-                      const SizedBox(height: 12),
-                      FilledButton.icon(
-                        onPressed:
-                            _submitting ? null : () => _submitDecision(true),
-                        icon: const Icon(Icons.verified_outlined),
-                        label: Text(
-                            _submitting ? 'Saving...' : 'Approve as default'),
-                      ),
                     ],
                   ),
                 ),
@@ -441,6 +328,7 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                       ),
                   ],
                 ),
+                ..._buildMetadataReviewActionWidgets(item),
                 if (processedMetadata.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _ExtractedMetadataPanel(
@@ -465,30 +353,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                   const SizedBox(height: 16),
                   _ReviewWarningsPanel(warnings: validationWarnings),
                 ],
-                const SizedBox(height: 20),
-                OutlinedButton.icon(
-                  onPressed: _submitting ? null : () => _editMetadata(item),
-                  icon: const Icon(Icons.edit_note_outlined),
-                  label: const Text('Edit metadata'),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _submitting ? null : () => _requestReprocess(item),
-                  icon: const Icon(Icons.manage_search_outlined),
-                  label: const Text('Send back for metadata review'),
-                ),
-                const SizedBox(height: 12),
-                OutlinedButton.icon(
-                  onPressed: _submitting ? null : () => _submitDecision(false),
-                  icon: const Icon(Icons.close_outlined),
-                  label: const Text('Reject'),
-                ),
-                const SizedBox(height: 8),
-                FilledButton.icon(
-                  onPressed: _submitting ? null : () => _submitDecision(true),
-                  icon: const Icon(Icons.check_outlined),
-                  label: const Text('Approve metadata'),
-                ),
               ],
             ),
           ),
@@ -519,6 +383,210 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
         ),
       ],
     );
+  }
+
+  List<Widget> _buildScoreReviewActionWidgets({
+    required ReviewQueueEntry item,
+    required String canonicalUrl,
+    required String canonicalScoreVersionId,
+    required String renderedScoreVersionId,
+    required String pieceTitle,
+  }) {
+    final theme = Theme.of(context);
+    final bulkButton = _bookBulkApprovalButton(
+      item,
+      processingStage: 'candidate_review_needed',
+    );
+    final actions = <Widget>[
+      if (bulkButton != null) bulkButton,
+      if (canonicalUrl.isNotEmpty)
+        SelectableText(
+          'MusicXML candidate\n$canonicalUrl',
+          style: theme.textTheme.bodySmall,
+        ),
+      if (canonicalScoreVersionId.isNotEmpty)
+        OutlinedButton.icon(
+          key: AppKeys.reviewOpenMuseScoreButton,
+          onPressed: _submitting
+              ? null
+              : () => _openInMuseScore(
+                    item,
+                    canonicalScoreVersionId,
+                    canonicalUrl,
+                    pieceTitle,
+                  ),
+          icon: const Icon(Icons.library_music_outlined),
+          label: const Text('Edit MusicXML in MuseScore'),
+        ),
+      if (canonicalScoreVersionId.isNotEmpty)
+        OutlinedButton.icon(
+          key: AppKeys.reviewUploadEditedMusicXmlButton,
+          onPressed: _submitting || renderedScoreVersionId.isEmpty
+              ? null
+              : () => _uploadEditedMusicXml(
+                    item,
+                    canonicalScoreVersionId,
+                    renderedScoreVersionId,
+                  ),
+          icon: const Icon(Icons.upload_file_outlined),
+          label: const Text('Upload edited MusicXML'),
+        ),
+      SegmentedButton<_CompareMode>(
+        segments: const [
+          ButtonSegment(
+            value: _CompareMode.original,
+            icon: Icon(Icons.picture_as_pdf_outlined),
+            label: Text('Original'),
+          ),
+          ButtonSegment(
+            value: _CompareMode.overlay,
+            icon: Icon(Icons.layers_outlined),
+            label: Text('Overlay'),
+          ),
+          ButtonSegment(
+            value: _CompareMode.sideBySide,
+            icon: Icon(Icons.compare_arrows_outlined),
+            label: Text('Side by side'),
+          ),
+          ButtonSegment(
+            value: _CompareMode.processed,
+            icon: Icon(Icons.auto_fix_high_outlined),
+            label: Text('Processed'),
+          ),
+        ],
+        selected: <_CompareMode>{_compareMode},
+        onSelectionChanged: (selection) {
+          setState(() {
+            _compareMode = selection.first;
+          });
+        },
+      ),
+      OutlinedButton.icon(
+        onPressed: _submitting ? null : () => _editMetadata(item),
+        icon: const Icon(Icons.edit_note_outlined),
+        label: const Text('Edit metadata'),
+      ),
+      FilledButton.icon(
+        key: AppKeys.reviewOverlayToggle,
+        onPressed: () {
+          setState(() {
+            _compareMode = _compareMode == _CompareMode.overlay
+                ? _CompareMode.processed
+                : _CompareMode.overlay;
+          });
+        },
+        icon: const Icon(Icons.layers_outlined),
+        label: Text(
+          _compareMode == _CompareMode.overlay
+              ? 'Hide overlay'
+              : 'Show overlay',
+        ),
+      ),
+      OutlinedButton.icon(
+        onPressed: _submitting ? null : () => _requestReprocess(item),
+        icon: const Icon(Icons.manage_search_outlined),
+        label: const Text('Send back for metadata review'),
+      ),
+      OutlinedButton.icon(
+        key: AppKeys.reviewAiScoreReviewButton,
+        onPressed: _showAiScoreReviewComingSoon,
+        icon: const Icon(Icons.auto_fix_high_outlined),
+        label: const Text('Send back for AI score review'),
+      ),
+      OutlinedButton.icon(
+        onPressed: _submitting ? null : () => _submitDecision(false),
+        icon: const Icon(Icons.close_outlined),
+        label: const Text('Reject candidate'),
+      ),
+      FilledButton.icon(
+        onPressed: _submitting ? null : () => _submitDecision(true),
+        icon: const Icon(Icons.verified_outlined),
+        label: Text(_submitting ? 'Saving...' : 'Approve as default'),
+      ),
+    ];
+    return _spacedReviewActions(actions);
+  }
+
+  List<Widget> _buildMetadataReviewActionWidgets(ReviewQueueEntry item) {
+    final bulkButton = _bookBulkApprovalButton(
+      item,
+      processingStage: 'split_review_needed',
+    );
+    final actions = <Widget>[
+      if (bulkButton != null) bulkButton,
+      OutlinedButton.icon(
+        onPressed: _submitting ? null : () => _editMetadata(item),
+        icon: const Icon(Icons.edit_note_outlined),
+        label: const Text('Edit metadata'),
+      ),
+      OutlinedButton.icon(
+        onPressed: _submitting ? null : () => _requestReprocess(item),
+        icon: const Icon(Icons.manage_search_outlined),
+        label: const Text('Send back for metadata review'),
+      ),
+      OutlinedButton.icon(
+        onPressed: _submitting ? null : () => _submitDecision(false),
+        icon: const Icon(Icons.close_outlined),
+        label: const Text('Reject'),
+      ),
+      FilledButton.icon(
+        onPressed: _submitting ? null : () => _submitDecision(true),
+        icon: const Icon(Icons.check_outlined),
+        label: const Text('Approve metadata'),
+      ),
+    ];
+    return _spacedReviewActions(actions);
+  }
+
+  Widget? _bookBulkApprovalButton(
+    ReviewQueueEntry item, {
+    required String processingStage,
+  }) {
+    final sourceBookId = _metadataText(item.candidateData['source_book_id']);
+    final sourceReviewItemId =
+        _metadataText(item.candidateData['source_review_item_id']);
+    final itemStage = _metadataText(item.candidateData['processing_stage']);
+    if ((sourceBookId == null && sourceReviewItemId == null) ||
+        itemStage != processingStage) {
+      return null;
+    }
+
+    final isMetadataStage = processingStage == 'split_review_needed';
+    return FilledButton.tonalIcon(
+      key: isMetadataStage
+          ? AppKeys.reviewBulkApproveMetadataButton
+          : AppKeys.reviewBulkApproveMuseScoreButton,
+      onPressed: _submitting
+          ? null
+          : () => _bulkApproveBookStage(
+                item,
+                processingStage: processingStage,
+              ),
+      icon: Icon(
+        isMetadataStage
+            ? Icons.fact_check_outlined
+            : Icons.library_music_outlined,
+      ),
+      label: Text(
+        isMetadataStage
+            ? 'Approve all metadata for this book'
+            : 'Approve all MuseScore for this book',
+      ),
+    );
+  }
+
+  List<Widget> _spacedReviewActions(List<Widget> actions) {
+    if (actions.isEmpty) {
+      return const <Widget>[];
+    }
+    final spaced = <Widget>[const SizedBox(height: 16)];
+    for (var index = 0; index < actions.length; index += 1) {
+      if (index > 0) {
+        spaced.add(const SizedBox(height: 12));
+      }
+      spaced.add(actions[index]);
+    }
+    return spaced;
   }
 
   Widget _buildCompareCanvas({
@@ -811,6 +879,7 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
       }
       await ref.read(parentReviewQueueProvider.notifier).refresh();
       ref.invalidate(reviewItemDetailProvider(widget.itemId!));
+      ref.invalidate(parentSyncedPiecesProvider);
 
       if (!mounted) {
         return;
@@ -845,6 +914,75 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
           _submitting = false;
         });
       }
+    }
+  }
+
+  Future<void> _bulkApproveBookStage(
+    ReviewQueueEntry item, {
+    required String processingStage,
+  }) async {
+    if (_submitting || widget.itemId == null) {
+      return;
+    }
+    final sourceBookId = _metadataText(item.candidateData['source_book_id']);
+    final sourceReviewItemId =
+        _metadataText(item.candidateData['source_review_item_id']);
+    if (sourceBookId == null && sourceReviewItemId == null) {
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+    });
+
+    try {
+      final repository = ref.read(serverPieceSyncRepositoryProvider);
+      final result = await repository.approveBookReviewItems(
+        sourceBookId: sourceBookId,
+        sourceReviewItemId: sourceReviewItemId,
+        processingStage: processingStage,
+      );
+      await ref.read(allPiecesProvider.notifier).loadPieces(
+            trigger: SyncTrigger.reviewApproval,
+          );
+      final nextReviewItems = await repository.fetchReviewQueue();
+      await ref.read(parentReviewQueueProvider.notifier).refresh();
+      ref.invalidate(reviewItemDetailProvider(widget.itemId!));
+      ref.invalidate(parentSyncedPiecesProvider);
+
+      if (!mounted) {
+        return;
+      }
+      final approvedLabel = processingStage == 'split_review_needed'
+          ? 'metadata reviews'
+          : 'MuseScore reviews';
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            'Approved ${result.approvedCount} $approvedLabel for this book. '
+            'Skipped ${result.skippedCount}.',
+          ),
+        ),
+      );
+
+      if (nextReviewItems.isNotEmpty) {
+        Navigator.of(context).pushReplacementNamed(
+          AppRouter.reviewCompare,
+          arguments: nextReviewItems.first.id,
+        );
+      } else {
+        Navigator.of(context).pop();
+      }
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _submitting = false;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to approve book reviews: $error')),
+      );
     }
   }
 

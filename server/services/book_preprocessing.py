@@ -334,7 +334,8 @@ def _propose_splits(
                         book_metadata,
                         list(fact.warnings)
                         + [
-                            "Multiple short pieces detected on one page; kept together as one shared page item."
+                            "Multiple short pieces detected on one page; kept together "
+                            "as one shared page item."
                         ],
                         contained_piece_titles=[
                             _trim_title_punctuation(title) for title in titles

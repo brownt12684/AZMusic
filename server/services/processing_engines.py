@@ -568,7 +568,13 @@ def _piece_title_direction(title: str) -> ElementTree.Element:
     words = ElementTree.SubElement(
         direction_type,
         "words",
-        {"font-weight": "bold", "font-size": "16"},
+        {
+            "default-x": "500",
+            "font-weight": "bold",
+            "font-size": "16",
+            "halign": "center",
+            "justify": "center",
+        },
     )
     words.text = title
     return direction

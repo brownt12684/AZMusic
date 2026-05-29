@@ -129,6 +129,25 @@ class ReviewItemRequest(BaseModel):
     correction: Optional[dict] = None
 
 
+class ReviewBulkApprovalRequest(BaseModel):
+    """Request to approve all matching review items for a source book."""
+
+    source_book_id: Optional[str] = Field(default=None, min_length=1)
+    source_review_item_id: Optional[str] = Field(default=None, min_length=1)
+    processing_stage: str = Field(..., min_length=1, max_length=100)
+
+
+class ReviewBulkApprovalResponse(BaseModel):
+    source_book_id: str
+    processing_stage: str
+    approved_count: int = 0
+    skipped_count: int = 0
+    failed_count: int = 0
+    approved_item_ids: list[str] = Field(default_factory=list)
+    skipped_item_ids: list[str] = Field(default_factory=list)
+    failed_items: list[dict] = Field(default_factory=list)
+
+
 class ReviewReprocessRequest(BaseModel):
     """Request follow-up processing for a review item without approving it."""
 

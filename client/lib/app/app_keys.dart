@@ -22,6 +22,8 @@ class AppKeys {
   static const librarySearchField = ValueKey<String>('library.search');
   static const parentImportButton = ValueKey<String>('parent.importScore');
   static const parentIntakeList = ValueKey<String>('parent.intakeList');
+  static const parentServerReadyList =
+      ValueKey<String>('parent.serverReadyList');
   static const logoutButton = ValueKey<String>('app.logout');
   static const reviewQueueButton = ValueKey<String>('library.reviewQueue');
   static const pieceDetailScreen = ValueKey<String>('pieceDetail.screen');
@@ -61,6 +63,10 @@ class AppKeys {
       ValueKey<String>('reviewCompare.uploadEditedMusicXml');
   static const reviewAiScoreReviewButton =
       ValueKey<String>('reviewCompare.aiScoreReview');
+  static const reviewBulkApproveMetadataButton =
+      ValueKey<String>('reviewCompare.bulkApproveMetadata');
+  static const reviewBulkApproveMuseScoreButton =
+      ValueKey<String>('reviewCompare.bulkApproveMuseScore');
   static const parentReviewCard = ValueKey<String>('parent.reviewCard');
 
   static ValueKey<String> pieceCard(String pieceId) {

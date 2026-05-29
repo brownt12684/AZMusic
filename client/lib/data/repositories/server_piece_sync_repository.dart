@@ -154,6 +154,26 @@ class ServerPieceSyncRepository {
     await _apiClient.post('/api/v1/review/$itemId', data: {'action': 'reject'});
   }
 
+  Future<ReviewBulkApprovalResult> approveBookReviewItems({
+    String? sourceBookId,
+    String? sourceReviewItemId,
+    required String processingStage,
+  }) async {
+    final response = await _apiClient.post(
+      '/api/v1/review/bulk/approve',
+      data: {
+        if (sourceBookId != null && sourceBookId.trim().isNotEmpty)
+          'source_book_id': sourceBookId.trim(),
+        if (sourceReviewItemId != null && sourceReviewItemId.trim().isNotEmpty)
+          'source_review_item_id': sourceReviewItemId.trim(),
+        'processing_stage': processingStage,
+      },
+    );
+    return ReviewBulkApprovalResult.fromJson(
+      response.data as Map<String, dynamic>,
+    );
+  }
+
   Future<Map<String, dynamic>> requestReviewReprocess(
     String itemId, {
     String reprocessType = 'metadata',

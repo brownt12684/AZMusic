@@ -904,6 +904,8 @@ class ScoreProcessingService:
                 "score_version_id": rendered_score_version.id,
                 "canonical_score_version_id": canonical_score_version.id,
                 "source_review_item_id": result_data.get("source_review_item_id"),
+                "source_book_id": result_data.get("source_book_id")
+                or catalog_metadata.get("source_book_id"),
                 "contained_piece_titles": result_data.get("contained_piece_titles")
                 or catalog_metadata.get("contained_piece_titles"),
                 "multi_piece_page": result_data.get("multi_piece_page")
