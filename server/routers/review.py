@@ -30,6 +30,10 @@ from server.models.schemas import (
     ReviewReprocessRequest,
 )
 from server.services.local_llm import LocalLlmProvider, LocalLlmUnavailableError
+from server.services.piece_identity import (
+    is_duplicate_metadata,
+    supersede_duplicate_pending_reviews,
+)
 from server.services.piece_state import PieceStateService
 from server.services.processing_engines import (
     MuseScoreRenderEngine,
@@ -66,7 +70,7 @@ def _review_item_to_response(request: Request, item: ReviewItem) -> ReviewItemRe
             "raw_file_url",
             _file_url(request, item.piece_id, raw_id),
         )
-    if rendered_id:
+    if rendered_id and _candidate_render_is_valid(candidate_data):
         candidate_data.setdefault(
             "rendered_file_url",
             _file_url(request, item.piece_id, rendered_id),
@@ -76,6 +80,7 @@ def _review_item_to_response(request: Request, item: ReviewItem) -> ReviewItemRe
             "canonical_file_url",
             _file_url(request, item.piece_id, canonical_id),
         )
+    candidate_data = _with_omr_candidate_urls(request, item.piece_id, candidate_data)
 
     return ReviewItemResponse(
         id=item.id,
@@ -103,7 +108,14 @@ async def list_review_items(
     if not include_resolved:
         query = query.where(ReviewItem.status == "pending")
     result = await db.execute(query)
-    return [_review_item_to_response(request, item) for item in result.scalars().all()]
+    responses = []
+    for item in result.scalars().all():
+        if not include_resolved:
+            piece = await db.get(Piece, item.piece_id)
+            if piece and is_duplicate_metadata(_piece_state_service.metadata_for_piece(piece)):
+                continue
+        responses.append(_review_item_to_response(request, item))
+    return responses
 
 
 @router.post("/")
@@ -196,6 +208,7 @@ async def bulk_approve_reviews(
                 item=item,
                 action=ReviewAction.approve,
                 correction=None,
+                selected_candidate_id=None,
             )
         except HTTPException as exc:
             failed_items.append({"item_id": item.id, "error": str(exc.detail)})
@@ -254,6 +267,7 @@ async def submit_review(
         item=item,
         action=body.action,
         correction=body.correction,
+        selected_candidate_id=body.selected_candidate_id,
     )
     await db.commit()
     await db.refresh(item)
@@ -266,6 +280,7 @@ async def _apply_review_decision(
     item: ReviewItem,
     action: object,
     correction: dict | None,
+    selected_candidate_id: str | None,
 ) -> None:
     action_value = getattr(action, "value", action)
     if item.status != "pending":
@@ -314,12 +329,25 @@ async def _apply_review_decision(
             )
             return
 
-        item.status = "approved"
-        candidate_data = _apply_review_correction(candidate_data, correction)
-        item.candidate_data = candidate_data
         piece = await db.get(Piece, item.piece_id)
+        if item.item_type == ReviewItemType.score_candidate:
+            candidate_data = _select_omr_candidate(
+                candidate_data,
+                selected_candidate_id=selected_candidate_id,
+            )
+            raw_score_id = candidate_data.get("raw_score_version_id")
+            rendered_score_id = candidate_data.get("score_version_id")
+            canonical_score_id = candidate_data.get("canonical_score_version_id")
+        authoritative_metadata = (
+            _authoritative_catalog_metadata(piece, candidate_data) if piece else {}
+        )
+        candidate_data = _apply_review_correction(
+            candidate_data,
+            correction,
+            fallback_metadata=authoritative_metadata,
+        )
+        item.candidate_data = candidate_data
         if piece:
-            _apply_catalog_metadata_to_piece(piece, candidate_data)
             if item.item_type == ReviewItemType.score_candidate and correction:
                 try:
                     candidate_data = await _refresh_candidate_output_for_metadata(
@@ -330,6 +358,24 @@ async def _apply_review_decision(
                     item.candidate_data = candidate_data
                 except ProcessingEngineError as exc:
                     raise HTTPException(status_code=409, detail=str(exc)) from exc
+        if (
+            item.item_type == ReviewItemType.score_candidate
+            and rendered_score_id
+            and not _candidate_render_is_valid(candidate_data)
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    _candidate_render_validation_error(candidate_data)
+                    or "Rendered review PDF is not valid yet. Rerender the MusicXML "
+                    "candidate before approval."
+                ),
+            )
+
+        item.status = "approved"
+        item.candidate_data = candidate_data
+        if piece:
+            _apply_catalog_metadata_to_piece(piece, candidate_data)
 
         if item.item_type == ReviewItemType.score_candidate and rendered_score_id:
             result = await db.execute(
@@ -369,11 +415,20 @@ async def _apply_review_decision(
         if pending_result.scalar_one_or_none() is None:
             if piece:
                 piece.status = PieceStatus.approved
+                await supersede_duplicate_pending_reviews(
+                    db,
+                    canonical_piece_id=piece.id,
+                    resolved_review_item_id=item.id,
+                )
 
     elif action_value == ReviewAction.reject.value:
         item.status = "rejected"
+        candidate_data["rejected_at"] = datetime.utcnow().isoformat()
+        candidate_data["needs_edits"] = True
+        candidate_data["future_llm_fix_available"] = False
+        item.candidate_data = candidate_data
 
-        for score_version_id in (rendered_score_id, canonical_score_id):
+        for score_version_id in _candidate_score_version_ids(candidate_data):
             if not score_version_id:
                 continue
             result = await db.execute(
@@ -393,7 +448,8 @@ async def _apply_review_decision(
         if pending_result.scalar_one_or_none() is None:
             piece = await db.get(Piece, item.piece_id)
             if piece:
-                piece.status = PieceStatus.archived
+                piece.status = PieceStatus.needs_edits
+                piece.updated_at = datetime.utcnow()
     else:
         raise HTTPException(status_code=400, detail="Unsupported review action.")
 
@@ -523,14 +579,29 @@ async def request_review_reprocess(
     )
 
 
-def _apply_review_correction(candidate_data: dict, correction: dict | None) -> dict:
+def _apply_review_correction(
+    candidate_data: dict,
+    correction: dict | None,
+    *,
+    fallback_metadata: dict | None = None,
+) -> dict:
+    fallback_metadata = {
+        key: value
+        for key, value in dict(fallback_metadata or {}).items()
+        if value not in (None, "", [])
+    }
     if not correction:
-        candidate_data.setdefault(
-            "catalog_metadata",
-            _first_catalog_suggestion_fields(candidate_data),
-        )
+        existing = candidate_data.get("catalog_metadata")
+        if isinstance(existing, dict) and existing:
+            candidate_data["catalog_metadata"] = existing
+        elif fallback_metadata:
+            candidate_data["catalog_metadata"] = fallback_metadata
+        else:
+            candidate_data["catalog_metadata"] = _first_catalog_suggestion_fields(
+                candidate_data
+            )
         return candidate_data
-    catalog_metadata = dict(candidate_data.get("catalog_metadata") or {})
+    catalog_metadata = dict(candidate_data.get("catalog_metadata") or fallback_metadata)
     catalog_metadata.update(
         {
             key: value
@@ -559,6 +630,27 @@ def _apply_review_correction(candidate_data: dict, correction: dict | None) -> d
     )
     candidate_data["catalog_metadata"] = catalog_metadata
     return candidate_data
+
+
+def _authoritative_catalog_metadata(piece: Piece, candidate_data: dict) -> dict:
+    """Return parent/book-approved metadata that should outrank OCR suggestions."""
+
+    current = _piece_state_service.metadata_for_piece(piece)
+    metadata = dict(current.get("catalog_metadata") or {})
+    for key, value in {
+        "title": piece.title,
+        "composer": piece.composer,
+        "primary_instrument": current.get("primary_instrument"),
+        "book_or_collection": current.get("book_or_collection"),
+        "key_signature": piece.key_signature,
+        "tempo": piece.tempo,
+        "source_page_start": current.get("source_page_start")
+        or candidate_data.get("source_page_start"),
+        "source_page_end": current.get("source_page_end") or candidate_data.get("source_page_end"),
+    }.items():
+        if value not in (None, "", []):
+            metadata[key] = value
+    return {key: value for key, value in metadata.items() if value not in (None, "", [])}
 
 
 def _apply_catalog_metadata_to_piece(piece: Piece, candidate_data: dict) -> None:
@@ -595,6 +687,124 @@ def _apply_catalog_metadata_to_piece(piece: Piece, candidate_data: dict) -> None
         split_confidence=current["split_confidence"],
         notes=catalog_metadata.get("notes") or current["notes"],
     )
+
+
+def _with_omr_candidate_urls(
+    request: Request,
+    piece_id: str,
+    candidate_data: dict,
+) -> dict:
+    candidates = candidate_data.get("omr_candidates")
+    if not isinstance(candidates, list):
+        return candidate_data
+
+    enriched_candidates = []
+    for candidate in candidates:
+        if not isinstance(candidate, dict):
+            continue
+        enriched = dict(candidate)
+        raw_id = enriched.get("raw_score_version_id") or candidate_data.get(
+            "raw_score_version_id"
+        )
+        rendered_id = enriched.get("score_version_id")
+        canonical_id = enriched.get("canonical_score_version_id")
+        if raw_id:
+            enriched.setdefault("raw_file_url", _file_url(request, piece_id, raw_id))
+        if rendered_id and _candidate_render_is_valid(enriched):
+            enriched.setdefault(
+                "rendered_file_url",
+                _file_url(request, piece_id, rendered_id),
+            )
+        if canonical_id:
+            enriched.setdefault(
+                "canonical_file_url",
+                _file_url(request, piece_id, canonical_id),
+            )
+        enriched_candidates.append(enriched)
+    candidate_data["omr_candidates"] = enriched_candidates
+    return candidate_data
+
+
+def _select_omr_candidate(
+    candidate_data: dict,
+    *,
+    selected_candidate_id: str | None,
+) -> dict:
+    candidates = [
+        dict(candidate)
+        for candidate in candidate_data.get("omr_candidates") or []
+        if isinstance(candidate, dict)
+    ]
+    if not candidates:
+        return candidate_data
+
+    selected_id = (selected_candidate_id or candidate_data.get("selected_omr_candidate_id") or "")
+    selected_id = str(selected_id).strip() or str(candidates[0].get("candidate_id") or "")
+    selected_candidate = next(
+        (
+            candidate
+            for candidate in candidates
+            if str(candidate.get("candidate_id") or "") == selected_id
+        ),
+        None,
+    )
+    if selected_candidate is None:
+        raise HTTPException(status_code=400, detail="Selected OMR candidate was not found.")
+
+    selected_id = str(selected_candidate.get("candidate_id") or selected_id)
+    for key in (
+        "engine_name",
+        "engine_version",
+        "provenance",
+        "confidence",
+        "processed_metadata",
+        "renderer_name",
+        "renderer_version",
+        "renderer_provenance",
+        "render_validation_status",
+        "render_validation_error",
+        "rendered_file_size_bytes",
+        "rendered_page_count",
+        "render_diagnostics",
+        "raw_score_version_id",
+        "score_version_id",
+        "canonical_score_version_id",
+    ):
+        if key in selected_candidate:
+            candidate_data[key] = selected_candidate[key]
+    candidate_data["selected_omr_candidate_id"] = selected_id
+    candidate_data["selected_omr_candidate_label"] = selected_candidate.get("label")
+    if selected_candidate.get("warnings"):
+        candidate_data["warnings"] = sorted(
+            set(
+                list(candidate_data.get("warnings") or [])
+                + list(selected_candidate.get("warnings") or [])
+            )
+        )
+    candidate_data["omr_candidates"] = [
+        {**candidate, "selected": str(candidate.get("candidate_id") or "") == selected_id}
+        for candidate in candidates
+    ]
+    return candidate_data
+
+
+def _candidate_score_version_ids(candidate_data: dict) -> set[str]:
+    score_version_ids = {
+        value
+        for value in (
+            candidate_data.get("score_version_id"),
+            candidate_data.get("canonical_score_version_id"),
+        )
+        if isinstance(value, str) and value.strip()
+    }
+    for candidate in candidate_data.get("omr_candidates") or []:
+        if not isinstance(candidate, dict):
+            continue
+        for key in ("score_version_id", "canonical_score_version_id"):
+            value = candidate.get(key)
+            if isinstance(value, str) and value.strip():
+                score_version_ids.add(value.strip())
+    return score_version_ids
 
 
 async def _refresh_candidate_output_for_metadata(
@@ -664,12 +874,31 @@ async def _refresh_candidate_output_for_metadata(
     candidate_data["renderer_name"] = render_result.renderer_name
     candidate_data["renderer_version"] = render_result.renderer_version
     candidate_data["renderer_provenance"] = render_result.provenance
+    candidate_data["render_validation_status"] = render_result.validation_status
+    candidate_data["render_validation_error"] = render_result.validation_error
+    candidate_data["rendered_file_size_bytes"] = render_result.file_size_bytes
+    candidate_data["rendered_page_count"] = render_result.page_count
+    candidate_data["render_diagnostics"] = render_result.diagnostics
     candidate_data["metadata_rerendered_at"] = datetime.utcnow().isoformat()
     if render_result.warnings:
         candidate_data["warnings"] = sorted(
             set(list(candidate_data.get("warnings") or []) + render_result.warnings)
         )
     return candidate_data
+
+
+def _candidate_render_is_valid(candidate_data: dict) -> bool:
+    status = candidate_data.get("render_validation_status")
+    if status in (None, "", "valid"):
+        return True
+    return False
+
+
+def _candidate_render_validation_error(candidate_data: dict) -> str | None:
+    error = candidate_data.get("render_validation_error")
+    if isinstance(error, str) and error.strip():
+        return error.strip()
+    return None
 
 
 def _first_catalog_suggestion_fields(candidate_data: dict) -> dict:

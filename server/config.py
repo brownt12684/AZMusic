@@ -1,11 +1,25 @@
-"""Server configuration loaded from environment with stable repo-relative defaults."""
+"""Server configuration loaded from environment with stable runtime defaults."""
 
+import os
+import sys
 from pathlib import Path
 
 from pydantic import Field, model_validator
 from pydantic_settings import BaseSettings, SettingsConfigDict
 
-SERVER_DIR = Path(__file__).resolve().parent
+
+def _default_server_dir() -> Path:
+    configured = os.environ.get("AZMUSIC_SERVER_DIR")
+    if configured:
+        return Path(configured).expanduser().resolve()
+
+    if getattr(sys, "frozen", False):
+        return (Path(sys.executable).resolve().parent / "server").resolve()
+
+    return Path(__file__).resolve().parent
+
+
+SERVER_DIR = _default_server_dir()
 DEFAULT_DATABASE_PATH = (SERVER_DIR / "azmusic_server.db").resolve()
 DEFAULT_STORAGE_PATH = (SERVER_DIR / "storage").resolve()
 SQLITE_URL_PREFIXES = ("sqlite+aiosqlite:///", "sqlite:///")
@@ -47,7 +61,7 @@ class Settings(BaseSettings):
 
     app_name: str = "AZMusic"
     host: str = "0.0.0.0"
-    port: int = 8000
+    port: int = 8795
     debug: bool = False
     production_mode: bool = False
 
@@ -66,6 +80,7 @@ class Settings(BaseSettings):
     ai_enabled: bool = True
     max_concurrent_jobs: int = 2
     audiveris_cli_path: str | None = None
+    homr_cli_path: str | None = None
     musescore_cli_path: str | None = None
     ocr_cli_path: str | None = None
     ocr_language: str = "eng"

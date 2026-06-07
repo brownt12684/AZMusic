@@ -114,11 +114,9 @@ def _select_reachable_ipv4_candidates(candidates: list[str]) -> list[ipaddress.I
     if not usable_addresses:
         return []
 
-    # The UDP-route address is collected first and usually represents the active
-    # Wi-Fi/LAN route. Keep it first, then offer fallbacks for virtual/VPN cases.
-    primary = usable_addresses[0]
-    rest = sorted(usable_addresses[1:], key=_address_priority)
-    return [primary, *rest]
+    # Prefer common home/LAN ranges over 172.16/12, which is frequently a
+    # virtualized adapter address during Windows Sandbox smoke tests.
+    return sorted(usable_addresses, key=_address_priority)
 
 
 def _address_priority(address: ipaddress.IPv4Address) -> tuple[int, int]:
@@ -127,10 +125,12 @@ def _address_priority(address: ipaddress.IPv4Address) -> tuple[int, int]:
         private_priority = 0
     elif text.startswith("10."):
         private_priority = 1
-    elif address.is_private:
+    elif address.is_private and text.startswith("172."):
         private_priority = 2
-    else:
+    elif address.is_private:
         private_priority = 3
+    else:
+        private_priority = 4
     return (private_priority, int(address))
 
 

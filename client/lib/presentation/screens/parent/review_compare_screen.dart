@@ -10,17 +10,23 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 
 import '../../../app/app_keys.dart';
 import '../../../app/routes/app_router.dart';
+import '../../../core/config/app_config.dart';
 import '../../../domain/entities/review_candidate_package.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/parent_workflow_refresh.dart';
 import '../../providers/piece_providers.dart';
 import '../../providers/processing_settings_providers.dart';
 import '../../providers/review_providers.dart';
+
+@visibleForTesting
+bool debugUseReviewPdfPlaceholder = false;
 
 enum _CompareMode {
   original,
   overlay,
   sideBySide,
   processed,
+  omrCompare,
 }
 
 class ReviewCompareScreen extends ConsumerStatefulWidget {
@@ -39,17 +45,22 @@ class ReviewCompareScreen extends ConsumerStatefulWidget {
 class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
   final PdfViewerController _rawController = PdfViewerController();
   final PdfViewerController _candidateController = PdfViewerController();
+  final PdfViewerController _omrCompareLeftController = PdfViewerController();
+  final PdfViewerController _omrCompareRightController = PdfViewerController();
 
-  _CompareMode _compareMode = _CompareMode.overlay;
+  _CompareMode _compareMode = _CompareMode.sideBySide;
   int _currentPage = 1;
   int _pageCount = 1;
   int _renderRefreshToken = 0;
+  String? _selectedCandidateId;
   bool _submitting = false;
 
   @override
   void dispose() {
     _rawController.dispose();
     _candidateController.dispose();
+    _omrCompareLeftController.dispose();
+    _omrCompareRightController.dispose();
     super.dispose();
   }
 
@@ -81,7 +92,16 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
 
   Widget _buildLoadedState(BuildContext context, ReviewQueueEntry item) {
     final theme = Theme.of(context);
-    final candidateData = item.candidateData;
+    final baseCandidateData = item.candidateData;
+    final candidateOptions = _omrCandidateOptionsFrom(baseCandidateData);
+    final selectedCandidate = _selectedOmrCandidateOption(
+      baseCandidateData,
+      candidateOptions,
+      _selectedCandidateId,
+    );
+    final candidateData =
+        _activeCandidateData(baseCandidateData, selectedCandidate);
+    final selectedCandidateId = selectedCandidate?.id;
     final rawUrl = candidateData['raw_file_url'] as String? ?? '';
     final rawContentType = candidateData['raw_content_type'] as String? ?? '';
     final renderedUrl = candidateData['rendered_file_url'] as String? ?? '';
@@ -90,6 +110,13 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
         candidateData['score_version_id'] as String? ?? '';
     final canonicalScoreVersionId =
         candidateData['canonical_score_version_id'] as String? ?? '';
+    final renderValidationStatus =
+        _metadataText(candidateData['render_validation_status']);
+    final renderValidationError =
+        _metadataText(candidateData['render_validation_error']);
+    final isRenderBlocked = renderedScoreVersionId.isNotEmpty &&
+        renderValidationStatus != null &&
+        renderValidationStatus != 'valid';
     final displayedRenderedUrl =
         _cacheBustedUrl(renderedUrl, _renderRefreshToken);
     final summary = candidateData['summary'] as String? ?? item.description;
@@ -100,8 +127,13 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
     final processedMetadata =
         _metadataMapFrom(candidateData['processed_metadata']);
     final catalogMetadata = _metadataMapFrom(candidateData['catalog_metadata']);
-    final catalogSuggestionFields = _firstSuggestionFields(
-      _metadataListFrom(candidateData['catalog_suggestions']),
+    final catalogSuggestions =
+        _metadataListFrom(candidateData['catalog_suggestions']);
+    final catalogSuggestionFields = _firstSuggestionFields(catalogSuggestions);
+    final metadataConflicts = _metadataConflicts(
+      currentMetadata:
+          catalogMetadata.isNotEmpty ? catalogMetadata : processedMetadata,
+      suggestions: catalogSuggestions,
     );
     final validationWarnings = {
       ..._stringListFrom(candidateData['warnings']),
@@ -128,7 +160,15 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
         processedMetadata: processedMetadata,
         catalogMetadata: catalogMetadata,
         catalogSuggestionFields: catalogSuggestionFields,
+        metadataConflicts: metadataConflicts,
         validationWarnings: validationWarnings,
+        canonicalUrl: canonicalUrl,
+        canonicalScoreVersionId: canonicalScoreVersionId,
+        renderedScoreVersionId: renderedScoreVersionId,
+        isRenderBlocked: isRenderBlocked,
+        renderValidationError: renderValidationError,
+        candidateOptions: candidateOptions,
+        selectedCandidateId: selectedCandidateId,
       );
     }
 
@@ -176,6 +216,10 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                         canonicalScoreVersionId: canonicalScoreVersionId,
                         renderedScoreVersionId: renderedScoreVersionId,
                         pieceTitle: pieceTitle,
+                        isRenderBlocked: isRenderBlocked,
+                        renderValidationError: renderValidationError,
+                        candidateOptions: candidateOptions,
+                        selectedCandidateId: selectedCandidateId,
                       ),
                       if (processedMetadata.isNotEmpty) ...[
                         const SizedBox(height: 16),
@@ -187,15 +231,20 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                       if (catalogMetadata.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         _ExtractedMetadataPanel(
-                          title: 'Catalog metadata',
+                          title: 'Current catalog metadata',
                           metadata: catalogMetadata,
                         ),
-                      ] else if (catalogSuggestionFields.isNotEmpty) ...[
+                      ],
+                      if (catalogSuggestionFields.isNotEmpty) ...[
                         const SizedBox(height: 16),
                         _ExtractedMetadataPanel(
-                          title: 'Suggested catalog metadata',
+                          title: 'Unapproved metadata suggestions',
                           metadata: catalogSuggestionFields,
                         ),
+                      ],
+                      if (metadataConflicts.isNotEmpty) ...[
+                        const SizedBox(height: 16),
+                        _MetadataConflictsPanel(conflicts: metadataConflicts),
                       ],
                       if (validationWarnings.isNotEmpty) ...[
                         const SizedBox(height: 16),
@@ -214,19 +263,27 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                         padding: const EdgeInsets.fromLTRB(16, 12, 16, 8),
                         child: Row(
                           children: [
-                            Text(
-                              switch (_compareMode) {
-                                _CompareMode.original => 'Original source PDF',
-                                _CompareMode.overlay => 'Overlay compare',
-                                _CompareMode.sideBySide =>
-                                  'Side-by-side compare',
-                                _CompareMode.processed => 'Processed candidate',
-                              },
-                              style: theme.textTheme.titleMedium?.copyWith(
-                                fontWeight: FontWeight.w600,
+                            Expanded(
+                              child: Text(
+                                switch (_compareMode) {
+                                  _CompareMode.original =>
+                                    'Original source PDF',
+                                  _CompareMode.overlay => 'Overlay compare',
+                                  _CompareMode.sideBySide =>
+                                    'Side-by-side compare',
+                                  _CompareMode.processed =>
+                                    'Processed candidate',
+                                  _CompareMode.omrCompare =>
+                                    'OMR candidate compare',
+                                },
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: theme.textTheme.titleMedium?.copyWith(
+                                  fontWeight: FontWeight.w600,
+                                ),
                               ),
                             ),
-                            const Spacer(),
+                            const SizedBox(width: 8),
                             IconButton(
                               tooltip: 'Previous page',
                               onPressed: _currentPage > 1
@@ -261,6 +318,7 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                               child: _buildCompareCanvas(
                                 rawUrl: rawUrl,
                                 renderedUrl: displayedRenderedUrl,
+                                candidateOptions: candidateOptions,
                               ),
                             ),
                           ),
@@ -289,7 +347,15 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
     required Map<String, dynamic> processedMetadata,
     required Map<String, dynamic> catalogMetadata,
     required Map<String, dynamic> catalogSuggestionFields,
+    required List<_MetadataConflictData> metadataConflicts,
     required List<String> validationWarnings,
+    required String canonicalUrl,
+    required String canonicalScoreVersionId,
+    required String renderedScoreVersionId,
+    required bool isRenderBlocked,
+    required String? renderValidationError,
+    required List<_OmrCandidateOption> candidateOptions,
+    required String? selectedCandidateId,
   }) {
     final theme = Theme.of(context);
     return Row(
@@ -328,7 +394,23 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                       ),
                   ],
                 ),
-                ..._buildMetadataReviewActionWidgets(item),
+                if (isRenderBlocked) ...[
+                  const SizedBox(height: 16),
+                  _RenderBlockedPanel(message: renderValidationError),
+                  ..._buildScoreReviewActionWidgets(
+                    item: item,
+                    canonicalUrl: canonicalUrl,
+                    canonicalScoreVersionId: canonicalScoreVersionId,
+                    renderedScoreVersionId: renderedScoreVersionId,
+                    pieceTitle: pieceTitle,
+                    isRenderBlocked: true,
+                    renderValidationError: renderValidationError,
+                    showCompareControls: false,
+                    candidateOptions: candidateOptions,
+                    selectedCandidateId: selectedCandidateId,
+                  ),
+                ] else
+                  ..._buildMetadataReviewActionWidgets(item),
                 if (processedMetadata.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _ExtractedMetadataPanel(
@@ -339,15 +421,20 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                 if (catalogMetadata.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _ExtractedMetadataPanel(
-                    title: 'Catalog metadata',
+                    title: 'Current catalog metadata',
                     metadata: catalogMetadata,
                   ),
-                ] else if (catalogSuggestionFields.isNotEmpty) ...[
+                ],
+                if (catalogSuggestionFields.isNotEmpty) ...[
                   const SizedBox(height: 16),
                   _ExtractedMetadataPanel(
-                    title: 'Suggested catalog metadata',
+                    title: 'Unapproved metadata suggestions',
                     metadata: catalogSuggestionFields,
                   ),
+                ],
+                if (metadataConflicts.isNotEmpty) ...[
+                  const SizedBox(height: 16),
+                  _MetadataConflictsPanel(conflicts: metadataConflicts),
                 ],
                 if (validationWarnings.isNotEmpty) ...[
                   const SizedBox(height: 16),
@@ -372,6 +459,7 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                     )
                   : Image.network(
                       rawUrl,
+                      headers: _serverRequestHeaders(),
                       fit: BoxFit.contain,
                       errorBuilder: (context, _, __) => SelectableText(
                         'Raw import\n$rawUrl',
@@ -391,14 +479,40 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
     required String canonicalScoreVersionId,
     required String renderedScoreVersionId,
     required String pieceTitle,
+    bool isRenderBlocked = false,
+    String? renderValidationError,
+    bool showCompareControls = true,
+    List<_OmrCandidateOption> candidateOptions = const <_OmrCandidateOption>[],
+    String? selectedCandidateId,
   }) {
     final theme = Theme.of(context);
-    final bulkButton = _bookBulkApprovalButton(
-      item,
-      processingStage: 'candidate_review_needed',
-    );
+    final bulkButton = isRenderBlocked
+        ? null
+        : _bookBulkApprovalButton(
+            item,
+            processingStage: 'candidate_review_needed',
+          );
     final actions = <Widget>[
+      if (candidateOptions.length > 1)
+        _OmrCandidateSelector(
+          options: candidateOptions,
+          selectedCandidateId: selectedCandidateId,
+          onSelected: (candidateId) {
+            setState(() {
+              _selectedCandidateId = candidateId;
+              _currentPage = 1;
+              _renderRefreshToken += 1;
+            });
+          },
+        ),
       if (bulkButton != null) bulkButton,
+      if (_isBookReviewItem(item))
+        OutlinedButton.icon(
+          key: AppKeys.reviewNextButton,
+          onPressed: _submitting ? null : _skipToNextReviewItem,
+          icon: const Icon(Icons.skip_next_outlined),
+          label: const Text('Next'),
+        ),
       if (canonicalUrl.isNotEmpty)
         SelectableText(
           'MusicXML candidate\n$canonicalUrl',
@@ -431,77 +545,115 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
           icon: const Icon(Icons.upload_file_outlined),
           label: const Text('Upload edited MusicXML'),
         ),
-      SegmentedButton<_CompareMode>(
-        segments: const [
-          ButtonSegment(
-            value: _CompareMode.original,
-            icon: Icon(Icons.picture_as_pdf_outlined),
-            label: Text('Original'),
+      if (canonicalScoreVersionId.isNotEmpty &&
+          renderedScoreVersionId.isNotEmpty)
+        OutlinedButton.icon(
+          onPressed: _submitting
+              ? null
+              : () => _rerenderScoreVersion(
+                    item,
+                    canonicalScoreVersionId,
+                    renderedScoreVersionId,
+                  ),
+          icon: const Icon(Icons.refresh_outlined),
+          label: Text(
+            isRenderBlocked
+                ? 'Retry MuseScore render'
+                : 'Rerender PDF from MusicXML',
           ),
-          ButtonSegment(
-            value: _CompareMode.overlay,
-            icon: Icon(Icons.layers_outlined),
-            label: Text('Overlay'),
-          ),
-          ButtonSegment(
-            value: _CompareMode.sideBySide,
-            icon: Icon(Icons.compare_arrows_outlined),
-            label: Text('Side by side'),
-          ),
-          ButtonSegment(
-            value: _CompareMode.processed,
-            icon: Icon(Icons.auto_fix_high_outlined),
-            label: Text('Processed'),
-          ),
-        ],
-        selected: <_CompareMode>{_compareMode},
-        onSelectionChanged: (selection) {
-          setState(() {
-            _compareMode = selection.first;
-          });
-        },
-      ),
+        ),
+      if (showCompareControls)
+        SegmentedButton<_CompareMode>(
+          segments: const [
+            ButtonSegment(
+              value: _CompareMode.original,
+              icon: Icon(Icons.picture_as_pdf_outlined),
+              label: Text('Original'),
+            ),
+            ButtonSegment(
+              value: _CompareMode.overlay,
+              icon: Icon(Icons.layers_outlined),
+              label: Text('Overlay'),
+            ),
+            ButtonSegment(
+              value: _CompareMode.sideBySide,
+              icon: Icon(Icons.compare_arrows_outlined),
+              label: Text('Side by side'),
+            ),
+            ButtonSegment(
+              value: _CompareMode.processed,
+              icon: Icon(Icons.auto_fix_high_outlined),
+              label: Text('Processed'),
+            ),
+            ButtonSegment(
+              value: _CompareMode.omrCompare,
+              icon: Icon(Icons.rule_folder_outlined),
+              label: Text('OMR compare'),
+            ),
+          ],
+          selected: <_CompareMode>{_compareMode},
+          onSelectionChanged: (selection) {
+            setState(() {
+              _compareMode = selection.first;
+            });
+          },
+        ),
       OutlinedButton.icon(
         onPressed: _submitting ? null : () => _editMetadata(item),
         icon: const Icon(Icons.edit_note_outlined),
         label: const Text('Edit metadata'),
       ),
-      FilledButton.icon(
-        key: AppKeys.reviewOverlayToggle,
-        onPressed: () {
-          setState(() {
-            _compareMode = _compareMode == _CompareMode.overlay
-                ? _CompareMode.processed
-                : _CompareMode.overlay;
-          });
-        },
-        icon: const Icon(Icons.layers_outlined),
-        label: Text(
-          _compareMode == _CompareMode.overlay
-              ? 'Hide overlay'
-              : 'Show overlay',
+      if (showCompareControls)
+        FilledButton.icon(
+          key: AppKeys.reviewOverlayToggle,
+          onPressed: () {
+            setState(() {
+              _compareMode = _compareMode == _CompareMode.overlay
+                  ? _CompareMode.processed
+                  : _CompareMode.overlay;
+            });
+          },
+          icon: const Icon(Icons.layers_outlined),
+          label: Text(
+            _compareMode == _CompareMode.overlay
+                ? 'Hide overlay'
+                : 'Show overlay',
+          ),
         ),
-      ),
-      OutlinedButton.icon(
-        onPressed: _submitting ? null : () => _requestReprocess(item),
-        icon: const Icon(Icons.manage_search_outlined),
-        label: const Text('Send back for metadata review'),
-      ),
-      OutlinedButton.icon(
-        key: AppKeys.reviewAiScoreReviewButton,
-        onPressed: _showAiScoreReviewComingSoon,
-        icon: const Icon(Icons.auto_fix_high_outlined),
-        label: const Text('Send back for AI score review'),
-      ),
+      if (AppConfig.showExperimentalFeatures)
+        OutlinedButton.icon(
+          onPressed: _submitting ? null : () => _requestReprocess(item),
+          icon: const Icon(Icons.manage_search_outlined),
+          label: const Text('Send back for metadata review'),
+        ),
+      if (AppConfig.showExperimentalFeatures)
+        OutlinedButton.icon(
+          key: AppKeys.reviewAiScoreReviewButton,
+          onPressed: _showAiScoreReviewComingSoon,
+          icon: const Icon(Icons.auto_fix_high_outlined),
+          label: const Text('Send back for AI score review'),
+        ),
       OutlinedButton.icon(
         onPressed: _submitting ? null : () => _submitDecision(false),
         icon: const Icon(Icons.close_outlined),
         label: const Text('Reject candidate'),
       ),
+      if (isRenderBlocked && renderValidationError != null)
+        Text(
+          renderValidationError,
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.error,
+          ),
+        ),
       FilledButton.icon(
-        onPressed: _submitting ? null : () => _submitDecision(true),
+        onPressed:
+            _submitting || isRenderBlocked ? null : () => _submitDecision(true),
         icon: const Icon(Icons.verified_outlined),
-        label: Text(_submitting ? 'Saving...' : 'Approve as default'),
+        label: Text(
+          isRenderBlocked
+              ? 'Render required before approval'
+              : (_submitting ? 'Saving...' : 'Approve as default'),
+        ),
       ),
     ];
     return _spacedReviewActions(actions);
@@ -514,16 +666,24 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
     );
     final actions = <Widget>[
       if (bulkButton != null) bulkButton,
+      if (_isBookReviewItem(item))
+        OutlinedButton.icon(
+          key: AppKeys.reviewNextButton,
+          onPressed: _submitting ? null : _skipToNextReviewItem,
+          icon: const Icon(Icons.skip_next_outlined),
+          label: const Text('Next'),
+        ),
       OutlinedButton.icon(
         onPressed: _submitting ? null : () => _editMetadata(item),
         icon: const Icon(Icons.edit_note_outlined),
         label: const Text('Edit metadata'),
       ),
-      OutlinedButton.icon(
-        onPressed: _submitting ? null : () => _requestReprocess(item),
-        icon: const Icon(Icons.manage_search_outlined),
-        label: const Text('Send back for metadata review'),
-      ),
+      if (AppConfig.showExperimentalFeatures)
+        OutlinedButton.icon(
+          onPressed: _submitting ? null : () => _requestReprocess(item),
+          icon: const Icon(Icons.manage_search_outlined),
+          label: const Text('Send back for metadata review'),
+        ),
       OutlinedButton.icon(
         onPressed: _submitting ? null : () => _submitDecision(false),
         icon: const Icon(Icons.close_outlined),
@@ -592,6 +752,7 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
   Widget _buildCompareCanvas({
     required String rawUrl,
     required String renderedUrl,
+    required List<_OmrCandidateOption> candidateOptions,
   }) {
     switch (_compareMode) {
       case _CompareMode.original:
@@ -661,7 +822,52 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
             ),
           ],
         );
+      case _CompareMode.omrCompare:
+        return _buildOmrCandidateCompareCanvas(candidateOptions);
     }
+  }
+
+  Widget _buildOmrCandidateCompareCanvas(
+    List<_OmrCandidateOption> candidateOptions,
+  ) {
+    final renderedCandidates =
+        _renderedOmrCompareCandidates(candidateOptions);
+    if (renderedCandidates.length < 2) {
+      return _OmrCompareUnavailablePanel(
+        candidateCount: candidateOptions.length,
+        renderedCandidateCount: renderedCandidates.length,
+      );
+    }
+
+    final left = renderedCandidates[0];
+    final right = renderedCandidates[1];
+    return Row(
+      children: [
+        Expanded(
+          child: _LabeledPdfPane(
+            label: left.label,
+            child: _RemotePdfViewer(
+              url: _cacheBustedUrl(left.renderedUrl, _renderRefreshToken),
+              controller: _omrCompareLeftController,
+              onLoaded: _handleDocumentLoaded,
+              onPageChanged: _handlePageChanged,
+            ),
+          ),
+        ),
+        const VerticalDivider(width: 1),
+        Expanded(
+          child: _LabeledPdfPane(
+            label: right.label,
+            child: _RemotePdfViewer(
+              url: _cacheBustedUrl(right.renderedUrl, _renderRefreshToken),
+              controller: _omrCompareRightController,
+              onLoaded: _handleDocumentLoaded,
+              onPageChanged: _handlePageChanged,
+            ),
+          ),
+        ),
+      ],
+    );
   }
 
   void _handleDocumentLoaded(int pages) {
@@ -683,7 +889,10 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
     setState(() {
       _currentPage = pageNumber;
     });
-    if (_compareMode == _CompareMode.overlay ||
+    if (_compareMode == _CompareMode.omrCompare) {
+      _omrCompareLeftController.jumpToPage(pageNumber);
+      _omrCompareRightController.jumpToPage(pageNumber);
+    } else if (_compareMode == _CompareMode.overlay ||
         _compareMode == _CompareMode.sideBySide) {
       _rawController.jumpToPage(pageNumber);
       _candidateController.jumpToPage(pageNumber);
@@ -693,6 +902,8 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
   void _jumpToPage(int pageNumber) {
     _rawController.jumpToPage(pageNumber);
     _candidateController.jumpToPage(pageNumber);
+    _omrCompareLeftController.jumpToPage(pageNumber);
+    _omrCompareRightController.jumpToPage(pageNumber);
     setState(() {
       _currentPage = pageNumber;
     });
@@ -801,7 +1012,10 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
             filePath: editedPath,
           );
       ref.invalidate(reviewItemDetailProvider(item.id));
-      await ref.read(parentReviewQueueProvider.notifier).refresh();
+      refreshParentWorkflowInBackground(
+        ref,
+        trigger: SyncTrigger.reviewApproval,
+      );
 
       if (!mounted) {
         return;
@@ -820,6 +1034,58 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('Unable to upload edited MusicXML: $error')),
+      );
+    } finally {
+      if (mounted) {
+        setState(() {
+          _submitting = false;
+        });
+      }
+    }
+  }
+
+  Future<void> _rerenderScoreVersion(
+    ReviewQueueEntry item,
+    String canonicalScoreVersionId,
+    String renderedScoreVersionId,
+  ) async {
+    if (_submitting ||
+        canonicalScoreVersionId.isEmpty ||
+        renderedScoreVersionId.isEmpty) {
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+    });
+
+    try {
+      await ref.read(serverPieceSyncRepositoryProvider).rerenderScoreVersion(
+            serverPieceId: item.pieceId,
+            canonicalScoreVersionId: canonicalScoreVersionId,
+            renderedScoreVersionId: renderedScoreVersionId,
+          );
+      ref.invalidate(reviewItemDetailProvider(item.id));
+      refreshParentWorkflowInBackground(
+        ref,
+        trigger: SyncTrigger.reviewApproval,
+      );
+
+      if (!mounted) {
+        return;
+      }
+      setState(() {
+        _renderRefreshToken += 1;
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('MuseScore render refreshed.')),
+      );
+    } catch (error) {
+      if (!mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to rerender MusicXML: $error')),
       );
     } finally {
       if (mounted) {
@@ -850,6 +1116,30 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
     );
   }
 
+  void _skipToNextReviewItem() {
+    if (_submitting || widget.itemId == null) {
+      return;
+    }
+    final nextReviewItem =
+        ref.read(parentReviewQueueProvider.notifier).nextAfterRemoving(
+      {widget.itemId!},
+      currentItemId: widget.itemId,
+    );
+    if (!mounted) {
+      return;
+    }
+    if (nextReviewItem == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('No later review items are queued.')),
+      );
+      return;
+    }
+    Navigator.of(context).pushReplacementNamed(
+      AppRouter.reviewCompare,
+      arguments: nextReviewItem.id,
+    );
+  }
+
   Future<void> _submitDecision(bool approve) async {
     if (_submitting || widget.itemId == null) {
       return;
@@ -862,24 +1152,34 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
     try {
       final repository = ref.read(serverPieceSyncRepositoryProvider);
       if (approve) {
-        await repository.approveReviewItem(widget.itemId!);
+        final currentItem =
+            ref.read(reviewItemDetailProvider(widget.itemId!)).valueOrNull;
+        final selectedCandidateId = currentItem == null
+            ? _selectedCandidateId
+            : _selectedOmrCandidateOption(
+                currentItem.candidateData,
+                _omrCandidateOptionsFrom(currentItem.candidateData),
+                _selectedCandidateId,
+              )?.id;
+        await repository.approveReviewItem(
+          widget.itemId!,
+          selectedCandidateId: selectedCandidateId,
+        );
       } else {
         await repository.rejectReviewItem(widget.itemId!);
       }
-      await ref.read(allPiecesProvider.notifier).loadPieces(
-            trigger: SyncTrigger.reviewApproval,
-          );
-      final nextReviewItems = await repository.fetchReviewQueue();
-      ReviewQueueEntry? nextReviewItem;
-      for (final item in nextReviewItems) {
-        if (item.id != widget.itemId) {
-          nextReviewItem = item;
-          break;
-        }
-      }
-      await ref.read(parentReviewQueueProvider.notifier).refresh();
+      final queueNotifier = ref.read(parentReviewQueueProvider.notifier);
+      final nextReviewItem = queueNotifier.nextAfterRemoving(
+        {widget.itemId!},
+        currentItemId: widget.itemId,
+      );
+      queueNotifier.removeItems({widget.itemId!});
       ref.invalidate(reviewItemDetailProvider(widget.itemId!));
-      ref.invalidate(parentSyncedPiecesProvider);
+      scheduleParentWorkflowRefreshBurst(
+        ref,
+        trigger: SyncTrigger.reviewApproval,
+        isActive: () => mounted,
+      );
 
       if (!mounted) {
         return;
@@ -942,13 +1242,22 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
         sourceReviewItemId: sourceReviewItemId,
         processingStage: processingStage,
       );
-      await ref.read(allPiecesProvider.notifier).loadPieces(
-            trigger: SyncTrigger.reviewApproval,
-          );
-      final nextReviewItems = await repository.fetchReviewQueue();
-      await ref.read(parentReviewQueueProvider.notifier).refresh();
+      final resolvedItemIds = result.approvedItemIds.toSet();
+      if (resolvedItemIds.isEmpty && result.approvedCount > 0) {
+        resolvedItemIds.add(widget.itemId!);
+      }
+      final queueNotifier = ref.read(parentReviewQueueProvider.notifier);
+      final nextReviewItem = queueNotifier.nextAfterRemoving(
+        resolvedItemIds,
+        currentItemId: widget.itemId,
+      );
+      queueNotifier.removeItems(resolvedItemIds);
       ref.invalidate(reviewItemDetailProvider(widget.itemId!));
-      ref.invalidate(parentSyncedPiecesProvider);
+      scheduleParentWorkflowRefreshBurst(
+        ref,
+        trigger: SyncTrigger.reviewApproval,
+        isActive: () => mounted,
+      );
 
       if (!mounted) {
         return;
@@ -965,10 +1274,10 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
         ),
       );
 
-      if (nextReviewItems.isNotEmpty) {
+      if (nextReviewItem != null) {
         Navigator.of(context).pushReplacementNamed(
           AppRouter.reviewCompare,
-          arguments: nextReviewItems.first.id,
+          arguments: nextReviewItem.id,
         );
       } else {
         Navigator.of(context).pop();
@@ -1015,8 +1324,11 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
             sourcePageStart: draft.sourcePageStart,
             sourcePageEnd: draft.sourcePageEnd,
           );
-      ref.invalidate(parentReviewQueueProvider);
       ref.invalidate(reviewItemDetailProvider(item.id));
+      refreshParentWorkflowInBackground(
+        ref,
+        trigger: SyncTrigger.reviewApproval,
+      );
 
       if (!mounted) {
         return;
@@ -1127,6 +1439,311 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
         });
       }
     }
+  }
+}
+
+List<_OmrCandidateOption> _renderedOmrCompareCandidates(
+  List<_OmrCandidateOption> candidateOptions,
+) {
+  final renderedCandidates = candidateOptions
+      .where((option) => option.renderedUrl.isNotEmpty)
+      .toList(growable: false);
+  if (renderedCandidates.length <= 2) {
+    return renderedCandidates;
+  }
+
+  final primary = _primaryRenderedOmrCandidate(renderedCandidates);
+  final primaryEngineKey = _omrCandidateEngineKey(primary);
+  for (final candidate in renderedCandidates) {
+    if (candidate.id == primary.id) {
+      continue;
+    }
+    if (_omrCandidateEngineKey(candidate) != primaryEngineKey) {
+      return [primary, candidate];
+    }
+  }
+
+  for (final candidate in renderedCandidates) {
+    if (candidate.id != primary.id) {
+      return [primary, candidate];
+    }
+  }
+  return [primary];
+}
+
+_OmrCandidateOption _primaryRenderedOmrCandidate(
+  List<_OmrCandidateOption> renderedCandidates,
+) {
+  for (final candidate in renderedCandidates) {
+    if (candidate.selected) {
+      return candidate;
+    }
+  }
+  return renderedCandidates.first;
+}
+
+String _omrCandidateEngineKey(_OmrCandidateOption candidate) {
+  final engineName = candidate.engineName?.trim().toLowerCase();
+  if (engineName != null && engineName.isNotEmpty) {
+    return engineName;
+  }
+  return candidate.label.trim().toLowerCase();
+}
+
+class _OmrCandidateOption {
+  const _OmrCandidateOption(this.data);
+
+  final Map<String, dynamic> data;
+
+  String get id => _metadataText(data['candidate_id']) ?? '';
+
+  String get label {
+    final explicit = _metadataText(data['label']);
+    if (explicit != null) {
+      return explicit;
+    }
+    final engine = _metadataText(data['engine_name']) ?? 'OMR';
+    final profile = _metadataText(data['profile']);
+    return profile == null ? engine : '$engine $profile';
+  }
+
+  String? get engineName => _metadataText(data['engine_name']);
+
+  String? get profile => _metadataText(data['profile']);
+
+  String? get renderStatus => _metadataText(data['render_validation_status']);
+
+  String? get renderedScoreVersionId => _metadataText(data['score_version_id']);
+
+  String get renderedUrl => _metadataText(data['rendered_file_url']) ?? '';
+
+  double? get qualityScore => (data['omr_quality_score'] as num?)?.toDouble();
+
+  bool get selected => data['selected'] == true;
+}
+
+List<_OmrCandidateOption> _omrCandidateOptionsFrom(
+  Map<String, dynamic> candidateData,
+) {
+  final options = _metadataListFrom(candidateData['omr_candidates'])
+      .map(_OmrCandidateOption.new)
+      .where((option) => option.id.isNotEmpty)
+      .toList(growable: false);
+  final topLevelOptionData = _topLevelOmrCandidateOptionData(candidateData);
+  if (topLevelOptionData == null) {
+    return options;
+  }
+
+  final topLevelOption = _OmrCandidateOption(topLevelOptionData);
+  final alreadyIncluded = options.any(
+    (option) =>
+        option.id == topLevelOption.id ||
+        _metadataText(option.data['score_version_id']) ==
+            topLevelOption.renderedScoreVersionId,
+  );
+  if (alreadyIncluded) {
+    return options;
+  }
+  return [topLevelOption, ...options];
+}
+
+Map<String, dynamic>? _topLevelOmrCandidateOptionData(
+  Map<String, dynamic> candidateData,
+) {
+  final renderedScoreVersionId =
+      _metadataText(candidateData['score_version_id']);
+  final renderedUrl = _metadataText(candidateData['rendered_file_url']);
+  final canonicalScoreVersionId =
+      _metadataText(candidateData['canonical_score_version_id']);
+  final canonicalUrl = _metadataText(candidateData['canonical_file_url']);
+  if ((renderedScoreVersionId == null || renderedUrl == null) &&
+      (canonicalScoreVersionId == null || canonicalUrl == null)) {
+    return null;
+  }
+
+  final candidateId = _metadataText(candidateData['candidate_id']) ??
+      _metadataText(candidateData['selected_omr_candidate_id']) ??
+      renderedScoreVersionId ??
+      canonicalScoreVersionId;
+  if (candidateId == null) {
+    return null;
+  }
+
+  final engineName = _metadataText(candidateData['engine_name']) ?? 'OMR';
+  return <String, dynamic>{
+    'candidate_id': candidateId,
+    'label': 'Current $engineName candidate',
+    'engine_name': engineName,
+    'engine_version': candidateData['engine_version'],
+    'profile': candidateData['profile'],
+    'provenance': candidateData['provenance'],
+    'confidence': candidateData['confidence'],
+    'processed_metadata': candidateData['processed_metadata'],
+    'musicxml_metadata': candidateData['musicxml_metadata'],
+    'raw_score_version_id': candidateData['raw_score_version_id'],
+    'raw_file_url': candidateData['raw_file_url'],
+    'raw_content_type': candidateData['raw_content_type'],
+    'score_version_id': renderedScoreVersionId,
+    'rendered_file_url': renderedUrl,
+    'canonical_score_version_id': canonicalScoreVersionId,
+    'canonical_file_url': canonicalUrl,
+    'render_validation_status': candidateData['render_validation_status'],
+    'render_validation_error': candidateData['render_validation_error'],
+    'omr_quality_score': candidateData['omr_quality_score'],
+    'warnings': candidateData['warnings'],
+    'selected': true,
+  };
+}
+
+_OmrCandidateOption? _selectedOmrCandidateOption(
+  Map<String, dynamic> candidateData,
+  List<_OmrCandidateOption> options,
+  String? preferredCandidateId,
+) {
+  if (options.isEmpty) {
+    return null;
+  }
+  final preferred = preferredCandidateId?.trim();
+  if (preferred != null && preferred.isNotEmpty) {
+    for (final option in options) {
+      if (option.id == preferred) {
+        return option;
+      }
+    }
+  }
+  final serverSelected =
+      _metadataText(candidateData['selected_omr_candidate_id']);
+  if (serverSelected != null) {
+    for (final option in options) {
+      if (option.id == serverSelected) {
+        return option;
+      }
+    }
+  }
+  for (final option in options) {
+    if (option.selected) {
+      return option;
+    }
+  }
+  return options.first;
+}
+
+Map<String, dynamic> _activeCandidateData(
+  Map<String, dynamic> baseCandidateData,
+  _OmrCandidateOption? selectedCandidate,
+) {
+  if (selectedCandidate == null) {
+    return baseCandidateData;
+  }
+  final output = Map<String, dynamic>.from(baseCandidateData)
+    ..addAll(selectedCandidate.data);
+
+  for (final key in [
+    'raw_file_url',
+    'raw_content_type',
+    'source_book_id',
+    'source_review_item_id',
+    'processing_stage',
+    'catalog_metadata',
+    'catalog_suggestions',
+    'validation_warnings',
+    'contained_piece_titles',
+    'multi_piece_page',
+  ]) {
+    output[key] ??= baseCandidateData[key];
+  }
+
+  final warnings = {
+    ..._stringListFrom(baseCandidateData['warnings']),
+    ..._stringListFrom(selectedCandidate.data['warnings']),
+  }.toList(growable: false);
+  if (warnings.isNotEmpty) {
+    output['warnings'] = warnings;
+  }
+  output['selected_omr_candidate_id'] = selectedCandidate.id;
+  return output;
+}
+
+class _OmrCandidateSelector extends StatelessWidget {
+  const _OmrCandidateSelector({
+    required this.options,
+    required this.selectedCandidateId,
+    required this.onSelected,
+  });
+
+  final List<_OmrCandidateOption> options;
+  final String? selectedCandidateId;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final value = options.any((option) => option.id == selectedCandidateId)
+        ? selectedCandidateId
+        : options.first.id;
+    final selected = options.firstWhere(
+      (option) => option.id == value,
+      orElse: () => options.first,
+    );
+
+    return Card(
+      elevation: 0,
+      color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.32),
+      child: Padding(
+        padding: const EdgeInsets.all(12),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'OMR output to review',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            DropdownButtonFormField<String>(
+              initialValue: value,
+              isExpanded: true,
+              decoration: const InputDecoration(
+                labelText: 'Generated candidate',
+                border: OutlineInputBorder(),
+              ),
+              items: [
+                for (final option in options)
+                  DropdownMenuItem<String>(
+                    value: option.id,
+                    child: Text(option.label, overflow: TextOverflow.ellipsis),
+                  ),
+              ],
+              onChanged: (candidateId) {
+                if (candidateId != null && candidateId.isNotEmpty) {
+                  onSelected(candidateId);
+                }
+              },
+            ),
+            const SizedBox(height: 8),
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: [
+                if (selected.engineName != null)
+                  Chip(label: Text('Engine: ${selected.engineName}')),
+                if (selected.profile != null)
+                  Chip(label: Text('Profile: ${selected.profile}')),
+                if (selected.renderStatus != null)
+                  Chip(label: Text('Render: ${selected.renderStatus}')),
+                if (selected.qualityScore != null)
+                  Chip(
+                    label: Text(
+                      'Quality ${selected.qualityScore!.toStringAsFixed(1)}',
+                    ),
+                  ),
+              ],
+            ),
+          ],
+        ),
+      ),
+    );
   }
 }
 
@@ -1556,11 +2173,78 @@ class _ReviewWarningsPanel extends StatelessWidget {
   }
 }
 
+class _MetadataConflictsPanel extends StatelessWidget {
+  const _MetadataConflictsPanel({required this.conflicts});
+
+  final List<_MetadataConflictData> conflicts;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.tertiaryContainer.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.tertiary.withValues(alpha: 0.36),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Metadata conflicts',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Suggestions below disagree with the current editable metadata. They are advisory and are not applied automatically.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 8),
+            ...conflicts.map(
+              (conflict) => Padding(
+                padding: const EdgeInsets.symmetric(vertical: 4),
+                child: Text(
+                  '${conflict.label}: current "${conflict.currentValue}", suggested "${conflict.suggestedValue}" (${conflict.source})',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
 class _MetadataRowData {
   const _MetadataRowData(this.label, this.value);
 
   final String label;
   final String? value;
+}
+
+class _MetadataConflictData {
+  const _MetadataConflictData({
+    required this.label,
+    required this.currentValue,
+    required this.suggestedValue,
+    required this.source,
+  });
+
+  final String label;
+  final String currentValue;
+  final String suggestedValue;
+  final String source;
 }
 
 class _LabeledPdfPane extends StatelessWidget {
@@ -1609,8 +2293,21 @@ class _RemotePdfViewer extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    if (debugUseReviewPdfPlaceholder) {
+      return ColoredBox(
+        color: Theme.of(context).colorScheme.surfaceContainerLowest,
+        child: Center(
+          child: Text(
+            'PDF preview\n$url',
+            textAlign: TextAlign.center,
+          ),
+        ),
+      );
+    }
+
     return SfPdfViewer.network(
       url,
+      headers: _serverRequestHeaders(),
       controller: controller,
       pageLayoutMode: PdfPageLayoutMode.single,
       scrollDirection: PdfScrollDirection.horizontal,
@@ -1623,6 +2320,138 @@ class _RemotePdfViewer extends StatelessWidget {
       onPageChanged: (details) {
         onPageChanged(details.newPageNumber);
       },
+      onDocumentLoadFailed: (details) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            content: Text(
+              'Unable to load PDF: ${details.error}. ${details.description}',
+            ),
+          ),
+        );
+      },
+    );
+  }
+}
+
+Map<String, String> _serverRequestHeaders() {
+  final token = AppConfig.serverPairingToken;
+  if (token == null || token.isEmpty) {
+    return const <String, String>{};
+  }
+  return <String, String>{
+    'X-AZMusic-Device-Token': token,
+  };
+}
+
+class _RenderBlockedPanel extends StatelessWidget {
+  const _RenderBlockedPanel({required this.message});
+
+  final String? message;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer.withValues(alpha: 0.34),
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: theme.colorScheme.error.withValues(alpha: 0.32),
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(14),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                Icon(
+                  Icons.picture_as_pdf_outlined,
+                  color: theme.colorScheme.error,
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'MuseScore render needs attention',
+                    style: theme.textTheme.titleSmall?.copyWith(
+                      fontWeight: FontWeight.w700,
+                      color: theme.colorScheme.error,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 8),
+            Text(
+              message ??
+                  'MusicXML was generated, but the review PDF was not usable. '
+                      'Retry the render after confirming MuseScore Studio is installed.',
+              style: theme.textTheme.bodySmall,
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _OmrCompareUnavailablePanel extends StatelessWidget {
+  const _OmrCompareUnavailablePanel({
+    required this.candidateCount,
+    required this.renderedCandidateCount,
+  });
+
+  final int candidateCount;
+  final int renderedCandidateCount;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Center(
+      child: ConstrainedBox(
+        constraints: const BoxConstraints(maxWidth: 520),
+        child: DecoratedBox(
+          decoration: BoxDecoration(
+            color: theme.colorScheme.surfaceContainerLow,
+            borderRadius: BorderRadius.circular(18),
+            border: Border.all(color: theme.colorScheme.outlineVariant),
+          ),
+          child: Padding(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Icon(
+                  Icons.rule_folder_outlined,
+                  size: 42,
+                  color: theme.colorScheme.primary,
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'OMR compare needs two rendered candidates',
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                const SizedBox(height: 8),
+                Text(
+                  'This review item has $candidateCount OMR candidate(s), '
+                  'but only $renderedCandidateCount rendered PDF candidate(s). '
+                  'Use Compare Audiveris + HOMR candidates in server settings, '
+                  'confirm HOMR and MuseScore are configured, then reprocess '
+                  'or reimport the piece.',
+                  style: theme.textTheme.bodyMedium?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
     );
   }
 }
@@ -1694,6 +2523,18 @@ Map<String, dynamic> _metadataMapFrom(dynamic value) {
   return const <String, dynamic>{};
 }
 
+bool _isBookReviewItem(ReviewQueueEntry item) {
+  final candidateData = item.candidateData;
+  return _metadataText(candidateData['source_book_id']) != null ||
+      _metadataText(candidateData['source_review_item_id']) != null ||
+      _metadataText(candidateData['book_or_collection']) != null ||
+      _metadataText(
+            _metadataMapFrom(
+                candidateData['catalog_metadata'])['book_or_collection'],
+          ) !=
+          null;
+}
+
 List<Map<String, dynamic>> _metadataListFrom(dynamic value) {
   if (value is List) {
     return value
@@ -1720,10 +2561,71 @@ Map<String, dynamic> _firstSuggestionFields(
   for (final suggestion in suggestions) {
     final fields = suggestion['fields'];
     if (fields is Map) {
-      return Map<String, dynamic>.from(fields);
+      final output = Map<String, dynamic>.from(fields);
+      final source = _metadataText(suggestion['source']);
+      final confidence = (suggestion['confidence'] as num?)?.toDouble();
+      if (source != null) {
+        output['suggestion_source'] = source;
+      }
+      if (confidence != null) {
+        output['suggestion_confidence'] = '${(confidence * 100).round()}%';
+      }
+      return output;
     }
   }
   return const <String, dynamic>{};
+}
+
+List<_MetadataConflictData> _metadataConflicts({
+  required Map<String, dynamic> currentMetadata,
+  required List<Map<String, dynamic>> suggestions,
+}) {
+  const fields = <String, String>{
+    'title': 'Title',
+    'composer': 'Composer',
+    'primary_instrument': 'Instrument',
+    'book_or_collection': 'Book',
+    'source_page_start': 'Start page',
+    'source_page_end': 'End page',
+    'key_signature': 'Key',
+    'tempo': 'Tempo',
+  };
+  final conflicts = <_MetadataConflictData>[];
+  for (final suggestion in suggestions) {
+    final suggestionFields = suggestion['fields'];
+    if (suggestionFields is! Map) {
+      continue;
+    }
+    final source = _metadataText(suggestion['source']) ?? 'suggestion';
+    for (final entry in fields.entries) {
+      final currentValue = _metadataText(currentMetadata[entry.key]);
+      final suggestedValue = _metadataText(suggestionFields[entry.key]);
+      if (currentValue == null || suggestedValue == null) {
+        continue;
+      }
+      if (_metadataComparable(currentValue) ==
+          _metadataComparable(suggestedValue)) {
+        continue;
+      }
+      conflicts.add(
+        _MetadataConflictData(
+          label: entry.value,
+          currentValue: currentValue,
+          suggestedValue: suggestedValue,
+          source: source,
+        ),
+      );
+    }
+  }
+  return conflicts;
+}
+
+String _metadataComparable(String value) {
+  return value
+      .toLowerCase()
+      .replaceAll(RegExp(r'[^a-z0-9]+'), ' ')
+      .trim()
+      .replaceAll(RegExp(r'\s+'), ' ');
 }
 
 String? _metadataText(dynamic value) {

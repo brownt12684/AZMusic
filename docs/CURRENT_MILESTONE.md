@@ -1,6 +1,6 @@
 # AZMusic Current Milestone
 
-Snapshot date: 2026-05-25
+Snapshot date: 2026-06-05
 
 ## Milestone summary
 
@@ -23,13 +23,15 @@ This is now a V1 package candidate, but it still needs a real-device E2E pass be
 - `.\scripts\dev.ps1 -Task check-client-windows` runs the full Windows client gate: `check-client` plus a sandbox smoke path that verifies the Windows shell starts cleanly.
 - `.\scripts\dev.ps1 -Task build-client-windows-release` builds the production-flagged Windows release app.
 - `.\scripts\dev.ps1 -Task build-client-android-apk` builds the production-flagged Android APK.
-- `.\scripts\dev.ps1 -Task package-release-assets` creates the Windows server ZIP, Windows client ZIP, Android APK copy, and `SHA256SUMS.txt`.
+- `.\scripts\dev.ps1 -Task package-release-assets` creates the Windows server installer EXE, Windows client installer EXE, Android APK copy, and `SHA256SUMS.txt`.
 - Parent tools can import local `pdf` and common image files into intake, keep the raw local copy immediately, and best-effort upload PDFs to the server.
+- The parent intake workflow is split into Import, Processing, Review, and Push sections. Import now isolates stale local-upload problems with explicit retry/reupload/remove actions instead of leaving old "waiting to upload" rows mixed into the active server workflow.
+- The client blocks duplicate imports of the same source path while an upload is active, and server piece identity fields are preserved on synced remote summaries so duplicate/book attempts can be surfaced cleanly.
 - The parent review queue and review-compare screen load server review items and submit approve or reject actions.
 - The parent review-compare screen can download the generated MusicXML/MXL candidate to the parent device, open it in a local MusicXML-capable app such as MuseScore, upload the edited file, and refresh the rendered review PDF through the server renderer.
 - The parent review-compare screen also exposes a coming-soon AI score review action that explains the future LLM correction loop without enqueueing fake processing.
 - Parent tools now include a server-processing settings surface for Audiveris, MuseScore, development stub fallback, server health, and experimental device-worker mode.
-- Server setup now hosts the first parent/admin QR code at `/setup`; local setup-page launches encode a detected LAN URL instead of `localhost`, and `PUBLIC_SERVER_URL` can override detection. Parent tools then generate separate student-device QR codes that are tied to a specific student profile. Android and Windows clients can scan these QR codes, manual payload/code entry remains available, and development launches with the local server override are treated as already paired.
+- Server setup now hosts the first parent/admin QR code at `/setup`; local setup-page launches encode a detected LAN URL instead of `localhost`, and `PUBLIC_SERVER_URL` can override detection. Parent tools then generate separate student-device QR codes that are tied to a specific student profile. Android and Windows clients can scan these QR codes, manual payload/code entry remains available, and a server-host override no longer counts as pairing unless an explicit pairing token is also supplied.
 - Parent push marks student visibility locally immediately and retries the server push later if the server is unreachable.
 - The student library supports search plus a left-side drag alpha rail for `Title`, `Composer`, and `Book`.
 - Imported files are copied into app-managed local storage instead of being referenced in place.
@@ -39,9 +41,11 @@ This is now a V1 package candidate, but it still needs a real-device E2E pass be
 - The library banner now reports real `offline-ready`, `syncing`, `synced`, and `failed-usable` states from the current opportunistic sync flow.
 - The Windows release build completes at `client/build/windows/x64/runner/Release/azmusic.exe`.
 - The Android release APK builds at `client/build/app/outputs/flutter-apk/app-release.apk`.
-- The Windows server release package is created at `dist/AZMusic-server-windows-v0.1.0-pretesting.zip` with setup/start scripts and processing-tool installer helpers.
+- The preferred end-user server installer is `dist/AZMusic Server Setup.exe`, which embeds the internal bundled-server package and creates shortcuts.
+- The preferred Windows client installer is `dist/AZMusic Windows Client Setup.exe`, which embeds the Windows client package and creates shortcuts for `azmusic.exe`.
 - The sandbox launcher can reset the local sandbox library and jump directly into the library or review-queue surfaces. Piece detail and reader routing use the first local entry when one exists.
-- The automated client path now covers import cancellation, image-import persistence, app-config host and port resolution, sync banner state transitions, alpha-jump logic, reader spread layout rules, the local-library repository, and the core app-shell routes alongside the Windows sandbox smoke path.
+- Parent debug mode now exposes test-only controls for clearing local/server workflow data, refreshing jobs, canceling jobs, and retrying failed jobs with the piece title visible when the server provides it.
+- The automated client path now covers import cancellation, image-import persistence, app-config host and port resolution, sync banner state transitions, duplicate active-import blocking, stale local upload retry/removal, alpha-jump logic, reader spread layout rules, the local-library repository, and the core app-shell routes alongside the Windows sandbox smoke path.
 
 ### Server
 
@@ -56,7 +60,7 @@ This is now a V1 package candidate, but it still needs a real-device E2E pass be
 - `/api/v1/processing` now exposes durable processing settings, executable validation, capability reporting, and experimental device-worker registration.
 - `/api/v1/pairing` now exposes short-lived pairing-code creation, QR PNG generation, and one-time device claim. Pairing codes carry their purpose: parent setup or student-device assignment.
 - `REQUIRE_DEVICE_AUTH=true` enforces QR-paired device tokens on protected API groups while keeping setup, pairing, and health available.
-- Score processing now runs through explicit MusicXML and PDF-render engine adapters. Audiveris is the intended real OMR engine, MuseScore is the intended PDF renderer, and the existing deterministic MusicXML path remains only as a development fallback when enabled.
+- Score processing now runs through explicit MusicXML and PDF-render engine adapters. Audiveris is the current default OMR engine, HOMR is an optional experimental OMR engine for server-side bakeoff, MuseScore is the intended PDF renderer, and the existing deterministic MusicXML path remains only as a development fallback when enabled.
 - Score-version API endpoints now support parent-driven MuseScore correction by accepting an uploaded edited MusicXML/MXL candidate and rerendering it back into the review PDF.
 - Processed MusicXML metadata is now extracted for title, composer, instrument/parts, key, time signature, tempo when present, measure count, software provenance, and MusicXML version. The metadata is attached to review items, job results, piece detail responses, and local client piece records during sync.
 - Failed required processing keeps the raw PDF stored, marks the job failed, and records the last processing error in server settings.
@@ -66,7 +70,7 @@ This is now a V1 package candidate, but it still needs a real-device E2E pass be
 
 - `scripts/dev.ps1` is the canonical automation entry point.
 - The repo is Windows-first and root-relative; run shared automation from the monorepo root even though the component roots are `client/` and `server/`.
-- Use `-ClientServerHost` and `-ClientServerPort` on `run-client`, `run-client-sandbox`, or `check-client-windows` when same-machine testing should target `127.0.0.1:8000` instead of the checked-in LAN default.
+- Use `-ClientServerHost` and `-ClientServerPort` on `run-client`, `run-client-sandbox`, or `check-client-windows` when same-machine testing should target `127.0.0.1:8795` instead of the checked-in LAN default.
 - The current setup path is documented in `docs/SETUP_GUIDE.md`.
 
 ## What is still placeholder or incomplete
@@ -77,14 +81,15 @@ This is now a V1 package candidate, but it still needs a real-device E2E pass be
 - The primary client import flow still depends on the native `file_picker` dialog, so there is no committed headless client test covering the real import interaction.
 - The sandbox fast path avoids the native file picker for iteration, but it is still a prototype aid rather than the real import workflow.
 - The current server processing path still accepts PDFs only. Image imports remain local-only.
-- Real OMR requires installing/configuring Audiveris through the parent settings surface or server settings API. Without Audiveris, the app can still prototype with stub MusicXML only when `allow_stub_musicxml` is enabled.
+- Real OMR requires installing/configuring Audiveris through the parent settings surface or server settings API. HOMR can also be installed as an experimental Python-based OMR engine, but missing HOMR does not block Audiveris. Without a real OMR engine, the app can still prototype with stub MusicXML only when `allow_stub_musicxml` is enabled.
 - Real reconstructed PDF rendering after parent MuseScore edits requires installing/configuring MuseScore on the server. The parent device only needs an app that can open/edit MusicXML/MXL.
 - AI score review is currently wired only as a coming-soon affordance; direct score reprocess requests return a clear placeholder result rather than pretending to run LLM correction.
+- MCP-guided vision-LLM MusicXML repair is roadmap-only until OMR candidate generation and measure/page alignment are reliable.
 - Experimental device-worker registration exists, but no dispatch queue sends processing work packages to devices yet.
 - Device pairing supports generated QR payloads, manual payload/code entry, Android camera scanning, and Windows tablet camera scanning.
 - Piece research metadata beyond MusicXML extraction, such as composer biography, work catalog numbers, publisher/source history, and pedagogical notes, is not implemented yet.
 - LAN auth now has an enforced paired-device-token mode, but production deployments still need a final decision on LAN HTTP versus HTTPS.
-- The current client and server tests cover targeted behavior, but the final real-device parent-import to student-reader flow still needs a manual E2E gate.
+- The current client and server tests cover targeted behavior, and `scripts/run-release-smoke.ps1` covers packaged first-run pairing surfaces, but the final real-device parent-import to student-reader flow still needs a manual E2E gate.
 
 ## Key operating assumptions
 
@@ -94,7 +99,7 @@ This is now a V1 package candidate, but it still needs a real-device E2E pass be
 - Windows Surface Book is the primary target. Android tablets are secondary.
 - Flutter Windows and Android platform folders now exist and are part of the packaging path; they can still be regenerated, but release edits under `client/android` should be preserved.
 - Server database and storage paths resolve relative to `server/`.
-- The checked-in client network fallback is `http://192.168.1.100:8000`, but first-run pairing starts blank and should be populated by the QR payload.
+- The checked-in client network fallback is `http://192.168.1.100:8795`, but first-run pairing starts blank and should be populated by the QR payload.
 
 ## Handoff notes for later workers
 

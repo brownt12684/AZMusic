@@ -114,6 +114,14 @@ class AppDatabase {
     );
   }
 
+  Future<void> deleteLibraryEntry(String pieceId) async {
+    final database = await open();
+    database.execute(
+      'DELETE FROM library_entries WHERE piece_id = ?',
+      [pieceId],
+    );
+  }
+
   Future<void> clearLibrary() async {
     final database = await open();
     database.execute('DELETE FROM library_entries');

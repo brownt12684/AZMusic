@@ -141,6 +141,7 @@ class OcrMetadataExtractor:
         warnings: list[str] = []
         pages: list[OcrPageText] = []
         with tempfile.TemporaryDirectory(prefix="azmusic_ocr_") as temp_dir:
+            document = None
             try:
                 document = pdfium.PdfDocument(file_bytes)
                 page_count = min(len(document), DEFAULT_MAX_OCR_PAGES)
@@ -162,6 +163,9 @@ class OcrMetadataExtractor:
                         )
             except Exception as exc:  # noqa: BLE001
                 warnings.append(f"Scanned PDF OCR failed: {exc}")
+            finally:
+                if document is not None:
+                    document.close()
 
         return pages, warnings
 
@@ -200,6 +204,8 @@ class OcrMetadataExtractor:
             "stdout",
             "--psm",
             "6",
+            "--oem",
+            "1",
             "-l",
             language,
         ]
@@ -209,6 +215,8 @@ class OcrMetadataExtractor:
                 check=False,
                 capture_output=True,
                 text=True,
+                encoding="utf-8",
+                errors="replace",
                 timeout=45,
             )
         except (OSError, subprocess.TimeoutExpired) as exc:
@@ -216,12 +224,13 @@ class OcrMetadataExtractor:
 
         warnings = []
         if result.returncode != 0:
-            output = (result.stderr or result.stdout).strip()
+            output = (result.stderr or result.stdout or "").strip()
             warnings.append(f"Tesseract OCR failed: {output or 'unknown error'}")
             return "", warnings
-        if result.stderr.strip():
-            warnings.append(result.stderr.strip()[:500])
-        return result.stdout, warnings
+        stderr = (result.stderr or "").strip()
+        if stderr:
+            warnings.append(stderr[:500])
+        return result.stdout or "", warnings
 
     def _tesseract_status(self):
         return executable_status(
@@ -322,7 +331,7 @@ def _infer_title(lines: list[str]) -> str | None:
             continue
         if len(line) > 120:
             continue
-        return _title_case_if_needed(line)
+        return _title_case_if_needed(_strip_leading_page_number(line))
     return None
 
 
@@ -339,13 +348,21 @@ def _infer_composer(lines: list[str]) -> str | None:
             if normalized.startswith(prefix):
                 credit = _credit_after_prefix(line, prefix)
                 if credit:
-                    return credit
+                    known = _known_composer_from_line(credit)
+                    if known:
+                        return known
+                    if _looks_like_person_name(credit):
+                        return credit
 
     for line in lines[1:14]:
         composer = _known_composer_from_line(line)
         if composer:
             return composer
-        if _looks_like_person_name(line) and not _is_metadata_line(line):
+        if (
+            _looks_like_person_name(line)
+            and not _is_metadata_line(line)
+            and not _looks_like_music_ocr_noise(line)
+        ):
             return line
     return None
 
@@ -455,21 +472,37 @@ def _infer_opus(lines: list[str]) -> str | None:
 
 def _infer_catalog_number(lines: list[str]) -> str | None:
     for line in lines[:30]:
-        match = re.search(
-            r"\b(?:BWV|K\.?|KV|Hob\.?|RV|D\.)\s*[A-Za-z0-9./ -]+",
+        has_catalog_prefix = re.search(
+            r"\b(?:BWV|K\.?|KV|Hob\.?|RV|D\.?)\b",
             line,
             flags=re.IGNORECASE,
         )
-        if match:
-            return match.group(0).strip(" .")
+        if _looks_like_music_ocr_noise(line) and not has_catalog_prefix:
+            continue
+        for pattern in (
+            r"\bBWV\s*[A-Za-z0-9./ -]+",
+            r"\bK\.?\s*\d+[A-Za-z0-9./ -]*",
+            r"\bKV\s*\d+[A-Za-z0-9./ -]*",
+            r"\bHob\.?\s*[A-Za-z0-9:/ -]+",
+            r"\bRV\s*\d+[A-Za-z0-9./ -]*",
+            r"\bD\.?\s*\d+[A-Za-z0-9./ -]*",
+        ):
+            match = re.search(pattern, line, flags=re.IGNORECASE)
+            if match:
+                return match.group(0).strip(" .")
     return None
 
 
 def _infer_publisher(lines: list[str]) -> str | None:
     for line in lines[:40]:
         normalized = _normalize(line)
-        if "copyright" in normalized or "(c)" in normalized or "©" in line:
+        has_copyright_marker = (
+            "copyright" in normalized or "(c)" in normalized or "©" in line
+        )
+        if has_copyright_marker and re.search(r"\b(?:18|19|20)\d{2}\b", line):
             return line
+        if _looks_like_music_ocr_noise(line):
+            continue
         if any(marker in normalized for marker in ("publishing", "edition", "press")):
             return line
     return None
@@ -537,7 +570,59 @@ def _looks_like_person_name(line: str) -> bool:
         return False
     if any(_normalize(word) in {"for", "book", "volume", "tempo"} for word in words):
         return False
-    return sum(word[:1].isupper() for word in words) >= 2
+    if any(any(char.isdigit() for char in word) for word in words):
+        return False
+    if _looks_like_music_ocr_noise(line):
+        return False
+    valid_words = 0
+    for word in words:
+        stripped = word.strip(".,;:()[]{}")
+        if re.fullmatch(r"[A-Z]\.?", stripped):
+            valid_words += 1
+            continue
+        if re.fullmatch(r"[A-Z][a-z]+(?:[-'][A-Z]?[a-z]+)?", stripped):
+            valid_words += 1
+            continue
+        if stripped.lower() in {"de", "del", "la", "van", "von", "da"}:
+            valid_words += 1
+            continue
+        return False
+    return valid_words >= 2
+
+
+def _strip_leading_page_number(line: str) -> str:
+    return re.sub(r"^\s*\d{1,3}\s+(?=[A-Z])", "", line).strip() or line
+
+
+def _looks_like_music_ocr_noise(line: str) -> bool:
+    """Reject OCR fragments that are more likely notation/fingering than credits."""
+
+    compact = line.strip()
+    if not compact:
+        return True
+    if any(char.isdigit() for char in compact):
+        return True
+    symbol_count = sum(not char.isalnum() and not char.isspace() for char in compact)
+    alpha_count = sum(char.isalpha() for char in compact)
+    if alpha_count and symbol_count / max(1, alpha_count) > 0.35:
+        return True
+    words = [
+        word.strip(".,;:()[]{}")
+        for word in compact.split()
+        if word.strip(".,;:()[]{}")
+    ]
+    if not words:
+        return True
+    if len(words) <= 3 and all(len(word) <= 3 for word in words):
+        return True
+    if any(len(word) <= 3 and word.isupper() and len(word) > 1 for word in words):
+        return True
+    if any(re.search(r"[A-Z][A-Z][a-z]|[a-z][A-Z]", word) for word in words):
+        return True
+    normalized = _normalize(compact)
+    if normalized in {"dc al fine", "fine", "da capo", "dal segno"}:
+        return True
+    return False
 
 
 def _credit_after_prefix(line: str, normalized_prefix: str) -> str | None:

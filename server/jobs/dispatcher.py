@@ -12,7 +12,7 @@ import server.database as database
 from server.config import settings
 from server.models.orm import BackgroundJob, JobStatus, Piece, PieceStatus, ReviewItem
 from server.services.processing_settings import ProcessingSettingsStore
-from server.services.score_processing import ScoreProcessingService
+from server.services.score_processing import JobCanceledError, ScoreProcessingService
 
 
 class JobDispatcher:
@@ -36,11 +36,10 @@ class JobDispatcher:
             else settings.job_dispatcher_stale_after_seconds
         )
         self.max_retries = (
-            max_retries
-            if max_retries is not None
-            else settings.job_dispatcher_max_retries
+            max_retries if max_retries is not None else settings.job_dispatcher_max_retries
         )
         self._task: asyncio.Task[None] | None = None
+        self._running_tasks: set[asyncio.Task[None]] = set()
         self._stop_event = asyncio.Event()
         self._score_processing_service = ScoreProcessingService()
         self._settings_store = ProcessingSettingsStore()
@@ -61,21 +60,35 @@ class JobDispatcher:
             await self._task
         except asyncio.CancelledError:
             pass
+        for task in self._running_tasks:
+            task.cancel()
+        if self._running_tasks:
+            await asyncio.gather(*self._running_tasks, return_exceptions=True)
+        self._running_tasks.clear()
         self._task = None
 
     async def run_forever(self) -> None:
         while not self._stop_event.is_set():
             try:
-                processed_job = await self.run_once()
+                self._discard_completed_tasks()
+                started_jobs = await self.start_available_jobs()
             except asyncio.CancelledError:
                 raise
             except Exception as exc:  # pragma: no cover - defensive loop guard
-                self._settings_store.record_last_error(
-                    f"Job dispatcher loop failed: {exc}"
-                )
-                processed_job = False
+                self._settings_store.record_last_error(f"Job dispatcher loop failed: {exc}")
+                started_jobs = 0
 
-            if not processed_job:
+            if started_jobs == 0:
+                if self._running_tasks:
+                    done, _ = await asyncio.wait(
+                        self._running_tasks,
+                        timeout=self.poll_interval_seconds,
+                        return_when=asyncio.FIRST_COMPLETED,
+                    )
+                    for task in done:
+                        _ = task.exception() if not task.cancelled() else None
+                    self._discard_completed_tasks()
+                    continue
                 try:
                     await asyncio.wait_for(
                         self._stop_event.wait(),
@@ -91,12 +104,49 @@ class JobDispatcher:
                 return False
 
             job_id = job.id
+        await self._process_claimed_job(job_id)
+        return True
+
+    async def start_available_jobs(self) -> int:
+        max_jobs = self._configured_max_concurrent_jobs()
+        self._discard_completed_tasks()
+        available_slots = max(0, max_jobs - len(self._running_tasks))
+        started = 0
+        for _ in range(available_slots):
+            async with database.async_session() as db:
+                job = await self._claim_next_job(db)
+                if job is None:
+                    break
+                job_id = job.id
+            task = asyncio.create_task(self._process_claimed_job(job_id))
+            self._running_tasks.add(task)
+            started += 1
+        return started
+
+    async def _process_claimed_job(self, job_id: str) -> None:
+        async with database.async_session() as db:
+            job = await db.get(BackgroundJob, job_id)
+            if job is None or job.status != JobStatus.running:
+                return
             try:
                 await self._process_job(db, job)
+            except JobCanceledError:
+                await db.rollback()
             except Exception as exc:
                 await db.rollback()
                 await self._record_job_failure(job_id, exc)
-            return True
+
+    def _configured_max_concurrent_jobs(self) -> int:
+        payload = self._settings_store.load()
+        value = payload.get("max_concurrent_jobs", settings.max_concurrent_jobs)
+        try:
+            parsed = int(value)
+        except (TypeError, ValueError):
+            parsed = settings.max_concurrent_jobs
+        return max(1, min(4, parsed))
+
+    def _discard_completed_tasks(self) -> None:
+        self._running_tasks = {task for task in self._running_tasks if not task.done()}
 
     async def requeue_stale_running_jobs(self) -> int:
         cutoff = datetime.utcnow() - timedelta(seconds=self.stale_after_seconds)
@@ -199,9 +249,7 @@ class JobDispatcher:
             )
         )
         pending_item = pending_result.scalars().first()
-        piece.status = (
-            PieceStatus.review_pending if pending_item else PieceStatus.imported
-        )
+        piece.status = PieceStatus.review_pending if pending_item else PieceStatus.imported
         piece.updated_at = datetime.utcnow()
 
 

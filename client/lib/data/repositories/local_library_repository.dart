@@ -155,6 +155,16 @@ class LocalLibraryRepository {
     await _database.upsertLibraryEntry(entry);
   }
 
+  Future<void> removeEntry(String pieceId) async {
+    final scoreDirectory = Directory(
+      path.join(_appDirectory.path, 'library', 'scores', pieceId),
+    );
+    if (await scoreDirectory.exists()) {
+      await scoreDirectory.delete(recursive: true);
+    }
+    await _database.deleteLibraryEntry(pieceId);
+  }
+
   Future<LibraryEntry?> findEntry(String pieceId) async {
     await _database.migrateLibraryJsonIfNeeded(await _indexFile());
     return _database.findLibraryEntry(pieceId);
@@ -334,6 +344,7 @@ class LocalLibraryRepository {
         const <Map<String, dynamic>>[],
     List<String> validationWarnings = const <String>[],
     double? splitConfidence,
+    bool workflowClosed = false,
     required LibraryStatus libraryStatus,
     required List<int> bytes,
     required String fileExtension,
@@ -379,6 +390,7 @@ class LocalLibraryRepository {
       catalogSuggestions: catalogSuggestions,
       validationWarnings: validationWarnings,
       splitConfidence: splitConfidence,
+      workflowClosed: workflowClosed,
       libraryStatus: libraryStatus,
       createdAt: importedAt,
       updatedAt: importedAt,

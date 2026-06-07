@@ -57,8 +57,9 @@ This boundary is important for later workers: keep UI code behind repository con
 ### Config and sync scaffolding
 
 - `AppConfig` loads from `SharedPreferences` and optional compile-time overrides.
-- The legacy default server base URL is `http://192.168.1.100:8000`, but first-run pairing should come from the QR payload rather than that fallback.
-- `scripts/dev.ps1` can override that target at launch time with `-ClientServerHost` and `-ClientServerPort`, which become `AZMUSIC_SERVER_HOST` and `AZMUSIC_SERVER_PORT` Dart defines.
+- The legacy default server base URL is `http://192.168.1.100:8795`, but first-run pairing should come from the QR payload rather than that fallback.
+- `scripts/dev.ps1` can override that target for development launches with `-ClientServerHost` and `-ClientServerPort`, which become `AZMUSIC_SERVER_HOST` and `AZMUSIC_SERVER_PORT` Dart defines.
+- A server-host override no longer counts as pairing. Release builds start unpaired and must claim a real server QR token.
 - `ApiClient` and `NetworkInfo` are active today; `NetworkInfo` probes the currently configured server host for reachability.
 - `SyncManager.sync()` is still a TODO, but `PieceListNotifier` already runs opportunistic sync on app load, refresh, post-import, parent push, and connectivity return.
 - `LibrarySyncBannerState`, `syncStatusProvider`, and `connectionStatusProvider` expose real `offline-ready`, `syncing`, `synced`, and `failed-usable` states for the library banner.
@@ -134,11 +135,13 @@ Important notes about the current API shape:
 Server processing is now separated into orchestration and engine adapters:
 
 - `ScoreProcessingService` owns raw import preservation, job state, score-version rows, review item creation, and failure recording.
-- `MusicXmlEngine` chooses Audiveris when configured, or the deterministic stub only when development fallback is explicitly allowed.
+- `MusicXmlEngine` chooses the configured OMR strategy: Audiveris default/sweep, HOMR experimental, or experimental bakeoff. The deterministic stub is only allowed when development fallback is explicitly enabled.
 - `MuseScoreRenderEngine` renders MusicXML to PDF when configured, or copies the raw PDF as a development review fallback when no renderer is configured.
-- `PRODUCTION_MODE=true` disables stub MusicXML and requires Audiveris, MuseScore, and Tesseract OCR to be available.
+- `PRODUCTION_MODE=true` disables stub MusicXML and requires Audiveris, MuseScore, and Tesseract OCR to be available. HOMR remains optional and experimental.
 - `ProcessingSettingsStore` persists parent-managed settings under `server/storage/processing_settings.json`.
 - `DeviceWorkerRegistry` persists experimental device-worker registrations under `server/storage/device_workers.json`.
+
+HOMR is integrated as a server-side experimental OMR engine. It is installed separately into a Python 3.10-3.12 virtual environment and produces MusicXML from rendered page images. Approved MusicXML remains the canonical future playback artifact, while the MuseScore-rendered PDF remains the student-readable display artifact.
 
 The frontend should treat these as server-owned concerns. Client code may import, read, show status, configure settings, and approve review candidates, but it should not embed OMR or rendering decisions in end-user UI code.
 

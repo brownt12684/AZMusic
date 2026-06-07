@@ -7,7 +7,7 @@ from fastapi import Depends, FastAPI
 from server.config import settings
 from server.database import engine
 from server.jobs.dispatcher import JobDispatcher
-from server.routers import jobs, pairing, pieces, processing, review, setup, sync
+from server.routers import debug, jobs, pairing, pieces, processing, review, setup, sync
 from server.services.auth import require_paired_device
 
 
@@ -31,7 +31,7 @@ async def lifespan(app: FastAPI):
 app = FastAPI(
     title="AZMusic Server",
     description="LAN-only processing server for AZMusic family music practice system.",
-    version="0.1.0",
+    version="0.2.0",
     lifespan=lifespan,
 )
 
@@ -67,10 +67,16 @@ app.include_router(
     tags=["processing"],
     dependencies=_protected_dependencies,
 )
+app.include_router(
+    debug.router,
+    prefix="/api/v1/debug",
+    tags=["debug"],
+    dependencies=_protected_dependencies,
+)
 app.include_router(pairing.router, prefix="/api/v1/pairing", tags=["pairing"])
 app.include_router(setup.router, tags=["setup"])
 
 
 @app.get("/health")
 async def health():
-    return {"status": "ok", "server": "azmusic", "version": "0.1.0"}
+    return {"status": "ok", "server": "azmusic", "version": "0.2.0"}

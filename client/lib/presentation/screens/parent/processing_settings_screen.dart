@@ -2,7 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/app_keys.dart';
+import '../../../app/routes/app_router.dart';
 import '../../../core/config/app_config.dart';
+import '../../../core/network/server_connection_error.dart';
 import '../../../domain/entities/processing_settings.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/processing_settings_providers.dart';
@@ -19,10 +21,15 @@ class _ProcessingSettingsScreenState
     extends ConsumerState<ProcessingSettingsScreen> {
   final TextEditingController _audiverisPathController =
       TextEditingController();
+  final TextEditingController _homrPathController = TextEditingController();
   final TextEditingController _musescorePathController =
+      TextEditingController();
+  final TextEditingController _musescoreStylePathController =
       TextEditingController();
   final TextEditingController _ocrPathController = TextEditingController();
   final TextEditingController _ocrLanguageController = TextEditingController();
+  final TextEditingController _maxConcurrentJobsController =
+      TextEditingController();
   final TextEditingController _localLlmProviderController =
       TextEditingController();
   final TextEditingController _localLlmModelController =
@@ -38,14 +45,19 @@ class _ProcessingSettingsScreenState
   bool _cloudEnabled = false;
   bool _showAdvancedSettings = false;
   String _processingMode = 'server_only';
+  String _ocrEffort = 'balanced';
+  String _omrStrategy = 'audiveris_quality_sweep';
   ProcessingValidation? _lastValidation;
 
   @override
   void dispose() {
     _audiverisPathController.dispose();
+    _homrPathController.dispose();
     _musescorePathController.dispose();
+    _musescoreStylePathController.dispose();
     _ocrPathController.dispose();
     _ocrLanguageController.dispose();
+    _maxConcurrentJobsController.dispose();
     _localLlmProviderController.dispose();
     _localLlmModelController.dispose();
     _cloudProviderController.dispose();
@@ -85,9 +97,12 @@ class _ProcessingSettingsScreenState
                 _hydrate(value);
                 return _SettingsForm(
                   audiverisPathController: _audiverisPathController,
+                  homrPathController: _homrPathController,
                   musescorePathController: _musescorePathController,
+                  musescoreStylePathController: _musescoreStylePathController,
                   ocrPathController: _ocrPathController,
                   ocrLanguageController: _ocrLanguageController,
+                  maxConcurrentJobsController: _maxConcurrentJobsController,
                   localLlmProviderController: _localLlmProviderController,
                   localLlmModelController: _localLlmModelController,
                   cloudProviderController: _cloudProviderController,
@@ -99,6 +114,8 @@ class _ProcessingSettingsScreenState
                   productionMode: value.productionMode,
                   cloudEnabled: _cloudEnabled,
                   processingMode: _processingMode,
+                  ocrEffort: _ocrEffort,
+                  omrStrategy: _omrStrategy,
                   onShowAdvancedChanged: (value) {
                     setState(() {
                       _showAdvancedSettings = value;
@@ -119,13 +136,29 @@ class _ProcessingSettingsScreenState
                       _processingMode = value;
                     });
                   },
+                  onOcrEffortChanged: (value) {
+                    setState(() {
+                      _ocrEffort = value;
+                    });
+                  },
+                  onOmrStrategyChanged: (value) {
+                    setState(() {
+                      _omrStrategy = value;
+                    });
+                  },
                   onValidate: () => _validate(value),
                   onSave: () => _save(value),
                 );
               },
               error: (error, _) => _ErrorPanel(
                 title: 'Unable to load processing settings',
-                message: '$error',
+                message: formatServerConnectionError(error),
+                actionLabel: isServerConnectionError(error)
+                    ? 'Repair server pairing'
+                    : null,
+                onAction: isServerConnectionError(error)
+                    ? () => _openPairingScreen(context)
+                    : null,
               ),
               loading: () => const Center(
                 child: Padding(
@@ -142,7 +175,13 @@ class _ProcessingSettingsScreenState
               data: (value) => _CapabilitiesPanel(capabilities: value),
               error: (error, _) => _ErrorPanel(
                 title: 'Unable to load processing capabilities',
-                message: '$error',
+                message: formatServerConnectionError(error),
+                actionLabel: isServerConnectionError(error)
+                    ? 'Repair server pairing'
+                    : null,
+                onAction: isServerConnectionError(error)
+                    ? () => _openPairingScreen(context)
+                    : null,
               ),
               loading: () => Text(
                 'Checking installed processing tools...',
@@ -155,14 +194,21 @@ class _ProcessingSettingsScreenState
     );
   }
 
+  void _openPairingScreen(BuildContext context) {
+    Navigator.of(context).pushReplacementNamed(AppRouter.login);
+  }
+
   void _hydrate(ProcessingSettings settings) {
     if (_hydrated) {
       return;
     }
     _audiverisPathController.text = settings.audiverisCliPath ?? '';
+    _homrPathController.text = settings.homrCliPath ?? '';
     _musescorePathController.text = settings.musescoreCliPath ?? '';
+    _musescoreStylePathController.text = settings.musescoreStylePath ?? '';
     _ocrPathController.text = settings.ocrCliPath ?? '';
     _ocrLanguageController.text = settings.ocrLanguage;
+    _maxConcurrentJobsController.text = settings.maxConcurrentJobs.toString();
     _localLlmProviderController.text = settings.localLlmProvider ?? '';
     _localLlmModelController.text = settings.localLlmModel ?? '';
     _cloudProviderController.text = settings.cloudProvider ?? '';
@@ -172,43 +218,96 @@ class _ProcessingSettingsScreenState
     _allowStubMusicXml =
         settings.productionMode ? false : settings.allowStubMusicXml;
     _cloudEnabled = settings.cloudEnabled;
-    _processingMode = settings.processingMode;
+    _ocrEffort =
+        settings.ocrEffort == 'high_accuracy' ? 'high_accuracy' : 'balanced';
+    _omrStrategy = _validOmrStrategy(settings.omrStrategy);
+    _processingMode = AppConfig.showExperimentalFeatures
+        ? settings.processingMode
+        : 'server_only';
     _hydrated = true;
+  }
+
+  String _validOmrStrategy(String value) {
+    const productionStrategies = {
+      'audiveris_default',
+      'audiveris_quality_sweep',
+      'omr_bakeoff',
+    };
+    const experimentalStrategies = {
+      'audiveris_default',
+      'audiveris_quality_sweep',
+      'homr_experimental',
+      'omr_bakeoff',
+      'experimental_engine_bakeoff',
+    };
+    const validStrategies = AppConfig.showExperimentalFeatures
+        ? experimentalStrategies
+        : productionStrategies;
+    if (!validStrategies.contains(value) &&
+        value == 'experimental_engine_bakeoff') {
+      return 'omr_bakeoff';
+    }
+    return validStrategies.contains(value) ? value : 'audiveris_quality_sweep';
   }
 
   ProcessingSettings _editedSettings(ProcessingSettings base) {
     final audiverisPath = _audiverisPathController.text.trim();
+    final homrPath = _homrPathController.text.trim();
     final musescorePath = _musescorePathController.text.trim();
+    final musescoreStylePath = _musescoreStylePathController.text.trim();
     final ocrPath = _ocrPathController.text.trim();
     final ocrLanguage = _ocrLanguageController.text.trim();
+    final maxConcurrentJobs =
+        int.tryParse(_maxConcurrentJobsController.text.trim()) ?? 2;
+    final boundedMaxConcurrentJobs = maxConcurrentJobs < 1
+        ? 1
+        : maxConcurrentJobs > 4
+            ? 4
+            : maxConcurrentJobs;
     final localLlmProvider = _localLlmProviderController.text.trim();
     final localLlmModel = _localLlmModelController.text.trim();
     final cloudProvider = _cloudProviderController.text.trim();
     final cloudModel = _cloudModelController.text.trim();
     final cloudBaseUrl = _cloudBaseUrlController.text.trim();
     final cloudApiKey = _cloudApiKeyController.text.trim();
+    const showExperimental = AppConfig.showExperimentalFeatures;
     return base.copyWith(
       audiverisCliPath: audiverisPath.isEmpty ? null : audiverisPath,
+      homrCliPath: homrPath.isEmpty ? null : homrPath,
       musescoreCliPath: musescorePath.isEmpty ? null : musescorePath,
+      musescoreStylePath:
+          musescoreStylePath.isEmpty ? null : musescoreStylePath,
       ocrCliPath: ocrPath.isEmpty ? null : ocrPath,
       ocrLanguage: ocrLanguage.isEmpty ? 'eng' : ocrLanguage,
-      localLlmProvider: localLlmProvider.isEmpty ? null : localLlmProvider,
-      localLlmModel: localLlmModel.isEmpty ? null : localLlmModel,
-      cloudEnabled: _cloudEnabled,
-      cloudProvider: cloudProvider.isEmpty ? null : cloudProvider,
-      cloudModel: cloudModel.isEmpty ? null : cloudModel,
-      cloudBaseUrl: cloudBaseUrl.isEmpty ? null : cloudBaseUrl,
-      cloudApiKey: cloudApiKey.isEmpty ? null : cloudApiKey,
+      ocrEffort: _ocrEffort,
+      omrStrategy: _omrStrategy,
+      maxConcurrentJobs: boundedMaxConcurrentJobs,
+      localLlmProvider: showExperimental && localLlmProvider.isNotEmpty
+          ? localLlmProvider
+          : null,
+      localLlmModel:
+          showExperimental && localLlmModel.isNotEmpty ? localLlmModel : null,
+      cloudEnabled: showExperimental && _cloudEnabled,
+      cloudProvider:
+          showExperimental && cloudProvider.isNotEmpty ? cloudProvider : null,
+      cloudModel: showExperimental && cloudModel.isNotEmpty ? cloudModel : null,
+      cloudBaseUrl:
+          showExperimental && cloudBaseUrl.isNotEmpty ? cloudBaseUrl : null,
+      cloudApiKey:
+          showExperimental && cloudApiKey.isNotEmpty ? cloudApiKey : null,
       clearAudiverisPath: audiverisPath.isEmpty,
+      clearHomrPath: homrPath.isEmpty,
       clearMuseScorePath: musescorePath.isEmpty,
+      clearMuseScoreStylePath: musescoreStylePath.isEmpty,
       clearOcrPath: ocrPath.isEmpty,
-      clearLocalLlmProvider: localLlmProvider.isEmpty,
-      clearLocalLlmModel: localLlmModel.isEmpty,
-      clearCloudProvider: cloudProvider.isEmpty,
-      clearCloudModel: cloudModel.isEmpty,
-      clearCloudBaseUrl: cloudBaseUrl.isEmpty,
-      clearCloudApiKey: cloudApiKey.isEmpty && !base.cloudApiKeyConfigured,
-      processingMode: _processingMode,
+      clearLocalLlmProvider: !showExperimental || localLlmProvider.isEmpty,
+      clearLocalLlmModel: !showExperimental || localLlmModel.isEmpty,
+      clearCloudProvider: !showExperimental || cloudProvider.isEmpty,
+      clearCloudModel: !showExperimental || cloudModel.isEmpty,
+      clearCloudBaseUrl: !showExperimental || cloudBaseUrl.isEmpty,
+      clearCloudApiKey: !showExperimental ||
+          (cloudApiKey.isEmpty && !base.cloudApiKeyConfigured),
+      processingMode: showExperimental ? _processingMode : 'server_only',
       allowStubMusicXml: base.productionMode ? false : _allowStubMusicXml,
     );
   }
@@ -250,9 +349,12 @@ class _ProcessingSettingsScreenState
 class _SettingsForm extends StatelessWidget {
   const _SettingsForm({
     required this.audiverisPathController,
+    required this.homrPathController,
     required this.musescorePathController,
+    required this.musescoreStylePathController,
     required this.ocrPathController,
     required this.ocrLanguageController,
+    required this.maxConcurrentJobsController,
     required this.localLlmProviderController,
     required this.localLlmModelController,
     required this.cloudProviderController,
@@ -264,18 +366,25 @@ class _SettingsForm extends StatelessWidget {
     required this.productionMode,
     required this.cloudEnabled,
     required this.processingMode,
+    required this.ocrEffort,
+    required this.omrStrategy,
     required this.onShowAdvancedChanged,
     required this.onAllowStubChanged,
     required this.onCloudEnabledChanged,
     required this.onModeChanged,
+    required this.onOcrEffortChanged,
+    required this.onOmrStrategyChanged,
     required this.onValidate,
     required this.onSave,
   });
 
   final TextEditingController audiverisPathController;
+  final TextEditingController homrPathController;
   final TextEditingController musescorePathController;
+  final TextEditingController musescoreStylePathController;
   final TextEditingController ocrPathController;
   final TextEditingController ocrLanguageController;
+  final TextEditingController maxConcurrentJobsController;
   final TextEditingController localLlmProviderController;
   final TextEditingController localLlmModelController;
   final TextEditingController cloudProviderController;
@@ -287,16 +396,46 @@ class _SettingsForm extends StatelessWidget {
   final bool productionMode;
   final bool cloudEnabled;
   final String processingMode;
+  final String ocrEffort;
+  final String omrStrategy;
   final ValueChanged<bool> onShowAdvancedChanged;
   final ValueChanged<bool> onAllowStubChanged;
   final ValueChanged<bool> onCloudEnabledChanged;
   final ValueChanged<String> onModeChanged;
+  final ValueChanged<String> onOcrEffortChanged;
+  final ValueChanged<String> onOmrStrategyChanged;
   final VoidCallback onValidate;
   final VoidCallback onSave;
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final processingSegments = <ButtonSegment<String>>[
+      const ButtonSegment(
+        value: 'server_only',
+        icon: Icon(Icons.dns_outlined),
+        label: Text('Server only'),
+      ),
+      if (AppConfig.showExperimentalFeatures) ...const [
+        ButtonSegment(
+          value: 'server_plus_device_workers',
+          icon: Icon(Icons.devices_other_outlined),
+          label: Text('Server + devices'),
+        ),
+        ButtonSegment(
+          value: 'server_plus_cloud_workers',
+          icon: Icon(Icons.cloud_queue_outlined),
+          label: Text('Server + cloud'),
+        ),
+        ButtonSegment(
+          value: 'server_plus_device_and_cloud_workers',
+          icon: Icon(Icons.hub_outlined),
+          label: Text('Devices + cloud'),
+        ),
+      ],
+    ];
+    final selectedProcessingMode =
+        AppConfig.showExperimentalFeatures ? processingMode : 'server_only';
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -340,11 +479,31 @@ class _SettingsForm extends StatelessWidget {
               ),
               const SizedBox(height: 12),
               TextField(
+                controller: homrPathController,
+                decoration: const InputDecoration(
+                  labelText: 'HOMR CLI path',
+                  helperText:
+                      'Experimental: optional MusicXML OMR engine installed in a Python virtual environment.',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
                 controller: musescorePathController,
                 decoration: const InputDecoration(
                   labelText: 'MuseScore CLI path',
                   helperText:
                       'Advanced: used to render MusicXML into review PDFs.',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: musescoreStylePathController,
+                decoration: const InputDecoration(
+                  labelText: 'MuseScore style path',
+                  helperText:
+                      'Optional .mss file used for review PDF layout only; it does not change OMR accuracy.',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -370,32 +529,86 @@ class _SettingsForm extends StatelessWidget {
               const SizedBox(height: 16),
             ],
             SegmentedButton<String>(
-              segments: const [
-                ButtonSegment(
-                  value: 'server_only',
-                  icon: Icon(Icons.dns_outlined),
-                  label: Text('Server only'),
-                ),
-                ButtonSegment(
-                  value: 'server_plus_device_workers',
-                  icon: Icon(Icons.devices_other_outlined),
-                  label: Text('Server + devices'),
-                ),
-                ButtonSegment(
-                  value: 'server_plus_cloud_workers',
-                  icon: Icon(Icons.cloud_queue_outlined),
-                  label: Text('Server + cloud'),
-                ),
-                ButtonSegment(
-                  value: 'server_plus_device_and_cloud_workers',
-                  icon: Icon(Icons.hub_outlined),
-                  label: Text('Devices + cloud'),
-                ),
-              ],
-              selected: {processingMode},
+              segments: processingSegments,
+              selected: {selectedProcessingMode},
               onSelectionChanged: (selection) {
                 onModeChanged(selection.first);
               },
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: omrStrategy,
+              decoration: const InputDecoration(
+                labelText: 'OMR strategy',
+                helperText:
+                    'Use compare mode to create multiple score candidates for parent review.',
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(
+                  value: 'audiveris_default',
+                  child: Text('Audiveris default'),
+                ),
+                DropdownMenuItem(
+                  value: 'audiveris_quality_sweep',
+                  child: Text('Audiveris quality sweep'),
+                ),
+                DropdownMenuItem(
+                  value: 'omr_bakeoff',
+                  child: Text('Compare Audiveris + HOMR candidates'),
+                ),
+                if (AppConfig.showExperimentalFeatures) ...[
+                  DropdownMenuItem(
+                    value: 'homr_experimental',
+                    child: Text('HOMR only'),
+                  ),
+                  DropdownMenuItem(
+                    value: 'experimental_engine_bakeoff',
+                    child: Text('Experimental engine bakeoff'),
+                  ),
+                ],
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  onOmrStrategyChanged(value);
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<String>(
+              initialValue: ocrEffort,
+              decoration: const InputDecoration(
+                labelText: 'OCR effort',
+                helperText:
+                    'High accuracy renders book pages larger before text OCR.',
+                border: OutlineInputBorder(),
+              ),
+              items: const [
+                DropdownMenuItem(
+                  value: 'balanced',
+                  child: Text('Balanced'),
+                ),
+                DropdownMenuItem(
+                  value: 'high_accuracy',
+                  child: Text('High accuracy'),
+                ),
+              ],
+              onChanged: (value) {
+                if (value != null) {
+                  onOcrEffortChanged(value);
+                }
+              },
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              controller: maxConcurrentJobsController,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Concurrent processing jobs',
+                helperText:
+                    'How many approved pieces the server may process at once. Use 1-4; default is 2.',
+                border: OutlineInputBorder(),
+              ),
             ),
             const SizedBox(height: 8),
             SwitchListTile(
@@ -410,101 +623,103 @@ class _SettingsForm extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 12),
-            Text(
-              'Experimental processing providers',
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
+            if (AppConfig.showExperimentalFeatures) ...[
+              Text(
+                'Experimental processing providers',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'Device workers and cloud APIs are optional provider lanes for book classification, metadata suggestions, split validation, and reprocessing. They do not replace parent review or direct MusicXML generation.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              const SizedBox(height: 8),
+              Text(
+                'Device workers and cloud APIs are optional provider lanes for book classification, metadata suggestions, split validation, and reprocessing. They do not replace parent review or direct MusicXML generation.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            SwitchListTile(
-              contentPadding: EdgeInsets.zero,
-              value: cloudEnabled,
-              onChanged: onCloudEnabledChanged,
-              title: const Text('Enable experimental cloud provider'),
-              subtitle: const Text(
-                'Cloud APIs are optional and receive compact page facts, not raw books by default.',
+              const SizedBox(height: 8),
+              SwitchListTile(
+                contentPadding: EdgeInsets.zero,
+                value: cloudEnabled,
+                onChanged: onCloudEnabledChanged,
+                title: const Text('Enable experimental cloud provider'),
+                subtitle: const Text(
+                  'Cloud APIs are optional and receive compact page facts, not raw books by default.',
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            TextField(
-              controller: cloudProviderController,
-              decoration: const InputDecoration(
-                labelText: 'Cloud provider',
-                helperText: 'Examples: openai, gemini, anthropic, custom.',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 8),
+              TextField(
+                controller: cloudProviderController,
+                decoration: const InputDecoration(
+                  labelText: 'Cloud provider',
+                  helperText: 'Examples: openai, gemini, anthropic, custom.',
+                  border: OutlineInputBorder(),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: cloudModelController,
-              decoration: const InputDecoration(
-                labelText: 'Cloud model',
-                helperText: 'Optional model name for the selected provider.',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 12),
+              TextField(
+                controller: cloudModelController,
+                decoration: const InputDecoration(
+                  labelText: 'Cloud model',
+                  helperText: 'Optional model name for the selected provider.',
+                  border: OutlineInputBorder(),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: cloudBaseUrlController,
-              decoration: const InputDecoration(
-                labelText: 'Cloud base URL',
-                helperText:
-                    'Optional for custom or OpenAI-compatible endpoints.',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 12),
+              TextField(
+                controller: cloudBaseUrlController,
+                decoration: const InputDecoration(
+                  labelText: 'Cloud base URL',
+                  helperText:
+                      'Optional for custom or OpenAI-compatible endpoints.',
+                  border: OutlineInputBorder(),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: cloudApiKeyController,
-              obscureText: true,
-              decoration: const InputDecoration(
-                labelText: 'Cloud API key',
-                helperText:
-                    'Saved server-side. Leave blank to keep the existing key.',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 12),
+              TextField(
+                controller: cloudApiKeyController,
+                obscureText: true,
+                decoration: const InputDecoration(
+                  labelText: 'Cloud API key',
+                  helperText:
+                      'Saved server-side. Leave blank to keep the existing key.',
+                  border: OutlineInputBorder(),
+                ),
               ),
-            ),
-            const SizedBox(height: 16),
-            Text(
-              'Experimental local LLM review',
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
+              const SizedBox(height: 16),
+              Text(
+                'Experimental local LLM review',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
               ),
-            ),
-            const SizedBox(height: 8),
-            Text(
-              'This config is reserved for metadata validation and send-back review. The adapter boundary is present; runtime integrations such as Ollama or LM Studio still need to be implemented.',
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+              const SizedBox(height: 8),
+              Text(
+                'This config is reserved for metadata validation and send-back review. The adapter boundary is present; runtime integrations such as Ollama or LM Studio still need to be implemented.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: localLlmProviderController,
-              decoration: const InputDecoration(
-                labelText: 'Local LLM provider',
-                helperText: 'Examples for future adapters: ollama, lmstudio.',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 12),
+              TextField(
+                controller: localLlmProviderController,
+                decoration: const InputDecoration(
+                  labelText: 'Local LLM provider',
+                  helperText: 'Examples for future adapters: ollama, lmstudio.',
+                  border: OutlineInputBorder(),
+                ),
               ),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: localLlmModelController,
-              decoration: const InputDecoration(
-                labelText: 'Local LLM model',
-                helperText:
-                    'Optional model name used by the configured provider.',
-                border: OutlineInputBorder(),
+              const SizedBox(height: 12),
+              TextField(
+                controller: localLlmModelController,
+                decoration: const InputDecoration(
+                  labelText: 'Local LLM model',
+                  helperText:
+                      'Optional model name used by the configured provider.',
+                  border: OutlineInputBorder(),
+                ),
               ),
-            ),
+            ],
             const SizedBox(height: 12),
             Wrap(
               spacing: 8,
@@ -534,7 +749,8 @@ class _PairingCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final setupUrl = '${AppConfig.serverBaseUrl}/setup';
+    final setupUrl =
+        AppConfig.isServerPaired ? '${AppConfig.serverBaseUrl}/setup' : null;
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -572,16 +788,24 @@ class _PairingCard extends StatelessWidget {
                     style: theme.textTheme.labelLarge,
                   ),
                   const SizedBox(height: 6),
-                  SelectableText(
-                    setupUrl,
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      fontWeight: FontWeight.w700,
+                  if (setupUrl == null)
+                    Text(
+                      'Open the setup page shown by AZMusic Server Setup, then scan the QR code from this device.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    )
+                  else
+                    SelectableText(
+                      setupUrl,
+                      style: theme.textTheme.bodyMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
                     ),
-                  ),
                   const SizedBox(height: 8),
                   Text(
                     AppConfig.isServerPaired
-                        ? 'This development client is already paired with ${AppConfig.serverBaseUrl}.'
+                        ? 'This device is paired with ${AppConfig.serverBaseUrl}.'
                         : 'This device is not paired yet.',
                     style: theme.textTheme.bodySmall?.copyWith(
                       color: theme.colorScheme.onSurfaceVariant,
@@ -624,6 +848,15 @@ class _CapabilitiesPanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final visibleWarnings = AppConfig.showExperimentalFeatures
+        ? capabilities.warnings
+        : capabilities.warnings
+            .where(
+              (warning) =>
+                  !warning.toLowerCase().contains('cloud') &&
+                  !warning.toLowerCase().contains('llm'),
+            )
+            .toList(growable: false);
     return Card(
       child: Padding(
         padding: const EdgeInsets.all(18),
@@ -639,13 +872,17 @@ class _CapabilitiesPanel extends StatelessWidget {
             const SizedBox(height: 12),
             _ExecutableStatusTile(status: capabilities.audiveris),
             const SizedBox(height: 8),
+            _ExecutableStatusTile(status: capabilities.homr),
+            const SizedBox(height: 8),
             _ExecutableStatusTile(status: capabilities.musescore),
             const SizedBox(height: 8),
             _ExecutableStatusTile(status: capabilities.ocr),
-            const SizedBox(height: 8),
-            _ExecutableStatusTile(status: capabilities.localLlm),
-            const SizedBox(height: 8),
-            _ExecutableStatusTile(status: capabilities.cloudLlm),
+            if (AppConfig.showExperimentalFeatures) ...[
+              const SizedBox(height: 8),
+              _ExecutableStatusTile(status: capabilities.localLlm),
+              const SizedBox(height: 8),
+              _ExecutableStatusTile(status: capabilities.cloudLlm),
+            ],
             const SizedBox(height: 12),
             _InfoRow(
               label: 'Server mode',
@@ -653,22 +890,24 @@ class _CapabilitiesPanel extends StatelessWidget {
                   ? 'Production - real processing tools required'
                   : 'Development - stub fallback allowed when enabled',
             ),
-            const SizedBox(height: 8),
-            _InfoRow(
-              label: 'Experimental device workers',
-              value: capabilities.deviceWorkersEnabled
-                  ? '${capabilities.deviceWorkers.length} registered'
-                  : 'Disabled',
-            ),
-            const SizedBox(height: 8),
-            _InfoRow(
-              label: 'Experimental cloud workers',
-              value: capabilities.cloudWorkersEnabled
-                  ? (capabilities.cloudLlm.available
-                      ? 'Configured'
-                      : 'Enabled, needs configuration')
-                  : 'Disabled',
-            ),
+            if (AppConfig.showExperimentalFeatures) ...[
+              const SizedBox(height: 8),
+              _InfoRow(
+                label: 'Experimental device workers',
+                value: capabilities.deviceWorkersEnabled
+                    ? '${capabilities.deviceWorkers.length} registered'
+                    : 'Disabled',
+              ),
+              const SizedBox(height: 8),
+              _InfoRow(
+                label: 'Experimental cloud workers',
+                value: capabilities.cloudWorkersEnabled
+                    ? (capabilities.cloudLlm.available
+                        ? 'Configured'
+                        : 'Enabled, needs configuration')
+                    : 'Disabled',
+              ),
+            ],
             const SizedBox(height: 8),
             _InfoRow(
               label: 'Async queue',
@@ -684,9 +923,9 @@ class _CapabilitiesPanel extends StatelessWidget {
                     capabilities.jobSummary.lastFailedJob!.jobType,
               ),
             ],
-            if (capabilities.warnings.isNotEmpty) ...[
+            if (visibleWarnings.isNotEmpty) ...[
               const SizedBox(height: 12),
-              ...capabilities.warnings.map(
+              ...visibleWarnings.map(
                 (warning) => Padding(
                   padding: const EdgeInsets.only(bottom: 6),
                   child: Text(
@@ -713,8 +952,9 @@ class _CapabilitiesPanel extends StatelessWidget {
                 ),
               ),
             ],
-            if (capabilities.settings.lastLlmProcessingError?.isNotEmpty ??
-                false) ...[
+            if (AppConfig.showExperimentalFeatures &&
+                (capabilities.settings.lastLlmProcessingError?.isNotEmpty ??
+                    false)) ...[
               const SizedBox(height: 12),
               Text(
                 'Last LLM review error',
@@ -728,8 +968,9 @@ class _CapabilitiesPanel extends StatelessWidget {
                 ),
               ),
             ],
-            if (capabilities.settings.lastCloudProcessingError?.isNotEmpty ??
-                false) ...[
+            if (AppConfig.showExperimentalFeatures &&
+                (capabilities.settings.lastCloudProcessingError?.isNotEmpty ??
+                    false)) ...[
               const SizedBox(height: 12),
               Text(
                 'Last cloud processing error',
@@ -840,6 +1081,12 @@ class _ValidationPanel extends StatelessWidget {
               value: validation.audiveris.available
                   ? 'Available'
                   : validation.audiveris.error ?? 'Not configured',
+            ),
+            _InfoRow(
+              label: 'HOMR',
+              value: validation.homr.available
+                  ? 'Available'
+                  : validation.homr.error ?? 'Not configured',
             ),
             _InfoRow(
               label: 'MuseScore',
@@ -963,10 +1210,14 @@ class _ErrorPanel extends StatelessWidget {
   const _ErrorPanel({
     required this.title,
     required this.message,
+    this.actionLabel,
+    this.onAction,
   });
 
   final String title;
   final String message;
+  final String? actionLabel;
+  final VoidCallback? onAction;
 
   @override
   Widget build(BuildContext context) {
@@ -986,6 +1237,14 @@ class _ErrorPanel extends StatelessWidget {
             ),
             const SizedBox(height: 8),
             Text(message),
+            if (actionLabel != null && onAction != null) ...[
+              const SizedBox(height: 12),
+              OutlinedButton.icon(
+                onPressed: onAction,
+                icon: const Icon(Icons.qr_code_scanner_outlined),
+                label: Text(actionLabel!),
+              ),
+            ],
           ],
         ),
       ),

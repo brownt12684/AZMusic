@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 import 'dart:typed_data';
 
@@ -47,10 +48,13 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   int _currentPage = 1;
   int _pageCount = 1;
   String? _loadError;
+  bool _chromeVisible = false;
   bool _reportedPdfSmokeReady = false;
+  Timer? _chromeAutoHideTimer;
 
   @override
   void dispose() {
+    _chromeAutoHideTimer?.cancel();
     _pdfController.dispose();
     super.dispose();
   }
@@ -132,105 +136,157 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       pageCount: _pageCount,
       spreadMode: spreadMode,
     );
+    final chromeVisible =
+        _chromeVisible || _activeModule != null || isWriteModeActive;
+    final safePadding = mediaQuery.padding;
 
     return Scaffold(
       key: AppKeys.readerScreen,
-      body: Row(
+      backgroundColor: Theme.of(context).colorScheme.surface,
+      body: Stack(
         children: [
-          _ReaderRail(
-            activeModule: _activeModule,
-            onSelect: (module) {
-              _handleModuleSelection(module, annotationRequest);
-            },
-            onBack: () => _handleBack(annotationRequest),
+          Positioned.fill(
+            child: _buildCanvas(
+              context,
+              entry: entry,
+              scoreVersion: scoreVersion,
+              scoreFile: scoreFile,
+              activeProfile: activeProfile,
+              annotationRequest: annotationRequest,
+              annotationState: annotationState,
+              spreadMode: spreadMode,
+            ),
           ),
-          if (_activeModule != null)
-            SizedBox(
-              width: 320,
-              child: _ReaderModulePanel(
-                module: _activeModule!,
-                entry: entry,
-                scoreVersion: scoreVersion,
-                currentPage: _currentPage,
-                pageCount: _pageCount,
-                activeProfile: activeProfile,
-                annotationRequest: annotationRequest,
-                annotationState: annotationState,
+          Positioned(
+            left: 0,
+            top: 0,
+            bottom: 0,
+            width: 34,
+            child: _ReaderEdgeReveal(
+              onReveal: _showChromeTransient,
+            ),
+          ),
+          if (chromeVisible) ...[
+            Positioned(
+              left: 12,
+              top: safePadding.top + 12,
+              bottom: safePadding.bottom + 12,
+              child: _ReaderChromeSurface(
+                child: _ReaderRail(
+                  activeModule: _activeModule,
+                  onSelect: (module) {
+                    _handleModuleSelection(module, annotationRequest);
+                  },
+                  onBack: () => _handleBack(annotationRequest),
+                ),
               ),
             ),
-          Expanded(
-            child: ColoredBox(
-              color: Theme.of(context).colorScheme.surfaceContainerLowest,
-              child: Column(
-                children: [
-                  _ReaderTopBar(
+            Positioned(
+              left: 88,
+              right: 12,
+              top: safePadding.top + 12,
+              child: _ReaderChromeSurface(
+                child: _ReaderTopBar(
+                  entry: entry,
+                  scoreVersion: scoreVersion,
+                  readableScoreVersions:
+                      _readableScoreVersions(entry, scoreVersion),
+                  onSelectScoreVersion: (scoreVersionId) {
+                    if (scoreVersionId == scoreVersion.id) {
+                      return;
+                    }
+                    Navigator.of(context).pushReplacementNamed(
+                      AppRouter.reader,
+                      arguments: {
+                        'pieceId': entry.piece.id,
+                        'scoreVersionId': scoreVersionId,
+                      },
+                    );
+                  },
+                  pagePositionLabel: pagePositionLabel,
+                  isWriteModeActive: isWriteModeActive,
+                  canToggleWriteMode:
+                      activeProfile.role == ProfileRole.student &&
+                          annotationRequest != null,
+                  onToggleWriteMode: annotationRequest == null
+                      ? null
+                      : () => _toggleWriteMode(
+                            annotationRequest,
+                            annotationPageState,
+                          ),
+                  onPreviousPage: _currentPage > 1
+                      ? () {
+                          _showChromeTransient();
+                          _jumpToPage(
+                            previousReaderTarget(
+                              currentPage: _currentPage,
+                              spreadMode: spreadMode,
+                            ),
+                            spreadMode: spreadMode,
+                          );
+                        }
+                      : null,
+                  onNextPage: _currentPage < _pageCount
+                      ? () {
+                          _showChromeTransient();
+                          _jumpToPage(
+                            nextReaderTarget(
+                              currentPage: _currentPage,
+                              pageCount: _pageCount,
+                              spreadMode: spreadMode,
+                            ),
+                            spreadMode: spreadMode,
+                          );
+                        }
+                      : null,
+                ),
+              ),
+            ),
+            if (_activeModule != null)
+              Positioned(
+                left: 88,
+                top: safePadding.top + 112,
+                bottom: safePadding.bottom + 12,
+                width: 340,
+                child: _ReaderChromeSurface(
+                  child: _ReaderModulePanel(
+                    module: _activeModule!,
                     entry: entry,
                     scoreVersion: scoreVersion,
-                    pagePositionLabel: pagePositionLabel,
-                    isWriteModeActive: isWriteModeActive,
-                    canToggleWriteMode:
-                        activeProfile.role == ProfileRole.student &&
-                            annotationRequest != null,
-                    onToggleWriteMode: annotationRequest == null
-                        ? null
-                        : () => _toggleWriteMode(
-                              annotationRequest,
-                              annotationPageState,
-                            ),
-                    onPreviousPage: _currentPage > 1
-                        ? () => _jumpToPage(
-                              previousReaderTarget(
-                                currentPage: _currentPage,
-                                spreadMode: spreadMode,
-                              ),
-                              spreadMode: spreadMode,
-                            )
-                        : null,
-                    onNextPage: _currentPage < _pageCount
-                        ? () => _jumpToPage(
-                              nextReaderTarget(
-                                currentPage: _currentPage,
-                                pageCount: _pageCount,
-                                spreadMode: spreadMode,
-                              ),
-                              spreadMode: spreadMode,
-                            )
-                        : null,
+                    currentPage: _currentPage,
+                    pageCount: _pageCount,
+                    activeProfile: activeProfile,
+                    annotationRequest: annotationRequest,
+                    annotationState: annotationState,
                   ),
-                  Expanded(
-                    child: Padding(
-                      padding: const EdgeInsets.all(16),
-                      child: DecoratedBox(
-                        decoration: BoxDecoration(
-                          color: Theme.of(context).colorScheme.surface,
-                          borderRadius: BorderRadius.circular(24),
-                          border: Border.all(
-                            color: Theme.of(context).colorScheme.outlineVariant,
-                          ),
-                        ),
-                        child: ClipRRect(
-                          borderRadius: BorderRadius.circular(24),
-                          child: _buildCanvas(
-                            context,
-                            entry: entry,
-                            scoreVersion: scoreVersion,
-                            scoreFile: scoreFile,
-                            activeProfile: activeProfile,
-                            annotationRequest: annotationRequest,
-                            annotationState: annotationState,
-                            spreadMode: spreadMode,
-                          ),
-                        ),
-                      ),
-                    ),
-                  ),
-                ],
+                ),
               ),
-            ),
-          ),
+          ],
         ],
       ),
     );
+  }
+
+  void _showChromeTransient() {
+    _chromeAutoHideTimer?.cancel();
+    if (!_chromeVisible && mounted) {
+      setState(() {
+        _chromeVisible = true;
+      });
+    }
+    _chromeAutoHideTimer = Timer(const Duration(seconds: 4), () {
+      if (!mounted || _activeModule != null) {
+        return;
+      }
+      setState(() {
+        _chromeVisible = false;
+      });
+    });
+  }
+
+  void _cancelChromeAutoHide() {
+    _chromeAutoHideTimer?.cancel();
+    _chromeAutoHideTimer = null;
   }
 
   void _handleModuleSelection(
@@ -242,9 +298,14 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     })? annotationRequest,
   ) {
     final nextModule = _activeModule == module ? null : module;
+    _cancelChromeAutoHide();
     setState(() {
       _activeModule = nextModule;
+      _chromeVisible = true;
     });
+    if (nextModule == null) {
+      _showChromeTransient();
+    }
   }
 
   void _handleBack(
@@ -254,6 +315,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       int pageNumber
     })? annotationRequest,
   ) async {
+    _cancelChromeAutoHide();
     _stopDrawing(annotationRequest);
     final fallbackRoute =
         ref.read(activeProfileProvider).role == ProfileRole.parent
@@ -428,6 +490,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
           scoreFile,
           controller: _pdfController,
           pageLayoutMode: PdfPageLayoutMode.single,
+          pageSpacing: 0,
           scrollDirection: PdfScrollDirection.horizontal,
           canShowPaginationDialog: false,
           canShowScrollHead: false,
@@ -523,7 +586,16 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     if (!(annotationPageState?.isVisible ?? true)) {
       notifier.setVisibility(true);
     }
-    notifier.setDrawing(!(annotationPageState?.isDrawing ?? false));
+    final nextDrawingState = !(annotationPageState?.isDrawing ?? false);
+    notifier.setDrawing(nextDrawingState);
+    if (nextDrawingState) {
+      _cancelChromeAutoHide();
+      setState(() {
+        _chromeVisible = true;
+      });
+    } else {
+      _showChromeTransient();
+    }
   }
 
   OffsetPoint _normalizeOffset(Offset localPosition, Size size) {
@@ -533,6 +605,49 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     return OffsetPoint(
       x: (localPosition.dx / size.width).clamp(0.0, 1.0),
       y: (localPosition.dy / size.height).clamp(0.0, 1.0),
+    );
+  }
+}
+
+class _ReaderEdgeReveal extends StatelessWidget {
+  const _ReaderEdgeReveal({
+    required this.onReveal,
+  });
+
+  final VoidCallback onReveal;
+
+  @override
+  Widget build(BuildContext context) {
+    return GestureDetector(
+      behavior: HitTestBehavior.translucent,
+      onTap: onReveal,
+      onHorizontalDragEnd: (details) {
+        if ((details.primaryVelocity ?? 0) > 120) {
+          onReveal();
+        }
+      },
+      child: const SizedBox.expand(),
+    );
+  }
+}
+
+class _ReaderChromeSurface extends StatelessWidget {
+  const _ReaderChromeSurface({
+    required this.child,
+  });
+
+  final Widget child;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Material(
+      color: theme.colorScheme.surface.withValues(alpha: 0.94),
+      elevation: 14,
+      shadowColor: Colors.black.withValues(alpha: 0.18),
+      borderRadius: BorderRadius.circular(24),
+      clipBehavior: Clip.antiAlias,
+      child: child,
     );
   }
 }
@@ -648,10 +763,41 @@ class _RailButton extends StatelessWidget {
   }
 }
 
+List<ScoreVersion> _readableScoreVersions(
+  LibraryEntry entry,
+  ScoreVersion current,
+) {
+  final versions = entry.scoreVersions
+      .where(
+        (version) =>
+            (version.isStudentVisible || version.id == current.id) &&
+            (version.format == 'pdf' || version.format == 'image'),
+      )
+      .toList(growable: false);
+  if (!versions.any((version) => version.id == current.id) &&
+      (current.format == 'pdf' || current.format == 'image')) {
+    versions.add(current);
+  }
+  return versions;
+}
+
+String _readerVersionLabel(ScoreVersion version) {
+  final title = version.title.toLowerCase();
+  if (title.contains('original')) {
+    return 'Original PDF';
+  }
+  if (title.contains('processed') || version.versionType == 'approved') {
+    return 'Processed score';
+  }
+  return version.title;
+}
+
 class _ReaderTopBar extends StatelessWidget {
   const _ReaderTopBar({
     required this.entry,
     required this.scoreVersion,
+    required this.readableScoreVersions,
+    required this.onSelectScoreVersion,
     required this.pagePositionLabel,
     required this.isWriteModeActive,
     required this.canToggleWriteMode,
@@ -662,6 +808,8 @@ class _ReaderTopBar extends StatelessWidget {
 
   final LibraryEntry entry;
   final ScoreVersion scoreVersion;
+  final List<ScoreVersion> readableScoreVersions;
+  final ValueChanged<String> onSelectScoreVersion;
   final String pagePositionLabel;
   final bool isWriteModeActive;
   final bool canToggleWriteMode;
@@ -751,6 +899,23 @@ class _ReaderTopBar extends StatelessWidget {
                               ? 'Exit write mode'
                               : 'Enter write mode',
                         ),
+                      ),
+                    if (readableScoreVersions.length > 1)
+                      DropdownButton<String>(
+                        value: scoreVersion.id,
+                        onChanged: (value) {
+                          if (value != null) {
+                            onSelectScoreVersion(value);
+                          }
+                        },
+                        items: readableScoreVersions
+                            .map(
+                              (version) => DropdownMenuItem<String>(
+                                value: version.id,
+                                child: Text(_readerVersionLabel(version)),
+                              ),
+                            )
+                            .toList(growable: false),
                       ),
                   ],
                 ),
@@ -911,35 +1076,32 @@ class _PdfSpreadCanvasState extends ConsumerState<_PdfSpreadCanvas> {
         final leftPage = pageForSpreadIndex(index);
         final rightPage =
             leftPage + 1 <= widget.pageCount ? leftPage + 1 : null;
-        return Padding(
-          padding: const EdgeInsets.all(18),
-          child: Row(
-            children: [
-              Expanded(
-                child: _SpreadPagePane(
-                  pageNumber: leftPage,
-                  selected: widget.currentPage == leftPage,
-                  rasterFuture: _loadRaster(leftPage),
-                  activeProfile: widget.activeProfile,
-                  scoreVersionId: widget.scoreVersionId,
-                  onTap: widget.onPageSelected,
-                ),
+        return Row(
+          children: [
+            Expanded(
+              child: _SpreadPagePane(
+                pageNumber: leftPage,
+                selected: widget.currentPage == leftPage,
+                rasterFuture: _loadRaster(leftPage),
+                activeProfile: widget.activeProfile,
+                scoreVersionId: widget.scoreVersionId,
+                onTap: widget.onPageSelected,
               ),
-              const SizedBox(width: 16),
-              Expanded(
-                child: rightPage == null
-                    ? const _SpreadPlaceholderPage()
-                    : _SpreadPagePane(
-                        pageNumber: rightPage,
-                        selected: widget.currentPage == rightPage,
-                        rasterFuture: _loadRaster(rightPage),
-                        activeProfile: widget.activeProfile,
-                        scoreVersionId: widget.scoreVersionId,
-                        onTap: widget.onPageSelected,
-                      ),
-              ),
-            ],
-          ),
+            ),
+            const SizedBox(width: 6),
+            Expanded(
+              child: rightPage == null
+                  ? const _SpreadPlaceholderPage()
+                  : _SpreadPagePane(
+                      pageNumber: rightPage,
+                      selected: widget.currentPage == rightPage,
+                      rasterFuture: _loadRaster(rightPage),
+                      activeProfile: widget.activeProfile,
+                      scoreVersionId: widget.scoreVersionId,
+                      onTap: widget.onPageSelected,
+                    ),
+            ),
+          ],
         );
       },
     );
@@ -993,89 +1155,47 @@ class _SpreadPagePane extends ConsumerWidget {
     final pageState = annotationState?.valueOrNull;
     final isVisible = pageState?.isVisible ?? true;
 
-    return GestureDetector(
-      onTap: () => onTap(pageNumber),
-      child: AnimatedContainer(
-        duration: const Duration(milliseconds: 120),
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
+    return Semantics(
+      selected: selected,
+      label: 'Page $pageNumber',
+      child: GestureDetector(
+        onTap: () => onTap(pageNumber),
+        child: ColoredBox(
           color: theme.colorScheme.surface,
-          borderRadius: BorderRadius.circular(22),
-          border: Border.all(
-            color: selected
-                ? theme.colorScheme.primary
-                : theme.colorScheme.outlineVariant,
-            width: selected ? 2 : 1,
-          ),
-          boxShadow: [
-            BoxShadow(
-              color: Colors.black.withValues(alpha: 0.04),
-              blurRadius: 14,
-              offset: const Offset(0, 8),
-            ),
-          ],
-        ),
-        child: FutureBuilder<PdfRaster?>(
-          future: rasterFuture,
-          builder: (context, snapshot) {
-            if (!snapshot.hasData) {
-              return const Center(child: CircularProgressIndicator());
-            }
-            final raster = snapshot.data;
-            if (raster == null) {
-              return const Center(child: Text('Unable to render this page.'));
-            }
-            return Center(
-              child: AspectRatio(
-                aspectRatio: raster.width / raster.height,
-                child: Stack(
-                  fit: StackFit.expand,
-                  children: [
-                    DecoratedBox(
-                      decoration: BoxDecoration(
-                        borderRadius: BorderRadius.circular(16),
-                        color: Colors.white,
-                      ),
-                      child: Image(
+          child: FutureBuilder<PdfRaster?>(
+            future: rasterFuture,
+            builder: (context, snapshot) {
+              if (!snapshot.hasData) {
+                return const Center(child: CircularProgressIndicator());
+              }
+              final raster = snapshot.data;
+              if (raster == null) {
+                return const Center(child: Text('Unable to render this page.'));
+              }
+              return Center(
+                child: AspectRatio(
+                  aspectRatio: raster.width / raster.height,
+                  child: Stack(
+                    fit: StackFit.expand,
+                    children: [
+                      Image(
                         image: PdfRasterImage(raster),
                         fit: BoxFit.fill,
                       ),
-                    ),
-                    if (isVisible)
-                      CustomPaint(
-                        painter: _AnnotationPainter(
-                          strokes:
-                              pageState?.strokes ?? const <AnnotationStroke>[],
-                          activeStroke: const <OffsetPoint>[],
-                        ),
-                      ),
-                    Positioned(
-                      left: 12,
-                      top: 12,
-                      child: Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 10,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: Colors.white.withValues(alpha: 0.92),
-                          borderRadius: BorderRadius.circular(999),
-                        ),
-                        child: Text(
-                          selected
-                              ? 'Page $pageNumber active'
-                              : 'Page $pageNumber',
-                          style: theme.textTheme.labelSmall?.copyWith(
-                            fontWeight: FontWeight.w700,
+                      if (isVisible)
+                        CustomPaint(
+                          painter: _AnnotationPainter(
+                            strokes: pageState?.strokes ??
+                                const <AnnotationStroke>[],
+                            activeStroke: const <OffsetPoint>[],
                           ),
                         ),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
-              ),
-            );
-          },
+              );
+            },
+          ),
         ),
       ),
     );

@@ -12,6 +12,7 @@ class PieceStatus(str, Enum):
     processing = "processing"
     review_pending = "review_pending"
     approved = "approved"
+    needs_edits = "needs_edits"
     archived = "archived"
 
 
@@ -27,6 +28,7 @@ class JobStatus(str, Enum):
     running = "running"
     succeeded = "succeeded"
     failed = "failed"
+    canceled = "canceled"
 
 
 class ReviewItemType(str, Enum):
@@ -52,6 +54,19 @@ class ProcessingMode(str, Enum):
     server_plus_device_workers = "server_plus_device_workers"
     server_plus_cloud_workers = "server_plus_cloud_workers"
     server_plus_device_and_cloud_workers = "server_plus_device_and_cloud_workers"
+
+
+class PiecePushMode(str, Enum):
+    processed = "processed"
+    original_pdf = "original_pdf"
+
+
+class OmrStrategy(str, Enum):
+    audiveris_default = "audiveris_default"
+    audiveris_quality_sweep = "audiveris_quality_sweep"
+    homr_experimental = "homr_experimental"
+    omr_bakeoff = "omr_bakeoff"
+    experimental_engine_bakeoff = "experimental_engine_bakeoff"
 
 
 class PieceKind(str, Enum):
@@ -96,6 +111,7 @@ class PieceUpdate(BaseModel):
 
 class PiecePushRequest(BaseModel):
     profile_ids: list[str] = Field(default_factory=list)
+    mode: PiecePushMode = PiecePushMode.processed
 
 
 class ScoreVersionRerenderRequest(BaseModel):
@@ -127,6 +143,7 @@ class ReviewItemRequest(BaseModel):
     action: ReviewAction
     notes: Optional[str] = None
     correction: Optional[dict] = None
+    selected_candidate_id: Optional[str] = Field(default=None, min_length=1, max_length=100)
 
 
 class ReviewBulkApprovalRequest(BaseModel):
@@ -208,9 +225,14 @@ class ProcessingSettingsUpdate(BaseModel):
     """Durable server processing settings managed from the parent app."""
 
     audiveris_cli_path: Optional[str] = None
+    homr_cli_path: Optional[str] = None
     musescore_cli_path: Optional[str] = None
+    musescore_style_path: Optional[str] = None
     ocr_cli_path: Optional[str] = None
     ocr_language: Optional[str] = None
+    ocr_effort: Optional[str] = None
+    omr_strategy: Optional[OmrStrategy] = None
+    max_concurrent_jobs: Optional[int] = Field(default=None, ge=1, le=4)
     processing_mode: Optional[ProcessingMode] = None
     allow_stub_musicxml: Optional[bool] = None
     local_llm_provider: Optional[str] = None
@@ -224,9 +246,14 @@ class ProcessingSettingsUpdate(BaseModel):
 
 class ProcessingSettingsResponse(BaseModel):
     audiveris_cli_path: Optional[str] = None
+    homr_cli_path: Optional[str] = None
     musescore_cli_path: Optional[str] = None
+    musescore_style_path: Optional[str] = None
     ocr_cli_path: Optional[str] = None
     ocr_language: str = "eng"
+    ocr_effort: str = "balanced"
+    omr_strategy: OmrStrategy = OmrStrategy.audiveris_default
+    max_concurrent_jobs: int = Field(default=2, ge=1, le=4)
     processing_mode: ProcessingMode = ProcessingMode.server_only
     allow_stub_musicxml: bool = True
     production_mode: bool = False
@@ -256,6 +283,7 @@ class ProcessingExecutableStatus(BaseModel):
 class ProcessingValidationResponse(BaseModel):
     valid: bool
     audiveris: ProcessingExecutableStatus
+    homr: ProcessingExecutableStatus
     musescore: ProcessingExecutableStatus
     ocr: ProcessingExecutableStatus
     warnings: list[str] = Field(default_factory=list)
@@ -293,6 +321,7 @@ class JobSummaryResponse(BaseModel):
     running_count: int = 0
     failed_count: int = 0
     succeeded_count: int = 0
+    canceled_count: int = 0
     last_failed_job: Optional[JobSummaryFailureResponse] = None
 
 
@@ -300,6 +329,7 @@ class ProcessingCapabilityResponse(BaseModel):
     server_online: bool = True
     settings: ProcessingSettingsResponse
     audiveris: ProcessingExecutableStatus
+    homr: ProcessingExecutableStatus
     musescore: ProcessingExecutableStatus
     ocr: ProcessingExecutableStatus
     local_llm: ProcessingExecutableStatus
@@ -367,8 +397,17 @@ class PieceResponse(BaseModel):
     catalog_suggestions: list[dict] = Field(default_factory=list)
     validation_warnings: list[str] = Field(default_factory=list)
     split_confidence: Optional[float] = None
+    workflow_closed: bool = False
     visible_to_profile_ids: list[str] = []
     library_status: str = "intake"
+    source_content_sha256: Optional[str] = None
+    source_book_fingerprint: Optional[str] = None
+    logical_piece_key: Optional[str] = None
+    canonical_piece_id: Optional[str] = None
+    attempt_status: str = "canonical"
+    duplicate_attempt_count: int = 0
+    duplicate_reason: Optional[str] = None
+    is_duplicate_attempt: bool = False
     status: PieceStatus
     created_at: datetime
     updated_at: datetime
@@ -392,6 +431,7 @@ class ScoreVersionResponse(BaseModel):
     content_type: Optional[str] = None
     file_size_bytes: Optional[int] = None
     content_sha256: Optional[str] = None
+    score_version_role: Optional[str] = None
     is_default: bool = False
     created_at: datetime
 
@@ -429,6 +469,9 @@ class ReviewItemResponse(BaseModel):
 class JobResponse(BaseModel):
     id: str
     piece_id: Optional[str] = None
+    piece_title: Optional[str] = None
+    piece_composer: Optional[str] = None
+    piece_status: Optional[str] = None
     job_type: str
     status: JobStatus
     progress: float = 0.0

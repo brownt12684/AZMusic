@@ -3,6 +3,7 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../core/config/app_config.dart';
 import '../../core/network/network_info.dart';
+import '../../core/network/server_connection_error.dart';
 
 enum SyncTrigger {
   appLaunch,
@@ -54,9 +55,20 @@ class LibrarySyncBannerState {
 
   LibrarySyncBannerState.failedUsable({
     SyncTrigger? trigger,
+    String? message,
   }) : this(
           status: LibrarySyncStatus.failedUsable,
-          message: 'Sync failed, but local music stays readable.',
+          message: message ??
+              'Server sync is unavailable. Local music stays readable.',
+          trigger: trigger,
+        );
+
+  LibrarySyncBannerState.waitingForServerPairing({
+    SyncTrigger? trigger,
+  }) : this(
+          status: LibrarySyncStatus.failedUsable,
+          message:
+              'Waiting for server pairing. Local music stays readable until uploads can resume.',
           trigger: trigger,
         );
 
@@ -150,6 +162,14 @@ class ServerHealthState {
 
 final serverHealthProvider = FutureProvider<ServerHealthState>((ref) async {
   final serverUrl = AppConfig.serverBaseUrl;
+  if (!AppConfig.isServerPaired) {
+    return const ServerHealthState(
+      status: ServerHealthStatus.offline,
+      serverUrl: 'Not paired',
+      message: 'Pair this device from the AZMusic server setup page.',
+    );
+  }
+
   final dio = Dio(
     BaseOptions(
       baseUrl: serverUrl,
@@ -179,7 +199,7 @@ final serverHealthProvider = FutureProvider<ServerHealthState>((ref) async {
     return ServerHealthState(
       status: ServerHealthStatus.offline,
       serverUrl: serverUrl,
-      message: error.toString(),
+      message: formatServerConnectionError(error),
     );
   }
 });

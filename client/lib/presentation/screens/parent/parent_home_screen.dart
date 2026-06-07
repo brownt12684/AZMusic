@@ -1,18 +1,29 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../app/app_keys.dart';
 import '../../../app/routes/app_router.dart';
+import '../../../core/config/app_config.dart';
 import '../../../core/import/score_import_picker.dart';
+import '../../../core/network/server_connection_error.dart';
 import '../../../domain/entities/library_entry.dart';
 import '../../../domain/entities/piece.dart';
+import '../../../domain/entities/processing_settings.dart';
 import '../../../domain/entities/profile.dart';
 import '../../../domain/entities/review_candidate_package.dart';
 import '../../../domain/entities/server_pairing.dart';
+import '../../../domain/entities/server_job.dart';
 import '../../providers/app_providers.dart';
+import '../../providers/debug_tools_providers.dart';
+import '../../providers/parent_workflow_refresh.dart';
 import '../../providers/piece_providers.dart';
+import '../../providers/processing_settings_providers.dart';
 import '../../providers/profile_providers.dart';
 import '../../providers/review_providers.dart';
+
+const _activeWorkflowPollInterval = Duration(seconds: 5);
 
 class ParentHomeScreen extends ConsumerWidget {
   const ParentHomeScreen({super.key});
@@ -23,6 +34,8 @@ class ParentHomeScreen extends ConsumerWidget {
     final reviewQueue = ref.watch(parentReviewQueueProvider);
     final intakeEntries = ref.watch(parentIntakeEntriesProvider);
     final syncedPieces = ref.watch(parentSyncedPiecesProvider);
+    final debugTools = ref.watch(parentDebugToolsProvider);
+    final processingCapabilities = ref.watch(processingCapabilitiesProvider);
     final students = ref.watch(studentProfilesProvider);
     final serverHealth = ref.watch(serverHealthProvider);
     final theme = Theme.of(context);
@@ -37,95 +50,291 @@ class ParentHomeScreen extends ConsumerWidget {
             trigger: SyncTrigger.manualRefresh,
           );
       ref.invalidate(serverHealthProvider);
-      ref.invalidate(parentSyncedPiecesProvider);
+      await ref
+          .read(parentSyncedPiecesProvider.notifier)
+          .refresh(showLoading: false);
+      await ref
+          .read(processingCapabilitiesProvider.notifier)
+          .refresh(showLoading: false);
       await ref.read(parentReviewQueueProvider.notifier).refresh();
     }
 
-    return DefaultTabController(
-      length: 3,
-      child: Scaffold(
-        key: AppKeys.parentHomeScreen,
-        appBar: AppBar(
-          title: Text('${profile.displayName} tools'),
-          bottom: const TabBar(
-            tabs: [
-              Tab(icon: Icon(Icons.all_inbox_outlined), text: 'Intake'),
-              Tab(icon: Icon(Icons.people_alt_outlined), text: 'Students'),
-              Tab(icon: Icon(Icons.tune_outlined), text: 'Server'),
+    void openPairingScreen() {
+      Navigator.of(context).pushReplacementNamed(AppRouter.login);
+    }
+
+    Future<void> closeWorkflow({
+      required String serverPieceId,
+      required String title,
+      String? localPieceId,
+    }) async {
+      try {
+        await ref.read(allPiecesProvider.notifier).closeWorkflow(
+              serverPieceId: serverPieceId,
+              localPieceId: localPieceId,
+            );
+        scheduleParentWorkflowRefreshBurst(
+          ref,
+          trigger: SyncTrigger.manualRefresh,
+          isActive: () => context.mounted,
+        );
+        if (!context.mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Closed $title from the parent workflow.')),
+        );
+      } catch (error) {
+        if (!context.mounted) {
+          return;
+        }
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(content: Text('Unable to close workflow item: $error')),
+        );
+      }
+    }
+
+    return _ParentWorkflowAutoRefresh(
+      child: DefaultTabController(
+        length: 3,
+        child: Scaffold(
+          key: AppKeys.parentHomeScreen,
+          appBar: AppBar(
+            title: Text('${profile.displayName} tools'),
+            bottom: const TabBar(
+              tabs: [
+                Tab(icon: Icon(Icons.all_inbox_outlined), text: 'Intake'),
+                Tab(icon: Icon(Icons.people_alt_outlined), text: 'Students'),
+                Tab(icon: Icon(Icons.tune_outlined), text: 'Server'),
+              ],
+            ),
+            actions: [
+              IconButton(
+                key: AppKeys.logoutButton,
+                tooltip: 'Switch profile',
+                onPressed: () {
+                  Navigator.of(context).pushReplacementNamed(AppRouter.login);
+                },
+                icon: const Icon(Icons.switch_account_outlined),
+              ),
             ],
           ),
-          actions: [
-            IconButton(
-              key: AppKeys.logoutButton,
-              tooltip: 'Switch profile',
-              onPressed: () {
-                Navigator.of(context).pushReplacementNamed(AppRouter.login);
-              },
-              icon: const Icon(Icons.switch_account_outlined),
-            ),
-          ],
-        ),
-        body: TabBarView(
-          children: [
-            RefreshIndicator(
-              onRefresh: refreshParentData,
-              child: _IntakeAndPushTab(
-                theme: theme,
-                intakeEntries: intakeEntries,
-                syncedPieces: syncedPieces,
-                reviewQueue: reviewQueue,
-                reviewByPieceId: reviewByPieceId,
-                students: students,
-                onImport: () => _importScore(context, ref),
-                onOpenReview: (itemId) {
-                  Navigator.of(context).pushNamed(
-                    AppRouter.reviewCompare,
-                    arguments: itemId,
-                  );
-                },
-                onPushToProfile: (entry, profileId) {
-                  return ref.read(allPiecesProvider.notifier).pushToProfile(
-                        pieceId: entry.piece.id,
-                        profileId: profileId,
+          body: TabBarView(
+            children: [
+              RefreshIndicator(
+                onRefresh: refreshParentData,
+                child: _IntakeAndPushTab(
+                  theme: theme,
+                  intakeEntries: intakeEntries,
+                  syncedPieces: syncedPieces,
+                  processingCapabilities: processingCapabilities,
+                  debugTools: debugTools,
+                  reviewQueue: reviewQueue,
+                  reviewByPieceId: reviewByPieceId,
+                  students: students,
+                  onImport: () => _importScore(context, ref),
+                  onToggleDebugTools: (enabled) {
+                    return ref
+                        .read(parentDebugToolsProvider.notifier)
+                        .setEnabled(enabled);
+                  },
+                  onRefreshDebugJobs: () {
+                    return ref
+                        .read(parentDebugToolsProvider.notifier)
+                        .refreshJobs();
+                  },
+                  onCancelDebugJob: (jobId) {
+                    return ref
+                        .read(parentDebugToolsProvider.notifier)
+                        .cancelJob(jobId);
+                  },
+                  onRetryDebugJob: (jobId) {
+                    return ref
+                        .read(parentDebugToolsProvider.notifier)
+                        .retryJob(jobId);
+                  },
+                  onClearDebugLibraries: () {
+                    return ref
+                        .read(parentDebugToolsProvider.notifier)
+                        .clearLocalAndServerLibraries();
+                  },
+                  onRetryLocalUpload: (entry, reuploadAsNew) async {
+                    await ref.read(allPiecesProvider.notifier).retryLocalUpload(
+                          entry.piece.id,
+                          reuploadAsNew: reuploadAsNew,
+                        );
+                    scheduleParentWorkflowRefreshBurst(
+                      ref,
+                      trigger: SyncTrigger.postImport,
+                      isActive: () => context.mounted,
+                    );
+                    if (!context.mounted) {
+                      return;
+                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text('Retried ${entry.piece.title}.')),
+                    );
+                  },
+                  onRemoveLocalItem: (entry) async {
+                    await ref
+                        .read(allPiecesProvider.notifier)
+                        .removeLocalEntry(entry.piece.id);
+                    if (!context.mounted) {
+                      return;
+                    }
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Removed ${entry.piece.title} locally.'),
+                      ),
+                    );
+                  },
+                  onRepairPairing: openPairingScreen,
+                  onOpenReview: (itemId) {
+                    Navigator.of(context).pushNamed(
+                      AppRouter.reviewCompare,
+                      arguments: itemId,
+                    );
+                  },
+                  onPushToProfile: (entry, profileId) {
+                    return ref
+                        .read(allPiecesProvider.notifier)
+                        .pushToProfile(
+                          pieceId: entry.piece.id,
+                          profileId: profileId,
+                        )
+                        .then((_) {
+                      scheduleParentWorkflowRefreshBurst(
+                        ref,
+                        trigger: SyncTrigger.parentPush,
+                        isActive: () => context.mounted,
                       );
-                },
-                onPushRemoteToProfile: (piece, profileId) async {
-                  await ref
-                      .read(serverPieceSyncRepositoryProvider)
-                      .pushPieceToProfiles(piece.id, [profileId]);
-                  ref.invalidate(parentSyncedPiecesProvider);
-                  await ref.read(allPiecesProvider.notifier).loadPieces(
-                        trigger: SyncTrigger.manualRefresh,
-                      );
-                  await ref.read(parentReviewQueueProvider.notifier).refresh();
-                },
-              ),
-            ),
-            RefreshIndicator(
-              onRefresh: refreshParentData,
-              child: _StudentsTab(
-                syncedPieces: syncedPieces,
-                students: students,
-                onCreatePairing: (student) {
-                  _showStudentPairingDialog(context, ref, student);
-                },
-                onEditMetadata: (piece) => _showMetadataEditor(
-                  context,
-                  ref,
-                  _MetadataEditSeed.fromRemote(piece),
+                    });
+                  },
+                  onPushRemoteToProfile: (piece, profileId) async {
+                    final remotePiece = await ref
+                        .read(serverPieceSyncRepositoryProvider)
+                        .pushPieceToProfiles(piece.id, [profileId]);
+                    ref
+                        .read(parentSyncedPiecesProvider.notifier)
+                        .upsert(RemotePieceSummary.fromDetail(remotePiece));
+                    scheduleParentWorkflowRefreshBurst(
+                      ref,
+                      trigger: SyncTrigger.parentPush,
+                      isActive: () => context.mounted,
+                    );
+                  },
+                  onCloseWorkflow: (entry) {
+                    final serverPieceId = entry.piece.serverPieceId;
+                    if (serverPieceId == null) {
+                      return Future<void>.value();
+                    }
+                    return closeWorkflow(
+                      serverPieceId: serverPieceId,
+                      localPieceId: entry.piece.id,
+                      title: entry.piece.title,
+                    );
+                  },
+                  onCloseRemoteWorkflow: (piece) {
+                    return closeWorkflow(
+                      serverPieceId: piece.id,
+                      title: piece.title,
+                    );
+                  },
                 ),
               ),
-            ),
-            RefreshIndicator(
-              onRefresh: refreshParentData,
-              child: _ServerToolsTab(
-                serverHealth: serverHealth,
+              RefreshIndicator(
+                onRefresh: refreshParentData,
+                child: _StudentsTab(
+                  syncedPieces: syncedPieces,
+                  students: students,
+                  onRepairPairing: openPairingScreen,
+                  onAddStudent: () {
+                    _showAddStudentDialog(context, ref);
+                  },
+                  onCreatePairing: (student) {
+                    _showStudentPairingDialog(context, ref, student);
+                  },
+                  onEditMetadata: (piece) => _showMetadataEditor(
+                    context,
+                    ref,
+                    _MetadataEditSeed.fromRemote(piece),
+                  ),
+                  onPushOriginal: (piece, profileId) async {
+                    final remotePiece = await ref
+                        .read(serverPieceSyncRepositoryProvider)
+                        .pushPieceToProfiles(
+                          piece.id,
+                          [profileId],
+                          mode: 'original_pdf',
+                        );
+                    ref
+                        .read(parentSyncedPiecesProvider.notifier)
+                        .upsert(RemotePieceSummary.fromDetail(remotePiece));
+                    scheduleParentWorkflowRefreshBurst(
+                      ref,
+                      trigger: SyncTrigger.parentPush,
+                      isActive: () => context.mounted,
+                    );
+                  },
+                  onPullForEdits: (piece) async {
+                    await ref
+                        .read(allPiecesProvider.notifier)
+                        .pullRemotePieceForEdits(serverPieceId: piece.id);
+                    scheduleParentWorkflowRefreshBurst(
+                      ref,
+                      trigger: SyncTrigger.manualRefresh,
+                      isActive: () => context.mounted,
+                    );
+                  },
+                ),
               ),
-            ),
-          ],
+              RefreshIndicator(
+                onRefresh: refreshParentData,
+                child: _ServerToolsTab(
+                  serverHealth: serverHealth,
+                  onRepairPairing: openPairingScreen,
+                ),
+              ),
+            ],
+          ),
         ),
       ),
     );
+  }
+
+  Future<void> _showAddStudentDialog(
+    BuildContext context,
+    WidgetRef ref,
+  ) async {
+    final draft = await showDialog<_StudentDraft>(
+      context: context,
+      builder: (context) => const _AddStudentDialog(),
+    );
+    if (draft == null || !context.mounted) {
+      return;
+    }
+
+    try {
+      final student =
+          await ref.read(localStudentProfilesProvider.notifier).addStudent(
+                displayName: draft.displayName,
+                instrument: draft.instrument,
+              );
+      ref.invalidate(availableProfilesProvider);
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Added ${student.displayName}.')),
+      );
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Unable to add student: $error')),
+      );
+    }
   }
 
   Future<void> _importScore(BuildContext context, WidgetRef ref) async {
@@ -138,6 +347,11 @@ class ParentHomeScreen extends ConsumerWidget {
       final entry = await ref.read(allPiecesProvider.notifier).importToIntake(
             selectedPath,
           );
+      scheduleParentWorkflowRefreshBurst(
+        ref,
+        trigger: SyncTrigger.postImport,
+        isActive: () => context.mounted,
+      );
       if (!context.mounted) {
         return;
       }
@@ -160,6 +374,17 @@ class ParentHomeScreen extends ConsumerWidget {
     WidgetRef ref,
     Profile student,
   ) {
+    if (!AppConfig.isServerPaired) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text(
+            'Pair the parent device with the AZMusic server before adding student devices.',
+          ),
+        ),
+      );
+      return;
+    }
+
     final pairingFuture =
         ref.read(serverPieceSyncRepositoryProvider).fetchPairingCode(
               purpose: 'student_device',
@@ -206,7 +431,10 @@ class ParentHomeScreen extends ConsumerWidget {
             sourcePageStart: draft.sourcePageStart,
             sourcePageEnd: draft.sourcePageEnd,
           );
-      ref.invalidate(parentReviewQueueProvider);
+      refreshParentWorkflowInBackground(
+        ref,
+        trigger: SyncTrigger.manualRefresh,
+      );
       if (!context.mounted) {
         return;
       }
@@ -224,186 +452,1335 @@ class ParentHomeScreen extends ConsumerWidget {
   }
 }
 
+class _ParentWorkflowAutoRefresh extends ConsumerStatefulWidget {
+  const _ParentWorkflowAutoRefresh({
+    required this.child,
+  });
+
+  final Widget child;
+
+  @override
+  ConsumerState<_ParentWorkflowAutoRefresh> createState() =>
+      _ParentWorkflowAutoRefreshState();
+}
+
+class _ParentWorkflowAutoRefreshState
+    extends ConsumerState<_ParentWorkflowAutoRefresh> {
+  Timer? _timer;
+  bool _refreshing = false;
+  bool _polling = false;
+
+  @override
+  void dispose() {
+    _timer?.cancel();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final summary =
+        ref.watch(processingCapabilitiesProvider).valueOrNull?.jobSummary;
+    final shouldPoll = summary != null &&
+        (summary.queuedCount > 0 || summary.runningCount > 0);
+
+    if (shouldPoll != _polling) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          _setPolling(shouldPoll);
+        }
+      });
+    }
+
+    return widget.child;
+  }
+
+  void _setPolling(bool enabled) {
+    if (_polling == enabled) {
+      return;
+    }
+    _polling = enabled;
+    _timer?.cancel();
+    _timer = null;
+    if (!enabled) {
+      return;
+    }
+    _timer = Timer.periodic(
+      _activeWorkflowPollInterval,
+      (_) => _refreshWorkflow(),
+    );
+  }
+
+  Future<void> _refreshWorkflow() async {
+    if (_refreshing) {
+      return;
+    }
+    _refreshing = true;
+    try {
+      await refreshParentWorkflow(
+        ref,
+        trigger: SyncTrigger.manualRefresh,
+      );
+    } finally {
+      _refreshing = false;
+    }
+  }
+}
+
 class _IntakeAndPushTab extends StatelessWidget {
   const _IntakeAndPushTab({
     required this.theme,
     required this.intakeEntries,
     required this.syncedPieces,
+    required this.processingCapabilities,
+    required this.debugTools,
     required this.reviewQueue,
     required this.reviewByPieceId,
     required this.students,
     required this.onImport,
+    required this.onToggleDebugTools,
+    required this.onRefreshDebugJobs,
+    required this.onCancelDebugJob,
+    required this.onRetryDebugJob,
+    required this.onClearDebugLibraries,
+    required this.onRetryLocalUpload,
+    required this.onRemoveLocalItem,
+    required this.onRepairPairing,
     required this.onOpenReview,
     required this.onPushToProfile,
     required this.onPushRemoteToProfile,
+    required this.onCloseWorkflow,
+    required this.onCloseRemoteWorkflow,
   });
 
   final ThemeData theme;
   final List<LibraryEntry> intakeEntries;
   final AsyncValue<List<RemotePieceSummary>> syncedPieces;
+  final AsyncValue<ProcessingCapabilities> processingCapabilities;
+  final ParentDebugToolsState debugTools;
   final AsyncValue<List<ReviewQueueEntry>> reviewQueue;
   final Map<String, ReviewQueueEntry> reviewByPieceId;
   final List<Profile> students;
   final VoidCallback onImport;
+  final Future<void> Function(bool enabled) onToggleDebugTools;
+  final Future<void> Function() onRefreshDebugJobs;
+  final Future<void> Function(String jobId) onCancelDebugJob;
+  final Future<void> Function(String jobId) onRetryDebugJob;
+  final Future<void> Function() onClearDebugLibraries;
+  final Future<void> Function(LibraryEntry entry, bool reuploadAsNew)
+      onRetryLocalUpload;
+  final Future<void> Function(LibraryEntry entry) onRemoveLocalItem;
+  final VoidCallback onRepairPairing;
   final ValueChanged<String> onOpenReview;
   final Future<void> Function(LibraryEntry entry, String profileId)
       onPushToProfile;
   final Future<void> Function(RemotePieceSummary piece, String profileId)
       onPushRemoteToProfile;
+  final Future<void> Function(LibraryEntry entry) onCloseWorkflow;
+  final Future<void> Function(RemotePieceSummary piece) onCloseRemoteWorkflow;
 
   @override
   Widget build(BuildContext context) {
-    final matchedReviewItemIds = {
-      for (final entry in intakeEntries)
-        if (reviewByPieceId[entry.piece.serverPieceId] != null)
-          reviewByPieceId[entry.piece.serverPieceId]!.id,
-    };
+    final remotePieces =
+        syncedPieces.valueOrNull ?? const <RemotePieceSummary>[];
+    final reviewItems = reviewQueue.valueOrNull ?? const <ReviewQueueEntry>[];
+    final remotePieceIds = remotePieces.map((piece) => piece.id).toSet();
     final localServerPieceIds = {
       for (final entry in intakeEntries)
         if (entry.piece.serverPieceId != null) entry.piece.serverPieceId!,
     };
+    final localUploadProblems = intakeEntries.where((entry) {
+      if (entry.piece.workflowClosed ||
+          entry.piece.libraryStatus == LibraryStatus.archived) {
+        return false;
+      }
+      if (entry.piece.serverPieceId == null) {
+        return entry.piece.libraryStatus == LibraryStatus.uploadPending ||
+            entry.piece.libraryStatus == LibraryStatus.intake;
+      }
+      return syncedPieces.hasValue &&
+          !remotePieceIds.contains(entry.piece.serverPieceId);
+    }).toList(growable: false);
+    final localReviewOrReady = intakeEntries.where((entry) {
+      if (localUploadProblems.contains(entry)) {
+        return false;
+      }
+      return entry.piece.serverPieceId != null;
+    }).toList(growable: false);
+    final bookWorkflows = _buildBookWorkflows(
+      pieces: remotePieces,
+      reviewItems: reviewItems,
+    );
+    final groupedReviewItemIds = {
+      for (final workflow in bookWorkflows)
+        for (final item in workflow.reviewItems) item.id,
+    };
+    final looseReviewItems = reviewItems
+        .where((item) => !groupedReviewItemIds.contains(item.id))
+        .toList(growable: false);
+    final readyRemotePieces = remotePieces.where((piece) {
+      if (piece.workflowClosed ||
+          piece.libraryStatus != 'ready' ||
+          localServerPieceIds.contains(piece.id)) {
+        return false;
+      }
+      return true;
+    }).toList(growable: false);
+    final readyLocalEntries = localReviewOrReady
+        .where((entry) => entry.piece.libraryStatus == LibraryStatus.ready)
+        .toList(growable: false);
+    final activeLocalEntries = localReviewOrReady
+        .where((entry) => entry.piece.libraryStatus != LibraryStatus.ready)
+        .toList(growable: false);
 
     return ListView(
+      key: AppKeys.parentWorkflowList,
       padding: const EdgeInsets.all(16),
       children: [
         _ParentActionCards(theme: theme),
         const SizedBox(height: 12),
-        FilledButton.icon(
-          key: AppKeys.parentImportButton,
-          onPressed: onImport,
-          icon: const Icon(Icons.upload_file_outlined),
-          label: const Text('Import music for processing'),
-        ),
-        const SizedBox(height: 20),
-        Text(
-          'Process, review, push',
-          style: theme.textTheme.headlineSmall?.copyWith(
-            fontWeight: FontWeight.w700,
-          ),
-        ),
-        const SizedBox(height: 8),
-        if (intakeEntries.isEmpty)
-          const _ParentEmptyState(
-            title: 'No intake items yet',
-            body:
-                'Import PDFs or scans here. They stay in intake until processing, parent review, and push are complete.',
-          )
-        else
-          Column(
-            key: AppKeys.parentIntakeList,
-            children: intakeEntries
-                .map(
-                  (entry) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _IntakeEntryCard(
+        _WorkflowSection(
+          title: 'Import',
+          subtitle:
+              'Choose a PDF or scan. Local upload problems stay here until you retry or remove them.',
+          children: [
+            FilledButton.icon(
+              key: AppKeys.parentImportButton,
+              onPressed: onImport,
+              icon: const Icon(Icons.upload_file_outlined),
+              label: const Text('Import music for processing'),
+            ),
+            if (localUploadProblems.isEmpty)
+              const _ParentEmptyState(
+                title: 'No local upload problems',
+                body:
+                    'Imports that reach the server move into Processing automatically.',
+              )
+            else
+              Column(
+                key: AppKeys.parentIntakeList,
+                children: localUploadProblems.map((entry) {
+                  final serverMissing = entry.piece.serverPieceId != null;
+                  return Padding(
+                    padding: const EdgeInsets.only(top: 12),
+                    child: _LocalImportProblemCard(
                       entry: entry,
-                      students: students,
-                      reviewItem: reviewByPieceId[entry.piece.serverPieceId],
-                      onOpenReview: onOpenReview,
-                      onPushToProfile: (profileId) {
-                        return onPushToProfile(entry, profileId);
-                      },
+                      serverMissing: serverMissing,
+                      onRetry: () => onRetryLocalUpload(entry, serverMissing),
+                      onRemove: () => onRemoveLocalItem(entry),
                     ),
-                  ),
-                )
-                .toList(growable: false),
-          ),
-        syncedPieces.when(
-          data: (pieces) {
-            final readyPieces = pieces.where((piece) {
-              if (localServerPieceIds.contains(piece.id)) {
-                return false;
-              }
-              if (piece.libraryStatus != 'ready') {
-                return false;
-              }
-              if (students.isEmpty) {
-                return piece.visibleToProfileIds.isEmpty;
-              }
-              return students.any(
-                (student) => !piece.visibleToProfileIds.contains(student.id),
-              );
-            }).toList(growable: false);
-            if (readyPieces.isEmpty) {
-              return const SizedBox.shrink();
-            }
-            return Column(
-              key: AppKeys.parentServerReadyList,
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 8),
-                Text(
-                  'Ready to push from server',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-                const SizedBox(height: 8),
-                ...readyPieces.map(
-                  (piece) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _ServerReadyPushCard(
-                      piece: piece,
-                      students: students,
-                      onPushToProfile: (profileId) {
-                        return onPushRemoteToProfile(piece, profileId);
-                      },
-                    ),
-                  ),
-                ),
-              ],
-            );
-          },
-          error: (error, _) => Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: _QueueErrorCard(error: error),
-          ),
-          loading: () => const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(child: CircularProgressIndicator()),
-          ),
+                  );
+                }).toList(growable: false),
+              ),
+          ],
         ),
-        reviewQueue.when(
-          data: (items) {
-            final unmatchedItems = items
-                .where((item) => !matchedReviewItemIds.contains(item.id))
-                .toList(growable: false);
-            if (unmatchedItems.isEmpty) {
-              return const SizedBox.shrink();
-            }
-            return Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const SizedBox(height: 8),
-                Text(
-                  'Server review items',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
+        _WorkflowSection(
+          title: 'Processing',
+          subtitle:
+              'Books stay grouped here while the server splits pages and prepares review candidates.',
+          children: [
+            processingCapabilities.when(
+              data: (capabilities) => _ProcessingTrackerCard(
+                summary: capabilities.jobSummary,
+              ),
+              error: (error, _) => _ProcessingTrackerErrorCard(error: error),
+              loading: () => const _ProcessingTrackerLoadingCard(),
+            ),
+            if (bookWorkflows.isEmpty && activeLocalEntries.isEmpty)
+              const _ParentEmptyState(
+                title: 'No active book processing',
+                body:
+                    'After a book upload, you will see one grouped book workflow instead of dozens of loose pieces.',
+              )
+            else ...[
+              ...bookWorkflows.map(
+                (workflow) => Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: _BookWorkflowCard(
+                    workflow: workflow,
+                    onOpenReview: onOpenReview,
                   ),
                 ),
-                const SizedBox(height: 8),
-                ...unmatchedItems.map(
-                  (item) => Padding(
-                    padding: const EdgeInsets.only(bottom: 12),
-                    child: _ReviewItemCard(
-                      item: item,
-                      onOpenReview: () => onOpenReview(item.id),
+              ),
+              ...activeLocalEntries.map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.only(top: 12),
+                  child: _IntakeEntryCard(
+                    entry: entry,
+                    students: students,
+                    reviewItem: reviewByPieceId[entry.piece.serverPieceId],
+                    onOpenReview: onOpenReview,
+                    onPushToProfile: (profileId) {
+                      return onPushToProfile(entry, profileId);
+                    },
+                    onCloseWorkflow: () => onCloseWorkflow(entry),
+                  ),
+                ),
+              ),
+            ],
+            const SizedBox(height: 12),
+            _ParentDebugToolsCard(
+              state: debugTools,
+              onToggle: onToggleDebugTools,
+              onRefreshJobs: onRefreshDebugJobs,
+              onCancelJob: onCancelDebugJob,
+              onRetryJob: onRetryDebugJob,
+              onClearLibraries: onClearDebugLibraries,
+            ),
+          ],
+        ),
+        _WorkflowSection(
+          title: 'Review',
+          subtitle:
+              'Approve metadata first, then MuseScore candidates. Book reviews are grouped together.',
+          children: [
+            if (reviewQueue.hasError)
+              _QueueErrorCard(
+                error: reviewQueue.error!,
+                onRepairPairing: onRepairPairing,
+              )
+            else if (reviewQueue.isLoading)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (bookWorkflows
+                    .where((workflow) => workflow.reviewItems.isNotEmpty)
+                    .isEmpty &&
+                looseReviewItems.isEmpty)
+              const _ParentEmptyState(
+                title: 'No review items ready',
+                body:
+                    'Metadata and MuseScore review cards appear here as processing completes.',
+              )
+            else ...[
+              ...bookWorkflows
+                  .where((workflow) => workflow.reviewItems.isNotEmpty)
+                  .map(
+                    (workflow) => Padding(
+                      padding: const EdgeInsets.only(bottom: 12),
+                      child: _BookReviewGroupCard(
+                        workflow: workflow,
+                        onOpenReview: onOpenReview,
+                      ),
                     ),
                   ),
+              ...looseReviewItems.map(
+                (item) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _ReviewItemCard(
+                    item: item,
+                    onOpenReview: () => onOpenReview(item.id),
+                  ),
                 ),
-              ],
-            );
-          },
-          error: (error, _) => Padding(
-            padding: const EdgeInsets.only(top: 12),
-            child: _QueueErrorCard(error: error),
-          ),
-          loading: () => const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(child: CircularProgressIndicator()),
-          ),
+              ),
+            ],
+          ],
+        ),
+        _WorkflowSection(
+          title: 'Push',
+          subtitle:
+              'Approved pieces stay here until you assign them to a student or close them from the workflow.',
+          children: [
+            if (syncedPieces.hasError)
+              _QueueErrorCard(
+                error: syncedPieces.error!,
+                onRepairPairing: onRepairPairing,
+              )
+            else if (syncedPieces.isLoading)
+              const Padding(
+                padding: EdgeInsets.all(24),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (readyRemotePieces.isEmpty && readyLocalEntries.isEmpty)
+              const _ParentEmptyState(
+                title: 'Nothing ready to push',
+                body:
+                    'Approved pieces will appear here after parent review is complete.',
+              )
+            else ...[
+              if (readyRemotePieces.isNotEmpty)
+                Column(
+                  key: AppKeys.parentServerReadyList,
+                  children: readyRemotePieces.map(
+                    (piece) {
+                      return Padding(
+                        padding: const EdgeInsets.only(bottom: 12),
+                        child: _ServerReadyPushCard(
+                          piece: piece,
+                          students: students,
+                          onPushToProfile: (profileId) {
+                            return onPushRemoteToProfile(piece, profileId);
+                          },
+                          onCloseWorkflow: () => onCloseRemoteWorkflow(piece),
+                        ),
+                      );
+                    },
+                  ).toList(growable: false),
+                ),
+              ...readyLocalEntries.map(
+                (entry) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _IntakeEntryCard(
+                    entry: entry,
+                    students: students,
+                    reviewItem: reviewByPieceId[entry.piece.serverPieceId],
+                    onOpenReview: onOpenReview,
+                    onPushToProfile: (profileId) {
+                      return onPushToProfile(entry, profileId);
+                    },
+                    onCloseWorkflow: () => onCloseWorkflow(entry),
+                  ),
+                ),
+              ),
+            ],
+          ],
         ),
       ],
+    );
+  }
+}
+
+class _WorkflowSection extends StatelessWidget {
+  const _WorkflowSection({
+    required this.title,
+    required this.subtitle,
+    required this.children,
+  });
+
+  final String title;
+  final String subtitle;
+  final List<Widget> children;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Padding(
+      padding: const EdgeInsets.only(top: 22),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Text(
+            title,
+            style: theme.textTheme.headlineSmall?.copyWith(
+              fontWeight: FontWeight.w800,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          const SizedBox(height: 12),
+          ...children,
+        ],
+      ),
+    );
+  }
+}
+
+class _LocalImportProblemCard extends StatelessWidget {
+  const _LocalImportProblemCard({
+    required this.entry,
+    required this.serverMissing,
+    required this.onRetry,
+    required this.onRemove,
+  });
+
+  final LibraryEntry entry;
+  final bool serverMissing;
+  final Future<void> Function() onRetry;
+  final Future<void> Function() onRemove;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final message = serverMissing
+        ? 'This item points to a server record that is no longer present. Re-upload it as a new import or remove the local copy.'
+        : 'Waiting for a server connection before upload. Retry when the server is online, or remove this local-only import.';
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.tertiaryContainer.withValues(alpha: 0.22),
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(
+          color: theme.colorScheme.tertiary.withValues(alpha: 0.24),
+        ),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Icon(Icons.cloud_upload_outlined),
+              const SizedBox(width: 12),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      entry.piece.title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      message,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _WorkflowStatusChip(
+                label: serverMissing ? 'server missing' : 'needs upload',
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              FilledButton.tonalIcon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.replay_outlined),
+                label:
+                    Text(serverMissing ? 'Re-upload as new' : 'Retry upload'),
+              ),
+              OutlinedButton.icon(
+                onPressed: onRemove,
+                icon: const Icon(Icons.delete_outline),
+                label: const Text('Remove local item'),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _BookWorkflow {
+  const _BookWorkflow({
+    required this.id,
+    required this.title,
+    this.book,
+    this.children = const <RemotePieceSummary>[],
+    this.reviewItems = const <ReviewQueueEntry>[],
+  });
+
+  final String id;
+  final String title;
+  final RemotePieceSummary? book;
+  final List<RemotePieceSummary> children;
+  final List<ReviewQueueEntry> reviewItems;
+
+  int get detectedCount => children.length;
+  int get metadataPendingCount => reviewItems
+      .where((item) => _reviewProcessingStage(item) == 'split_review_needed')
+      .length;
+  int get museScorePendingCount => reviewItems
+      .where(
+          (item) => _reviewProcessingStage(item) == 'candidate_review_needed')
+      .length;
+  int get approvedCount =>
+      children.where((piece) => piece.libraryStatus == 'ready').length;
+  int get pushedCount =>
+      children.where((piece) => piece.visibleToProfileIds.isNotEmpty).length;
+  int get processingCount => children
+      .where(
+        (piece) =>
+            piece.libraryStatus == 'processing' ||
+            piece.status == 'processing' ||
+            piece.libraryStatus == 'review',
+      )
+      .length;
+
+  ReviewQueueEntry? get nextReviewItem {
+    final metadataItems = reviewItems
+        .where((item) => _reviewProcessingStage(item) == 'split_review_needed')
+        .toList(growable: false);
+    if (metadataItems.isNotEmpty) {
+      return metadataItems.first;
+    }
+    if (reviewItems.isNotEmpty) {
+      return reviewItems.first;
+    }
+    return null;
+  }
+}
+
+class _BookWorkflowCard extends StatelessWidget {
+  const _BookWorkflowCard({
+    required this.workflow,
+    required this.onOpenReview,
+  });
+
+  final _BookWorkflow workflow;
+  final ValueChanged<String> onOpenReview;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final nextReview = workflow.nextReviewItem;
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(22),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Container(
+                width: 44,
+                height: 44,
+                decoration: BoxDecoration(
+                  color: const Color(0xFFE4F6EE),
+                  borderRadius: BorderRadius.circular(14),
+                ),
+                child: const Icon(
+                  Icons.menu_book_outlined,
+                  color: Color(0xFF126B4A),
+                ),
+              ),
+              const SizedBox(width: 14),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      workflow.title,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.w800,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      _bookWorkflowSummary(workflow),
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              _WorkflowStatusChip(label: _bookWorkflowStatus(workflow)),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Wrap(
+            spacing: 8,
+            runSpacing: 8,
+            children: [
+              Chip(label: Text('${workflow.detectedCount} detected')),
+              Chip(label: Text('${workflow.metadataPendingCount} metadata')),
+              Chip(label: Text('${workflow.museScorePendingCount} MuseScore')),
+              Chip(label: Text('${workflow.approvedCount} approved')),
+              if (workflow.pushedCount > 0)
+                Chip(label: Text('${workflow.pushedCount} pushed')),
+            ],
+          ),
+          if (nextReview != null) ...[
+            const SizedBox(height: 12),
+            FilledButton.tonalIcon(
+              onPressed: () => onOpenReview(nextReview.id),
+              icon: const Icon(Icons.fact_check_outlined),
+              label: const Text('Open next review'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+class _BookReviewGroupCard extends StatelessWidget {
+  const _BookReviewGroupCard({
+    required this.workflow,
+    required this.onOpenReview,
+  });
+
+  final _BookWorkflow workflow;
+  final ValueChanged<String> onOpenReview;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final nextReview = workflow.nextReviewItem;
+    return Container(
+      padding: const EdgeInsets.all(18),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Icon(Icons.fact_check_outlined, color: Color(0xFF854F0B)),
+          const SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  workflow.title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  '${workflow.metadataPendingCount} metadata review(s), '
+                  '${workflow.museScorePendingCount} MuseScore review(s).',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                if (nextReview != null) ...[
+                  const SizedBox(height: 10),
+                  FilledButton.tonalIcon(
+                    onPressed: () => onOpenReview(nextReview.id),
+                    icon: const Icon(Icons.arrow_forward_outlined),
+                    label: const Text('Continue review'),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          Chip(label: Text('${workflow.reviewItems.length} open')),
+        ],
+      ),
+    );
+  }
+}
+
+class _WorkflowStatusChip extends StatelessWidget {
+  const _WorkflowStatusChip({required this.label});
+
+  final String label;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Chip(
+      visualDensity: VisualDensity.compact,
+      label: Text(label),
+      labelStyle: theme.textTheme.labelSmall?.copyWith(
+        color: theme.colorScheme.primary,
+        fontWeight: FontWeight.w700,
+      ),
+      backgroundColor:
+          theme.colorScheme.primaryContainer.withValues(alpha: 0.35),
+    );
+  }
+}
+
+List<_BookWorkflow> _buildBookWorkflows({
+  required List<RemotePieceSummary> pieces,
+  required List<ReviewQueueEntry> reviewItems,
+}) {
+  final booksById = <String, RemotePieceSummary>{
+    for (final piece in pieces)
+      if (piece.pieceKind == 'book' && !piece.workflowClosed) piece.id: piece,
+  };
+  final childrenByBookId = <String, List<RemotePieceSummary>>{};
+  for (final piece in pieces) {
+    final sourceBookId = piece.sourceBookId;
+    if (sourceBookId == null ||
+        sourceBookId.isEmpty ||
+        piece.workflowClosed ||
+        piece.pieceKind == 'book') {
+      continue;
+    }
+    childrenByBookId.putIfAbsent(sourceBookId, () => []).add(piece);
+  }
+
+  final reviewsByBookId = <String, List<ReviewQueueEntry>>{};
+  for (final item in reviewItems) {
+    final sourceBookId = _reviewSourceBookId(item);
+    if (sourceBookId == null || sourceBookId.isEmpty) {
+      continue;
+    }
+    reviewsByBookId.putIfAbsent(sourceBookId, () => []).add(item);
+  }
+
+  final bookIds = <String>{
+    ...booksById.keys,
+    ...childrenByBookId.keys,
+    ...reviewsByBookId.keys,
+  };
+  final workflows = bookIds.map((bookId) {
+    final book = booksById[bookId];
+    final children = childrenByBookId[bookId] ?? const <RemotePieceSummary>[];
+    final reviews = reviewsByBookId[bookId] ?? const <ReviewQueueEntry>[];
+    return _BookWorkflow(
+      id: bookId,
+      title: _bookWorkflowTitle(book, children, reviews),
+      book: book,
+      children: children,
+      reviewItems: reviews,
+    );
+  }).toList();
+  workflows.sort((left, right) => left.title.compareTo(right.title));
+  return workflows;
+}
+
+String _bookWorkflowTitle(
+  RemotePieceSummary? book,
+  List<RemotePieceSummary> children,
+  List<ReviewQueueEntry> reviews,
+) {
+  if (book != null) {
+    return book.title;
+  }
+  for (final child in children) {
+    final title =
+        child.bookOrCollection ?? child.catalogMetadata['book_or_collection'];
+    final text = _metadataString(title);
+    if (text != null) {
+      return text;
+    }
+  }
+  for (final review in reviews) {
+    final catalog = review.candidateData['catalog_metadata'];
+    if (catalog is Map) {
+      final title = _metadataString(catalog['book_or_collection']);
+      if (title != null) {
+        return title;
+      }
+    }
+  }
+  return 'Book import';
+}
+
+String _bookWorkflowSummary(_BookWorkflow workflow) {
+  if (workflow.reviewItems.isEmpty && workflow.processingCount == 0) {
+    return 'Book source uploaded. Waiting for extracted pieces or review output.';
+  }
+  return '${workflow.detectedCount} piece(s) detected, '
+      '${workflow.processingCount} processing/reviewing, '
+      '${workflow.approvedCount} approved.';
+}
+
+String _bookWorkflowStatus(_BookWorkflow workflow) {
+  if (workflow.metadataPendingCount > 0) {
+    return 'metadata review';
+  }
+  if (workflow.museScorePendingCount > 0) {
+    return 'MuseScore review';
+  }
+  if (workflow.processingCount > 0) {
+    return 'processing';
+  }
+  if (workflow.approvedCount > 0) {
+    return 'ready';
+  }
+  return 'uploaded';
+}
+
+String? _reviewSourceBookId(ReviewQueueEntry item) {
+  return _metadataString(item.candidateData['source_book_id']);
+}
+
+String? _reviewProcessingStage(ReviewQueueEntry item) {
+  return _metadataString(item.candidateData['processing_stage']);
+}
+
+class _ProcessingTrackerCard extends StatelessWidget {
+  const _ProcessingTrackerCard({required this.summary});
+
+  final ProcessingJobSummary summary;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final completedCount = summary.succeededCount + summary.failedCount;
+    final totalCount =
+        completedCount + summary.queuedCount + summary.runningCount;
+    final hasJobs = totalCount > 0;
+    final progress = hasJobs ? completedCount / totalCount : null;
+    final activeText = summary.runningCount == 0 && summary.queuedCount == 0
+        ? 'No active server processing jobs.'
+        : '${summary.runningCount} running, ${summary.queuedCount} queued.';
+
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: [
+                const Icon(Icons.pending_actions_outlined),
+                const SizedBox(width: 10),
+                Expanded(
+                  child: Text(
+                    'Processing tracker',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.w700,
+                    ),
+                  ),
+                ),
+                Chip(
+                  label: Text(
+                    hasJobs ? '$completedCount / $totalCount done' : 'Idle',
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 12),
+            LinearProgressIndicator(value: progress),
+            const SizedBox(height: 10),
+            Text(
+              activeText,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            if (summary.failedCount > 0) ...[
+              const SizedBox(height: 8),
+              Text(
+                '${summary.failedCount} job(s) failed. Check Server for details.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                  fontWeight: FontWeight.w600,
+                ),
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _ParentDebugToolsCard extends StatelessWidget {
+  const _ParentDebugToolsCard({
+    required this.state,
+    required this.onToggle,
+    required this.onRefreshJobs,
+    required this.onCancelJob,
+    required this.onRetryJob,
+    required this.onClearLibraries,
+  });
+
+  final ParentDebugToolsState state;
+  final Future<void> Function(bool enabled) onToggle;
+  final Future<void> Function() onRefreshJobs;
+  final Future<void> Function(String jobId) onCancelJob;
+  final Future<void> Function(String jobId) onRetryJob;
+  final Future<void> Function() onClearLibraries;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final failedCount =
+        state.jobs.where((job) => job.status == 'failed').length;
+    final runningCount =
+        state.jobs.where((job) => job.status == 'running').length;
+    final queuedCount =
+        state.jobs.where((job) => job.status == 'queued').length;
+    final visibleJobs = _prioritizedDebugJobs(state.jobs).take(40).toList();
+    return DecoratedBox(
+      key: AppKeys.parentDebugToolsCard,
+      decoration: BoxDecoration(
+        color: state.enabled
+            ? theme.colorScheme.errorContainer.withValues(alpha: 0.16)
+            : theme.colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(
+          color: state.enabled
+              ? theme.colorScheme.error.withValues(alpha: 0.24)
+              : theme.colorScheme.outlineVariant,
+        ),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            SwitchListTile(
+              key: AppKeys.parentDebugToolsToggle,
+              contentPadding: EdgeInsets.zero,
+              value: state.enabled,
+              onChanged: state.busy ? null : (value) => onToggle(value),
+              title: const Text('Debug tools'),
+              subtitle: const Text(
+                'For test cleanup only. These actions can remove local and server workflow data.',
+              ),
+            ),
+            if (state.enabled) ...[
+              const SizedBox(height: 8),
+              if (state.busy) const LinearProgressIndicator(),
+              if (state.message != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  state.message!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.primary,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+              if (state.error != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  'Debug action failed: ${formatServerConnectionError(state.error!)}',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.error,
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  FilledButton.tonalIcon(
+                    key: AppKeys.parentDebugClearLibrariesButton,
+                    onPressed: state.busy
+                        ? null
+                        : () => _confirmClearLibraries(context),
+                    icon: const Icon(Icons.delete_sweep_outlined),
+                    label: const Text('Clear local + server libraries'),
+                  ),
+                  OutlinedButton.icon(
+                    key: AppKeys.parentDebugRefreshJobsButton,
+                    onPressed: state.busy ? null : onRefreshJobs,
+                    icon: const Icon(Icons.refresh_outlined),
+                    label: const Text('Refresh server jobs'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 14),
+              Text(
+                'Server jobs',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              if (state.jobs.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(
+                  '$failedCount failed, $runningCount running, $queuedCount queued. '
+                  'Showing jobs needing attention first.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: failedCount > 0
+                        ? theme.colorScheme.error
+                        : theme.colorScheme.onSurfaceVariant,
+                    fontWeight:
+                        failedCount > 0 ? FontWeight.w600 : FontWeight.w400,
+                  ),
+                ),
+              ],
+              const SizedBox(height: 8),
+              if (state.jobs.isEmpty)
+                Text(
+                  'No server jobs found.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                )
+              else
+                ...visibleJobs.map(
+                  (job) => _DebugJobRow(
+                    job: job,
+                    busy: state.busy,
+                    onCancel: () => _confirmCancelJob(context, job),
+                    onRetry: () => _confirmRetryJob(context, job),
+                  ),
+                ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
+
+  Future<void> _confirmClearLibraries(BuildContext context) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Clear debug libraries?'),
+        content: const Text(
+          'This clears this Windows client library and server import, review, job, and generated workflow data. Pairing, students, parent PIN, and processing settings are preserved.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Clear'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await onClearLibraries();
+    }
+  }
+
+  Future<void> _confirmCancelJob(
+    BuildContext context,
+    ServerJob job,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Cancel server job?'),
+        content: Text(
+          'Cancel ${job.jobType} job ${job.id}? Running tools may finish their current subprocess, but the job will not publish final review output after cancellation is detected.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Keep running'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Cancel job'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await onCancelJob(job.id);
+    }
+  }
+
+  Future<void> _confirmRetryJob(
+    BuildContext context,
+    ServerJob job,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: const Text('Retry processing?'),
+        content: Text(
+          'Retry processing for ${job.pieceLabel}? This will send the same raw PDF and metadata back through Audiveris and MuseScore.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Retry processing'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await onRetryJob(job.id);
+    }
+  }
+}
+
+List<ServerJob> _prioritizedDebugJobs(List<ServerJob> jobs) {
+  final sorted = [...jobs];
+  sorted.sort((a, b) {
+    final priorityCompare = _debugJobStatusPriority(a.status)
+        .compareTo(_debugJobStatusPriority(b.status));
+    if (priorityCompare != 0) {
+      return priorityCompare;
+    }
+    return b.updatedAt.compareTo(a.updatedAt);
+  });
+  return sorted;
+}
+
+int _debugJobStatusPriority(String status) {
+  return switch (status) {
+    'failed' => 0,
+    'running' => 1,
+    'queued' => 2,
+    'canceled' => 3,
+    _ => 4,
+  };
+}
+
+class _DebugJobRow extends StatelessWidget {
+  const _DebugJobRow({
+    required this.job,
+    required this.busy,
+    required this.onCancel,
+    required this.onRetry,
+  });
+
+  final ServerJob job;
+  final bool busy;
+  final Future<void> Function() onCancel;
+  final Future<void> Function() onRetry;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final statusColor = switch (job.status) {
+      'queued' || 'running' => const Color(0xFF854F0B),
+      'succeeded' => const Color(0xFF126B4A),
+      'failed' => theme.colorScheme.error,
+      'canceled' => theme.colorScheme.onSurfaceVariant,
+      _ => theme.colorScheme.onSurface,
+    };
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      job.pieceLabel,
+                      style: theme.textTheme.labelLarge?.copyWith(
+                        fontWeight: FontWeight.w700,
+                      ),
+                    ),
+                    const SizedBox(height: 2),
+                    Text(
+                      '${job.jobType} ${job.status}',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Chip(
+                visualDensity: VisualDensity.compact,
+                label: Text(job.status),
+                labelStyle: TextStyle(color: statusColor),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          LinearProgressIndicator(value: job.progress.clamp(0, 100) / 100),
+          const SizedBox(height: 6),
+          Text(
+            '${job.progress.toStringAsFixed(0)}% - updated ${_shortDateTime(job.updatedAt)}',
+            style: theme.textTheme.bodySmall?.copyWith(
+              color: theme.colorScheme.onSurfaceVariant,
+            ),
+          ),
+          if (job.errorMessage?.isNotEmpty ?? false) ...[
+            const SizedBox(height: 6),
+            Text(
+              job.errorMessage!,
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.error,
+              ),
+            ),
+          ],
+          if (job.canCancel) ...[
+            const SizedBox(height: 8),
+            OutlinedButton.icon(
+              key: AppKeys.parentDebugCancelJobButton(job.id),
+              onPressed: busy ? null : onCancel,
+              icon: const Icon(Icons.cancel_outlined),
+              label: const Text('Cancel'),
+            ),
+          ],
+          if (job.canRetry) ...[
+            const SizedBox(height: 8),
+            FilledButton.tonalIcon(
+              key: AppKeys.parentDebugRetryJobButton(job.id),
+              onPressed: busy ? null : onRetry,
+              icon: const Icon(Icons.replay_outlined),
+              label: const Text('Retry processing'),
+            ),
+          ],
+        ],
+      ),
+    );
+  }
+}
+
+String _shortDateTime(DateTime value) {
+  if (value.millisecondsSinceEpoch == 0) {
+    return 'unknown';
+  }
+  final local = value.toLocal();
+  final month = local.month.toString().padLeft(2, '0');
+  final day = local.day.toString().padLeft(2, '0');
+  final hour = local.hour.toString().padLeft(2, '0');
+  final minute = local.minute.toString().padLeft(2, '0');
+  return '$month/$day $hour:$minute';
+}
+
+class _ProcessingTrackerLoadingCard extends StatelessWidget {
+  const _ProcessingTrackerLoadingCard();
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surfaceContainerLowest,
+        borderRadius: BorderRadius.circular(18),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: const Padding(
+        padding: EdgeInsets.all(16),
+        child: LinearProgressIndicator(),
+      ),
+    );
+  }
+}
+
+class _ProcessingTrackerErrorCard extends StatelessWidget {
+  const _ProcessingTrackerErrorCard({required this.error});
+
+  final Object error;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.errorContainer.withValues(alpha: 0.28),
+        borderRadius: BorderRadius.circular(18),
+        border:
+            Border.all(color: theme.colorScheme.error.withValues(alpha: 0.22)),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Text(
+          'Unable to load processing tracker: $error',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onErrorContainer,
+          ),
+        ),
+      ),
     );
   }
 }
@@ -412,14 +1789,23 @@ class _StudentsTab extends StatelessWidget {
   const _StudentsTab({
     required this.syncedPieces,
     required this.students,
+    required this.onRepairPairing,
+    required this.onAddStudent,
     required this.onCreatePairing,
     required this.onEditMetadata,
+    required this.onPushOriginal,
+    required this.onPullForEdits,
   });
 
   final AsyncValue<List<RemotePieceSummary>> syncedPieces;
   final List<Profile> students;
+  final VoidCallback onRepairPairing;
+  final VoidCallback onAddStudent;
   final ValueChanged<Profile> onCreatePairing;
   final ValueChanged<RemotePieceSummary> onEditMetadata;
+  final Future<void> Function(RemotePieceSummary piece, String profileId)
+      onPushOriginal;
+  final Future<void> Function(RemotePieceSummary piece) onPullForEdits;
 
   @override
   Widget build(BuildContext context) {
@@ -429,6 +1815,7 @@ class _StudentsTab extends StatelessWidget {
       children: [
         _StudentDevicePairingCard(
           students: students,
+          onAddStudent: onAddStudent,
           onCreatePairing: onCreatePairing,
         ),
         const SizedBox(height: 20),
@@ -457,13 +1844,19 @@ class _StudentsTab extends StatelessWidget {
                         piece: piece,
                         students: students,
                         onEditMetadata: () => onEditMetadata(piece),
+                        onPushOriginal: (profileId) =>
+                            onPushOriginal(piece, profileId),
+                        onPullForEdits: () => onPullForEdits(piece),
                       ),
                     ),
                   )
                   .toList(growable: false),
             );
           },
-          error: (error, _) => _QueueErrorCard(error: error),
+          error: (error, _) => _QueueErrorCard(
+            error: error,
+            onRepairPairing: onRepairPairing,
+          ),
           loading: () => const Padding(
             padding: EdgeInsets.all(24),
             child: Center(child: CircularProgressIndicator()),
@@ -475,16 +1868,23 @@ class _StudentsTab extends StatelessWidget {
 }
 
 class _ServerToolsTab extends StatelessWidget {
-  const _ServerToolsTab({required this.serverHealth});
+  const _ServerToolsTab({
+    required this.serverHealth,
+    required this.onRepairPairing,
+  });
 
   final AsyncValue<ServerHealthState> serverHealth;
+  final VoidCallback onRepairPairing;
 
   @override
   Widget build(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
-        _ServerStatusCard(serverHealth: serverHealth),
+        _ServerStatusCard(
+          serverHealth: serverHealth,
+          onRepairPairing: onRepairPairing,
+        ),
         const SizedBox(height: 12),
         const _ProcessingSettingsCard(),
       ],
@@ -537,6 +1937,7 @@ class _IntakeEntryCard extends StatelessWidget {
     required this.reviewItem,
     required this.onOpenReview,
     required this.onPushToProfile,
+    required this.onCloseWorkflow,
   });
 
   final LibraryEntry entry;
@@ -544,6 +1945,7 @@ class _IntakeEntryCard extends StatelessWidget {
   final ReviewQueueEntry? reviewItem;
   final ValueChanged<String> onOpenReview;
   final Future<void> Function(String profileId) onPushToProfile;
+  final Future<void> Function() onCloseWorkflow;
 
   @override
   Widget build(BuildContext context) {
@@ -556,6 +1958,9 @@ class _IntakeEntryCard extends StatelessWidget {
       if (piece.bookOrCollection?.isNotEmpty ?? false) piece.bookOrCollection!,
     ].join(' - ');
     final canPush = piece.libraryStatus == LibraryStatus.ready;
+    final canCloseWorkflow = canPush &&
+        piece.serverPieceId != null &&
+        piece.visibleToProfileIds.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
@@ -616,25 +2021,34 @@ class _IntakeEntryCard extends StatelessWidget {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: students.map((student) {
-                final alreadyVisible =
-                    piece.visibleToProfileIds.contains(student.id);
-                return FilledButton.tonalIcon(
-                  key: AppKeys.pushToProfileButton(piece.id, student.id),
-                  onPressed:
-                      alreadyVisible ? null : () => onPushToProfile(student.id),
-                  icon: Icon(
-                    alreadyVisible
-                        ? Icons.check_circle_outline
-                        : Icons.send_outlined,
+              children: [
+                ...students.map((student) {
+                  final alreadyVisible =
+                      piece.visibleToProfileIds.contains(student.id);
+                  return FilledButton.tonalIcon(
+                    key: AppKeys.pushToProfileButton(piece.id, student.id),
+                    onPressed: alreadyVisible
+                        ? null
+                        : () => onPushToProfile(student.id),
+                    icon: Icon(
+                      alreadyVisible
+                          ? Icons.check_circle_outline
+                          : Icons.send_outlined,
+                    ),
+                    label: Text(
+                      alreadyVisible
+                          ? '${student.displayName} added'
+                          : 'Push to ${student.displayName}',
+                    ),
+                  );
+                }),
+                if (canCloseWorkflow)
+                  OutlinedButton.icon(
+                    onPressed: onCloseWorkflow,
+                    icon: const Icon(Icons.done_all_outlined),
+                    label: const Text('Close workflow'),
                   ),
-                  label: Text(
-                    alreadyVisible
-                        ? '${student.displayName} added'
-                        : 'Push to ${student.displayName}',
-                  ),
-                );
-              }).toList(growable: false),
+              ],
             ),
         ],
       ),
@@ -644,11 +2058,14 @@ class _IntakeEntryCard extends StatelessWidget {
   String _statusMessage(LibraryStatus status, bool hasReviewItem) {
     return switch (status) {
       LibraryStatus.intake => 'Waiting for processing or server upload.',
-      LibraryStatus.uploadPending => 'Waiting to upload to the server.',
+      LibraryStatus.uploadPending =>
+        'Waiting for server connection before upload.',
       LibraryStatus.processing => 'Backend processing is still running.',
       LibraryStatus.review => hasReviewItem
           ? 'Processing is complete. Review metadata and score output before pushing.'
           : 'Processing is complete, but the review item is still syncing.',
+      LibraryStatus.needsEdits =>
+        'Processed candidate was rejected or pulled back. Push original or edit and repush.',
       LibraryStatus.ready => 'Ready to push.',
       LibraryStatus.archived => 'Rejected or archived after parent review.',
     };
@@ -660,11 +2077,13 @@ class _ServerReadyPushCard extends StatelessWidget {
     required this.piece,
     required this.students,
     required this.onPushToProfile,
+    required this.onCloseWorkflow,
   });
 
   final RemotePieceSummary piece;
   final List<Profile> students;
   final Future<void> Function(String profileId) onPushToProfile;
+  final Future<void> Function() onCloseWorkflow;
 
   @override
   Widget build(BuildContext context) {
@@ -683,6 +2102,7 @@ class _ServerReadyPushCard extends StatelessWidget {
       else
         'Assigned to ${assignedNames.join(', ')}',
     ].join(' - ');
+    final canCloseWorkflow = piece.visibleToProfileIds.isNotEmpty;
 
     return Container(
       decoration: BoxDecoration(
@@ -735,25 +2155,34 @@ class _ServerReadyPushCard extends StatelessWidget {
             Wrap(
               spacing: 8,
               runSpacing: 8,
-              children: students.map((student) {
-                final alreadyVisible =
-                    piece.visibleToProfileIds.contains(student.id);
-                return FilledButton.tonalIcon(
-                  key: AppKeys.pushToProfileButton(piece.id, student.id),
-                  onPressed:
-                      alreadyVisible ? null : () => onPushToProfile(student.id),
-                  icon: Icon(
-                    alreadyVisible
-                        ? Icons.check_circle_outline
-                        : Icons.send_outlined,
+              children: [
+                ...students.map((student) {
+                  final alreadyVisible =
+                      piece.visibleToProfileIds.contains(student.id);
+                  return FilledButton.tonalIcon(
+                    key: AppKeys.pushToProfileButton(piece.id, student.id),
+                    onPressed: alreadyVisible
+                        ? null
+                        : () => onPushToProfile(student.id),
+                    icon: Icon(
+                      alreadyVisible
+                          ? Icons.check_circle_outline
+                          : Icons.send_outlined,
+                    ),
+                    label: Text(
+                      alreadyVisible
+                          ? '${student.displayName} added'
+                          : 'Push to ${student.displayName}',
+                    ),
+                  );
+                }),
+                if (canCloseWorkflow)
+                  OutlinedButton.icon(
+                    onPressed: onCloseWorkflow,
+                    icon: const Icon(Icons.done_all_outlined),
+                    label: const Text('Close workflow'),
                   ),
-                  label: Text(
-                    alreadyVisible
-                        ? '${student.displayName} added'
-                        : 'Push to ${student.displayName}',
-                  ),
-                );
-              }).toList(growable: false),
+              ],
             ),
         ],
       ),
@@ -780,10 +2209,15 @@ class _ParentStatusBadge extends StatelessWidget {
           foreground: const Color(0xFF854F0B),
           label: 'Review',
         ),
+      LibraryStatus.needsEdits => (
+          background: const Color(0xFFFFF2D7),
+          foreground: const Color(0xFF854F0B),
+          label: 'Needs edits',
+        ),
       LibraryStatus.uploadPending => (
           background: const Color(0xFFFAEEDA),
           foreground: const Color(0xFF854F0B),
-          label: 'Upload',
+          label: 'Server',
         ),
       LibraryStatus.processing => (
           background: const Color(0xFFE8DDD0),
@@ -820,9 +2254,13 @@ class _ParentStatusBadge extends StatelessWidget {
 }
 
 class _ServerStatusCard extends StatelessWidget {
-  const _ServerStatusCard({required this.serverHealth});
+  const _ServerStatusCard({
+    required this.serverHealth,
+    required this.onRepairPairing,
+  });
 
   final AsyncValue<ServerHealthState> serverHealth;
+  final VoidCallback onRepairPairing;
 
   @override
   Widget build(BuildContext context) {
@@ -836,7 +2274,11 @@ class _ServerStatusCard extends StatelessWidget {
             state.isOnline ? const Color(0xFF126B4A) : const Color(0xFF854F0B);
         final background =
             state.isOnline ? const Color(0xFFE4F6EE) : const Color(0xFFFAEEDA);
-        final label = state.isOnline ? 'Server online' : 'Server offline';
+        final label = state.isOnline
+            ? 'Server online'
+            : AppConfig.isServerPaired
+                ? 'Server offline'
+                : 'Server not paired';
 
         return Container(
           key: AppKeys.parentServerStatus,
@@ -847,36 +2289,102 @@ class _ServerStatusCard extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
             border: Border.all(color: foreground.withValues(alpha: 0.18)),
           ),
-          child: Row(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Icon(icon, color: foreground, size: 18),
-              const SizedBox(width: 10),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      label,
-                      style: theme.textTheme.labelLarge?.copyWith(
-                        color: foreground,
-                        fontWeight: FontWeight.w700,
-                      ),
+              Row(
+                children: [
+                  Icon(icon, color: foreground, size: 18),
+                  const SizedBox(width: 10),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          label,
+                          style: theme.textTheme.labelLarge?.copyWith(
+                            color: foreground,
+                            fontWeight: FontWeight.w700,
+                          ),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          state.serverUrl,
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: foreground.withValues(alpha: 0.82),
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 2),
-                    Text(
-                      state.serverUrl,
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: foreground.withValues(alpha: 0.82),
-                      ),
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
+              if (state.message != null) ...[
+                const SizedBox(height: 8),
+                Text(
+                  state.message!,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: foreground.withValues(alpha: 0.86),
+                  ),
+                ),
+              ],
+              if (!state.isOnline) ...[
+                const SizedBox(height: 10),
+                OutlinedButton.icon(
+                  onPressed: onRepairPairing,
+                  icon: const Icon(Icons.qr_code_scanner_outlined),
+                  label: Text(
+                    AppConfig.isServerPaired
+                        ? 'Repair server pairing'
+                        : 'Pair this device',
+                  ),
+                  style: OutlinedButton.styleFrom(
+                    foregroundColor: foreground,
+                    side: BorderSide(
+                      color: foreground.withValues(alpha: 0.38),
+                    ),
+                  ),
+                ),
+              ],
             ],
           ),
         );
       },
-      error: (error, stackTrace) => const SizedBox.shrink(),
+      error: (error, stackTrace) => Container(
+        key: AppKeys.parentServerStatus,
+        width: double.infinity,
+        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFFFAEEDA),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0x33854F0B)),
+        ),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Server check failed',
+              style: theme.textTheme.labelLarge?.copyWith(
+                color: const Color(0xFF854F0B),
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              formatServerConnectionError(error),
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: const Color(0xFF854F0B),
+              ),
+            ),
+            const SizedBox(height: 10),
+            OutlinedButton.icon(
+              onPressed: onRepairPairing,
+              icon: const Icon(Icons.qr_code_scanner_outlined),
+              label: const Text('Repair server pairing'),
+            ),
+          ],
+        ),
+      ),
       loading: () {
         return Container(
           key: AppKeys.parentServerStatus,
@@ -910,10 +2418,12 @@ class _ServerStatusCard extends StatelessWidget {
 class _StudentDevicePairingCard extends StatelessWidget {
   const _StudentDevicePairingCard({
     required this.students,
+    required this.onAddStudent,
     required this.onCreatePairing,
   });
 
   final List<Profile> students;
+  final VoidCallback onAddStudent;
   final ValueChanged<Profile> onCreatePairing;
 
   @override
@@ -937,26 +2447,144 @@ class _StudentDevicePairingCard extends StatelessWidget {
           ),
           const SizedBox(height: 6),
           Text(
-            'After the parent/admin device is initialized from the server setup page, generate a separate QR code for each student device.',
+            'Add student profiles here, then generate a separate QR code for each student device.',
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
           ),
           const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: students.map((student) {
-              return FilledButton.tonalIcon(
-                key: AppKeys.studentDevicePairingButton(student.id),
-                onPressed: () => onCreatePairing(student),
-                icon: const Icon(Icons.qr_code_2_outlined),
-                label: Text('Pair ${student.displayName} device'),
-              );
-            }).toList(growable: false),
+          OutlinedButton.icon(
+            key: AppKeys.parentAddStudentButton,
+            onPressed: onAddStudent,
+            icon: const Icon(Icons.person_add_alt_1_outlined),
+            label: const Text('Add student'),
           ),
+          const SizedBox(height: 12),
+          if (students.isEmpty)
+            Text(
+              'No students have been added yet.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            )
+          else
+            Wrap(
+              spacing: 8,
+              runSpacing: 8,
+              children: students.map((student) {
+                return FilledButton.tonalIcon(
+                  key: AppKeys.studentDevicePairingButton(student.id),
+                  onPressed: () => onCreatePairing(student),
+                  icon: const Icon(Icons.qr_code_2_outlined),
+                  label: Text('Pair ${student.displayName} device'),
+                );
+              }).toList(growable: false),
+            ),
         ],
       ),
+    );
+  }
+}
+
+class _StudentDraft {
+  const _StudentDraft({
+    required this.displayName,
+    required this.instrument,
+  });
+
+  final String displayName;
+  final InstrumentType instrument;
+}
+
+class _AddStudentDialog extends StatefulWidget {
+  const _AddStudentDialog();
+
+  @override
+  State<_AddStudentDialog> createState() => _AddStudentDialogState();
+}
+
+class _AddStudentDialogState extends State<_AddStudentDialog> {
+  final TextEditingController _nameController = TextEditingController();
+  InstrumentType _instrument = InstrumentType.cello;
+  String? _nameError;
+
+  @override
+  void dispose() {
+    _nameController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Add student'),
+      content: SizedBox(
+        width: 420,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            TextField(
+              key: AppKeys.parentStudentNameField,
+              controller: _nameController,
+              autofocus: true,
+              decoration: InputDecoration(
+                labelText: 'Student name',
+                errorText: _nameError,
+                border: const OutlineInputBorder(),
+              ),
+              onSubmitted: (_) => _submit(),
+            ),
+            const SizedBox(height: 12),
+            DropdownButtonFormField<InstrumentType>(
+              initialValue: _instrument,
+              decoration: const InputDecoration(
+                labelText: 'Primary instrument',
+                border: OutlineInputBorder(),
+              ),
+              items: InstrumentType.values
+                  .map(
+                    (instrument) => DropdownMenuItem(
+                      value: instrument,
+                      child: Text(_instrumentLabel(instrument)),
+                    ),
+                  )
+                  .toList(growable: false),
+              onChanged: (value) {
+                if (value == null) {
+                  return;
+                }
+                setState(() {
+                  _instrument = value;
+                });
+              },
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: AppKeys.parentCreateStudentButton,
+          onPressed: _submit,
+          child: const Text('Create student'),
+        ),
+      ],
+    );
+  }
+
+  void _submit() {
+    final displayName = _nameController.text.trim();
+    if (displayName.isEmpty) {
+      setState(() {
+        _nameError = 'Student name is required.';
+      });
+      return;
+    }
+    Navigator.of(context).pop(
+      _StudentDraft(displayName: displayName, instrument: _instrument),
     );
   }
 }
@@ -1087,7 +2715,7 @@ class _ProcessingSettingsCard extends StatelessWidget {
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Configure Audiveris, MuseScore, OCR, stub fallback, and experimental device processing.',
+                      'Configure Audiveris, MuseScore Studio, OCR, and stub fallback.',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -1110,11 +2738,15 @@ class _SyncedPieceCard extends StatelessWidget {
     required this.piece,
     required this.students,
     required this.onEditMetadata,
+    required this.onPushOriginal,
+    required this.onPullForEdits,
   });
 
   final RemotePieceSummary piece;
   final List<Profile> students;
   final VoidCallback onEditMetadata;
+  final ValueChanged<String> onPushOriginal;
+  final VoidCallback onPullForEdits;
 
   @override
   Widget build(BuildContext context) {
@@ -1122,6 +2754,9 @@ class _SyncedPieceCard extends StatelessWidget {
     final assignedNames = students
         .where((student) => piece.visibleToProfileIds.contains(student.id))
         .map((student) => student.displayName)
+        .toList(growable: false);
+    final unassignedStudents = students
+        .where((student) => !piece.visibleToProfileIds.contains(student.id))
         .toList(growable: false);
     final subtitle = <String>[
       if (piece.composer?.isNotEmpty ?? false) piece.composer!,
@@ -1185,6 +2820,24 @@ class _SyncedPieceCard extends StatelessWidget {
                       icon: const Icon(Icons.edit_note_outlined),
                       label: const Text('Edit metadata'),
                     ),
+                    if (assignedNames.isNotEmpty)
+                      OutlinedButton.icon(
+                        onPressed: onPullForEdits,
+                        icon: const Icon(Icons.build_outlined),
+                        label: const Text('Pull back for edits'),
+                      ),
+                    for (final student in unassignedStudents)
+                      OutlinedButton.icon(
+                        onPressed: () => onPushOriginal(student.id),
+                        icon: const Icon(Icons.picture_as_pdf_outlined),
+                        label: Text('Push original to ${student.displayName}'),
+                      ),
+                    if (piece.libraryStatus == 'needsEdits')
+                      const Tooltip(
+                        message:
+                            'Coming soon: AI will review the rejected MusicXML against the original PDF.',
+                        child: Chip(label: Text('Fix with AI later')),
+                      ),
                   ],
                 ),
               ],
@@ -1599,9 +3252,13 @@ class _ParentEmptyState extends StatelessWidget {
 }
 
 class _QueueErrorCard extends StatelessWidget {
-  const _QueueErrorCard({required this.error});
+  const _QueueErrorCard({
+    required this.error,
+    required this.onRepairPairing,
+  });
 
   final Object error;
+  final VoidCallback onRepairPairing;
 
   @override
   Widget build(BuildContext context) {
@@ -1618,18 +3275,32 @@ class _QueueErrorCard extends StatelessWidget {
           const Icon(Icons.cloud_off_outlined, size: 44),
           const SizedBox(height: 12),
           Text(
-            'Unable to load the parent review queue.',
+            isServerConnectionError(error)
+                ? 'Server connection needs attention.'
+                : 'Unable to load the parent review queue.',
             style: theme.textTheme.titleMedium,
             textAlign: TextAlign.center,
           ),
           const SizedBox(height: 8),
           Text(
-            '$error',
+            formatServerConnectionError(error),
             style: theme.textTheme.bodySmall?.copyWith(
               color: theme.colorScheme.onSurfaceVariant,
             ),
             textAlign: TextAlign.center,
           ),
+          if (isServerConnectionError(error)) ...[
+            const SizedBox(height: 12),
+            OutlinedButton.icon(
+              onPressed: onRepairPairing,
+              icon: const Icon(Icons.qr_code_scanner_outlined),
+              label: Text(
+                AppConfig.isServerPaired
+                    ? 'Repair server pairing'
+                    : 'Pair this device',
+              ),
+            ),
+          ],
         ],
       ),
     );
@@ -1679,4 +3350,23 @@ List<String> _aliasesFrom(dynamic value) {
         .toList(growable: false);
   }
   return const <String>[];
+}
+
+String _instrumentLabel(InstrumentType instrument) {
+  switch (instrument) {
+    case InstrumentType.violin:
+      return 'Violin';
+    case InstrumentType.viola:
+      return 'Viola';
+    case InstrumentType.cello:
+      return 'Cello';
+    case InstrumentType.doubleBass:
+      return 'Double bass';
+    case InstrumentType.guitar:
+      return 'Guitar';
+    case InstrumentType.piano:
+      return 'Piano';
+    case InstrumentType.other:
+      return 'Other';
+  }
 }

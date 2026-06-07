@@ -10,5 +10,5 @@ def test_health_returns_service_metadata() -> None:
     assert response.json() == {
         "status": "ok",
         "server": "azmusic",
-        "version": "0.1.0",
+        "version": "0.2.0",
     }

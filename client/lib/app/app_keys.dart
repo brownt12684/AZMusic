@@ -21,9 +21,26 @@ class AppKeys {
   static const libraryList = ValueKey<String>('library.list');
   static const librarySearchField = ValueKey<String>('library.search');
   static const parentImportButton = ValueKey<String>('parent.importScore');
+  static const parentDebugToolsToggle =
+      ValueKey<String>('parent.debugTools.toggle');
+  static const parentDebugToolsCard =
+      ValueKey<String>('parent.debugTools.card');
+  static const parentDebugClearLibrariesButton =
+      ValueKey<String>('parent.debugTools.clearLibraries');
+  static const parentDebugRefreshJobsButton =
+      ValueKey<String>('parent.debugTools.refreshJobs');
+  static const parentWorkflowList = ValueKey<String>('parent.workflowList');
   static const parentIntakeList = ValueKey<String>('parent.intakeList');
   static const parentServerReadyList =
       ValueKey<String>('parent.serverReadyList');
+  static const parentAddStudentButton = ValueKey<String>('parent.student.add');
+  static const parentStudentNameField = ValueKey<String>('parent.student.name');
+  static const parentCreateStudentButton =
+      ValueKey<String>('parent.student.create');
+  static const parentPinEntryField = ValueKey<String>('parent.pin.entry');
+  static const parentPinSetupField = ValueKey<String>('parent.pin.setup');
+  static const parentPinConfirmField = ValueKey<String>('parent.pin.confirm');
+  static const parentPinCreateButton = ValueKey<String>('parent.pin.create');
   static const logoutButton = ValueKey<String>('app.logout');
   static const reviewQueueButton = ValueKey<String>('library.reviewQueue');
   static const pieceDetailScreen = ValueKey<String>('pieceDetail.screen');
@@ -63,6 +80,7 @@ class AppKeys {
       ValueKey<String>('reviewCompare.uploadEditedMusicXml');
   static const reviewAiScoreReviewButton =
       ValueKey<String>('reviewCompare.aiScoreReview');
+  static const reviewNextButton = ValueKey<String>('reviewCompare.next');
   static const reviewBulkApproveMetadataButton =
       ValueKey<String>('reviewCompare.bulkApproveMetadata');
   static const reviewBulkApproveMuseScoreButton =
@@ -104,5 +122,13 @@ class AppKeys {
 
   static ValueKey<String> reviewQueueItem(String itemId) {
     return ValueKey<String>('parent.review.$itemId');
+  }
+
+  static ValueKey<String> parentDebugCancelJobButton(String jobId) {
+    return ValueKey<String>('parent.debugTools.cancelJob.$jobId');
+  }
+
+  static ValueKey<String> parentDebugRetryJobButton(String jobId) {
+    return ValueKey<String>('parent.debugTools.retryJob.$jobId');
   }
 }

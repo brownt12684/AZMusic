@@ -111,9 +111,11 @@ Extends the current `/api/v1/pieces/import`, `/api/v1/jobs`, and `/api/v1/review
 - [x] Mark stub-generated MusicXML with explicit provenance and warnings instead of presenting it as real OMR output.
 - [x] Preserve the raw import and mark the job failed when required processing is unavailable.
 - [x] Extract processed MusicXML metadata and attach it to review candidates, job results, piece detail responses, and client local piece records.
+- [x] Add optional HOMR OMR configuration and a server-owned bakeoff path so alternate engines can be tested without moving OMR decisions into the Flutter client.
 - [ ] Add parent-editable metadata correction fields for processed MusicXML metadata before push to student devices.
 - [ ] Add researched piece metadata, such as composer/work context and pedagogical notes, as a separate reviewed backend result rather than mixing it into raw MusicXML extraction.
 - [ ] Install/configure Audiveris in the target environment and validate real PDF-to-MusicXML output.
+- [ ] Install/configure HOMR in a separate Python environment and compare its MusicXML output against Audiveris on known book pages before promoting it beyond experimental status.
 - [ ] Install/configure MuseScore CLI in the target environment and validate real MusicXML-to-PDF rendering.
 - [ ] Add a real device-worker dispatch and result-upload loop before treating on-device processing as more than registration/capability scaffolding.
 

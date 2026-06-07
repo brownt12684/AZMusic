@@ -20,11 +20,16 @@ void main() {
 
   setUpAll(() async {
     TestWidgetsFlutterBinding.ensureInitialized();
-    SharedPreferences.setMockInitialValues(const <String, Object>{});
-    await AppConfig.initialize();
   });
 
-  setUp(() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues(const <String, Object>{
+      'server_host': 'test-server',
+      'server_port': 8795,
+      'server_id': 'test-server',
+      'server_pairing_token': 'test-token',
+    });
+    await AppConfig.initialize();
     tempDir = Directory.systemTemp.createTempSync(
       'azmusic_piece_import_sync_regression_',
     );
@@ -87,7 +92,7 @@ void main() {
   });
 
   test(
-      'approved remote artifacts replace the student default while keeping a hidden raw fallback',
+      'approved remote artifacts replace the default while keeping original fallback visible',
       () async {
     final container = _containerFor(
       tempDir,
@@ -149,7 +154,7 @@ void main() {
       (scoreVersion) => scoreVersion.format == 'musicxml',
     );
 
-    expect(rawVersion.isStudentVisible, isFalse);
+    expect(rawVersion.isStudentVisible, isTrue);
     expect(musicXmlVersion.isStudentVisible, isFalse);
     expect(musicXmlVersion.isPrimary, isFalse);
     expect(

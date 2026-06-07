@@ -46,8 +46,8 @@ Run all automation from the monorepo root. The component roots above describe co
 For same-machine validation against a local server session, prefer:
 
 ```powershell
-.\scripts\dev.ps1 -Task run-client -ClientServerHost 127.0.0.1 -ClientServerPort 8000
-.\scripts\dev.ps1 -Task run-client-sandbox -ClientServerHost 127.0.0.1 -ClientServerPort 8000
+.\scripts\dev.ps1 -Task run-client -ClientServerHost 127.0.0.1 -ClientServerPort 8795
+.\scripts\dev.ps1 -Task run-client-sandbox -ClientServerHost 127.0.0.1 -ClientServerPort 8795
 ```
 
 ## Current milestone flows
@@ -94,7 +94,7 @@ The canonical server smoke coverage under `server/tests/` currently exercises:
 
 - `file_picker` opens a native OS dialog, so the real import flow is not headless yet.
 - `client/test/` has useful committed coverage, but it still does not drive the native picker or the full parent-to-student workflow.
-- The checked-in client server default is `http://192.168.1.100:8000`, not `localhost`.
+- The checked-in client server default is `http://192.168.1.100:8795`, not `localhost`.
 - There is no client settings UI yet for changing host and port during manual validation.
 
 ## Pass conditions for this milestone

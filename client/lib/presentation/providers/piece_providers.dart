@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:collection/collection.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../core/config/app_config.dart';
+import '../../core/network/server_connection_error.dart';
 import '../../data/repositories/local_library_repository.dart';
 import '../../domain/entities/library_entry.dart';
 import '../../domain/entities/piece.dart';
@@ -31,13 +33,70 @@ final allPiecesProvider =
 );
 
 final parentSyncedPiecesProvider =
-    FutureProvider<List<RemotePieceSummary>>((ref) {
-  return ref.read(serverPieceSyncRepositoryProvider).fetchAllPieces();
-});
+    AsyncNotifierProvider<ParentSyncedPiecesNotifier, List<RemotePieceSummary>>(
+  ParentSyncedPiecesNotifier.new,
+);
+
+class ParentSyncedPiecesNotifier
+    extends AsyncNotifier<List<RemotePieceSummary>> {
+  @override
+  Future<List<RemotePieceSummary>> build() async {
+    return _loadPieces();
+  }
+
+  Future<void> refresh({bool showLoading = true}) async {
+    if (showLoading) {
+      state = const AsyncValue.loading();
+    }
+    state = await AsyncValue.guard(_loadPieces);
+  }
+
+  Future<void> refreshInBackground() async {
+    try {
+      final pieces = await _loadPieces();
+      state = AsyncValue.data(pieces);
+    } catch (error, stackTrace) {
+      if (state.valueOrNull == null) {
+        state = AsyncValue.error(error, stackTrace);
+      }
+    }
+  }
+
+  void upsert(RemotePieceSummary piece) {
+    final current = state.valueOrNull;
+    if (current == null) {
+      return;
+    }
+    final next = [
+      piece,
+      ...current.where((existing) => existing.id != piece.id),
+    ];
+    state = AsyncValue.data(next);
+  }
+
+  void remove(String pieceId) {
+    final current = state.valueOrNull;
+    if (current == null) {
+      return;
+    }
+    state = AsyncValue.data(
+      current.where((piece) => piece.id != pieceId).toList(growable: false),
+    );
+  }
+
+  Future<List<RemotePieceSummary>> _loadPieces() {
+    if (!AppConfig.isServerPaired) {
+      throw const ServerNotPairedException();
+    }
+    return ref.read(serverPieceSyncRepositoryProvider).fetchAllPieces();
+  }
+}
 
 class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
   LocalLibraryRepository? _repository;
   Future<List<LibraryEntry>>? _activeLoad;
+  final Set<String> _activeImportSourcePaths = <String>{};
+  final Set<String> _activeUploadKeys = <String>{};
 
   @override
   Future<List<LibraryEntry>> build() async {
@@ -51,6 +110,18 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
     state = await AsyncValue.guard(() => _loadPieces(trigger: trigger));
   }
 
+  Future<void> refreshInBackground({
+    SyncTrigger trigger = SyncTrigger.manualRefresh,
+  }) async {
+    try {
+      state = AsyncValue.data(await _loadPieces(trigger: trigger));
+    } catch (error, stackTrace) {
+      if (state.valueOrNull == null) {
+        state = AsyncValue.error(error, stackTrace);
+      }
+    }
+  }
+
   Future<LibraryEntry> importScoreFile(
     String sourcePath, {
     String? assignedProfileId,
@@ -58,17 +129,19 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
     String? primaryInstrument,
     String? bookOrCollection,
   }) async {
-    var entry = await _libraryRepository.importScoreForProfile(
-      sourcePath: sourcePath,
-      assignedProfileId: assignedProfileId,
-      composer: composer,
-      primaryInstrument: primaryInstrument,
-      bookOrCollection: bookOrCollection,
-    );
-    entry = await _markProcessingIfServerUploadable(entry);
-    await _uploadEntryToServer(entry);
-    await loadPieces(trigger: SyncTrigger.postImport);
-    return await _libraryRepository.findEntry(entry.piece.id) ?? entry;
+    return _guardDuplicateImport(sourcePath, () async {
+      var entry = await _libraryRepository.importScoreForProfile(
+        sourcePath: sourcePath,
+        assignedProfileId: assignedProfileId,
+        composer: composer,
+        primaryInstrument: primaryInstrument,
+        bookOrCollection: bookOrCollection,
+      );
+      entry = await _markProcessingIfServerUploadable(entry);
+      await _uploadEntryToServer(entry);
+      state = AsyncValue.data(await _libraryRepository.loadLibrary());
+      return await _libraryRepository.findEntry(entry.piece.id) ?? entry;
+    });
   }
 
   Future<LibraryEntry> importToIntake(
@@ -78,22 +151,55 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
     String? primaryInstrument,
     String? bookOrCollection,
   }) async {
-    var entry = await _libraryRepository.importScoreToIntake(
-      sourcePath: sourcePath,
-      title: title,
-      composer: composer,
-      primaryInstrument: primaryInstrument,
-      bookOrCollection: bookOrCollection,
-    );
+    return _guardDuplicateImport(sourcePath, () async {
+      var entry = await _libraryRepository.importScoreToIntake(
+        sourcePath: sourcePath,
+        title: title,
+        composer: composer,
+        primaryInstrument: primaryInstrument,
+        bookOrCollection: bookOrCollection,
+      );
+      entry = await _markProcessingIfServerUploadable(entry);
+      await _uploadEntryToServer(entry);
+      state = AsyncValue.data(await _libraryRepository.loadLibrary());
+      return await _libraryRepository.findEntry(entry.piece.id) ?? entry;
+    });
+  }
+
+  Future<void> retryLocalUpload(
+    String localPieceId, {
+    bool reuploadAsNew = false,
+  }) async {
+    var entry = await _libraryRepository.findEntry(localPieceId);
+    if (entry == null) {
+      state = AsyncValue.data(await _libraryRepository.loadLibrary());
+      return;
+    }
+    if (reuploadAsNew && entry.piece.serverPieceId != null) {
+      entry = LibraryEntry(
+        piece: entry.piece.copyWith(
+          clearServerPieceId: true,
+          libraryStatus: LibraryStatus.uploadPending,
+          updatedAt: DateTime.now(),
+        ),
+        scoreVersions: entry.scoreVersions,
+      );
+      await _libraryRepository.saveEntry(entry);
+    }
     entry = await _markProcessingIfServerUploadable(entry);
     await _uploadEntryToServer(entry);
-    await loadPieces(trigger: SyncTrigger.postImport);
-    return await _libraryRepository.findEntry(entry.piece.id) ?? entry;
+    state = AsyncValue.data(await _libraryRepository.loadLibrary());
+  }
+
+  Future<void> removeLocalEntry(String localPieceId) async {
+    await _libraryRepository.removeEntry(localPieceId);
+    state = AsyncValue.data(await _libraryRepository.loadLibrary());
   }
 
   Future<void> pushToProfile({
     required String pieceId,
     required String profileId,
+    String mode = 'processed',
   }) async {
     final entry = await _libraryRepository.findEntry(pieceId);
     if (entry == null) {
@@ -116,14 +222,55 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
     final serverPieceId = entry.piece.serverPieceId;
     if (serverPieceId != null) {
       try {
-        await ref
+        final remotePiece = await ref
             .read(serverPieceSyncRepositoryProvider)
-            .pushPieceToProfiles(serverPieceId, [profileId]);
+            .pushPieceToProfiles(serverPieceId, [profileId], mode: mode);
+        await _mergeRemotePiece(entry, remotePiece);
+        ref
+            .read(parentSyncedPiecesProvider.notifier)
+            .upsert(RemotePieceSummary.fromDetail(remotePiece));
       } catch (_) {
         // Keep the local assignment and retry on the next sync.
       }
     }
-    await loadPieces(trigger: SyncTrigger.parentPush);
+    state = AsyncValue.data(await _libraryRepository.loadLibrary());
+  }
+
+  Future<void> pullRemotePieceForEdits({
+    required String serverPieceId,
+  }) async {
+    final remotePiece = await ref
+        .read(serverPieceSyncRepositoryProvider)
+        .pullPieceForEdits(serverPieceId);
+    final localEntry = await _libraryRepository.findEntryByServerPieceId(
+      serverPieceId,
+    );
+    if (localEntry != null) {
+      await _mergeRemotePiece(localEntry, remotePiece);
+    }
+    ref
+        .read(parentSyncedPiecesProvider.notifier)
+        .upsert(RemotePieceSummary.fromDetail(remotePiece));
+    state = AsyncValue.data(await _libraryRepository.loadLibrary());
+  }
+
+  Future<void> closeWorkflow({
+    required String serverPieceId,
+    String? localPieceId,
+  }) async {
+    final remotePiece = await ref
+        .read(serverPieceSyncRepositoryProvider)
+        .closePieceWorkflow(serverPieceId);
+    final localEntry = localPieceId == null
+        ? await _libraryRepository.findEntryByServerPieceId(serverPieceId)
+        : await _libraryRepository.findEntry(localPieceId);
+    if (localEntry != null) {
+      await _mergeRemotePiece(localEntry, remotePiece);
+    }
+    ref
+        .read(parentSyncedPiecesProvider.notifier)
+        .upsert(RemotePieceSummary.fromDetail(remotePiece));
+    state = AsyncValue.data(await _libraryRepository.loadLibrary());
   }
 
   Future<void> updateRemoteMetadata({
@@ -154,13 +301,29 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
               sourcePageEnd: sourcePageEnd,
             );
     await _mergeRemoteSummaryIntoLocalEntries(remotePiece);
-    ref.invalidate(parentSyncedPiecesProvider);
-    await loadPieces(trigger: SyncTrigger.manualRefresh);
+    ref.read(parentSyncedPiecesProvider.notifier).upsert(remotePiece);
+    state = AsyncValue.data(await _libraryRepository.loadLibrary());
   }
 
   Future<void> clearLibrary() async {
     await _libraryRepository.clearLibrary();
     state = const AsyncValue.data(<LibraryEntry>[]);
+  }
+
+  Future<T> _guardDuplicateImport<T>(
+    String sourcePath,
+    Future<T> Function() action,
+  ) async {
+    final importKey = _activeImportKey(sourcePath);
+    if (_activeImportSourcePaths.contains(importKey)) {
+      throw StateError('That file is already being imported.');
+    }
+    _activeImportSourcePaths.add(importKey);
+    try {
+      return await action();
+    } finally {
+      _activeImportSourcePaths.remove(importKey);
+    }
   }
 
   LocalLibraryRepository get _libraryRepository {
@@ -200,6 +363,13 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
     var entries = await _libraryRepository.loadLibrary();
     entries = await _normalizePendingUploadEntries(entries);
 
+    if (!AppConfig.isServerPaired) {
+      _setSyncBanner(
+        LibrarySyncBannerState.waitingForServerPairing(trigger: trigger),
+      );
+      return entries;
+    }
+
     final networkInfo = ref.read(networkInfoProvider);
     if (!await networkInfo.isConnected) {
       _setSyncBanner(LibrarySyncBannerState.offlineReady());
@@ -212,7 +382,10 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
       final latestNetworkStatus = await networkInfo.isConnected;
       _setSyncBanner(
         latestNetworkStatus
-            ? LibrarySyncBannerState.failedUsable()
+            ? LibrarySyncBannerState.failedUsable(
+                message:
+                    'Server sync is unavailable. Check that the server is running and pairing is current.',
+              )
             : LibrarySyncBannerState.offlineReady(),
       );
     } else {
@@ -342,6 +515,7 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
             ? localEntry.piece.validationWarnings
             : remotePiece.validationWarnings,
         splitConfidence: remotePiece.splitConfidence,
+        workflowClosed: remotePiece.workflowClosed,
         clearComposer: remotePiece.composer == null,
         clearPrimaryInstrument: remotePiece.primaryInstrument == null,
         clearBookOrCollection: remotePiece.bookOrCollection == null,
@@ -424,6 +598,7 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
           catalogSuggestions: remotePiece.catalogSuggestions,
           validationWarnings: remotePiece.validationWarnings,
           splitConfidence: remotePiece.splitConfidence,
+          workflowClosed: remotePiece.workflowClosed,
           clearComposer: remotePiece.composer == null,
           clearPrimaryInstrument: remotePiece.primaryInstrument == null,
           clearBookOrCollection: remotePiece.bookOrCollection == null,
@@ -484,6 +659,7 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
       catalogSuggestions: remotePiece.catalogSuggestions,
       validationWarnings: remotePiece.validationWarnings,
       splitConfidence: remotePiece.splitConfidence,
+      workflowClosed: remotePiece.workflowClosed,
       libraryStatus: _libraryStatusFromRemote(remotePiece.libraryStatus),
       bytes: download,
       fileExtension: primaryArtifact.version.fileExtension,
@@ -521,14 +697,24 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
     final approvedVersions = remotePiece.scoreVersions
         .where((version) => version.versionType == 'approved')
         .toList(growable: false);
-    if (approvedVersions.isEmpty) {
+    final originalVersion = remotePiece.scoreVersions.firstWhereOrNull(
+      (version) =>
+          version.scoreVersionRole == 'original_pdf' &&
+          (version.format == 'pdf' || version.format == 'image'),
+    );
+    if (approvedVersions.isEmpty && originalVersion == null) {
       return const <_RemoteArtifactImport>[];
     }
 
     final imports = <_RemoteArtifactImport>[];
     final approvedReaderVersion = approvedVersions.firstWhereOrNull(
-      (version) => version.format == 'pdf' || version.format == 'image',
-    );
+          (version) =>
+              version.scoreVersionRole == 'processed_render_pdf' &&
+              (version.format == 'pdf' || version.format == 'image'),
+        ) ??
+        approvedVersions.firstWhereOrNull(
+          (version) => version.format == 'pdf' || version.format == 'image',
+        );
     if (approvedReaderVersion != null) {
       imports.add(
         _RemoteArtifactImport(
@@ -536,13 +722,28 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
           title: _titleForRemoteVersion(approvedReaderVersion),
           makePrimary: true,
           isStudentVisible: true,
-          hideExistingStudentVisible: true,
+          hideExistingStudentVisible: false,
+        ),
+      );
+    }
+
+    if (originalVersion != null &&
+        originalVersion.fileUrl != approvedReaderVersion?.fileUrl) {
+      imports.add(
+        _RemoteArtifactImport(
+          version: originalVersion,
+          title: _titleForRemoteVersion(originalVersion),
+          makePrimary: approvedReaderVersion == null,
+          isStudentVisible: true,
+          hideExistingStudentVisible: false,
         ),
       );
     }
 
     final approvedMusicXml = approvedVersions.firstWhereOrNull(
-      (version) => version.format == 'musicxml',
+      (version) =>
+          version.scoreVersionRole == 'canonical_musicxml' ||
+          version.format == 'musicxml',
     );
     if (approvedMusicXml != null) {
       imports.add(
@@ -560,6 +761,12 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
   }
 
   String _titleForRemoteVersion(RemoteScoreVersion version) {
+    if (version.scoreVersionRole == 'original_pdf') {
+      return 'Original PDF';
+    }
+    if (version.scoreVersionRole == 'processed_render_pdf') {
+      return 'Processed score';
+    }
     if (version.versionType == 'approved' && version.format == 'musicxml') {
       return 'Approved MusicXML';
     }
@@ -574,6 +781,9 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
   }
 
   LibraryStatus _libraryStatusFromRemote(String libraryStatus) {
+    if (libraryStatus == 'needs_edits' || libraryStatus == 'needsEdits') {
+      return LibraryStatus.needsEdits;
+    }
     return LibraryStatus.values.firstWhere(
       (status) => status.name == libraryStatus,
       orElse: () => LibraryStatus.intake,
@@ -594,11 +804,22 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
   }
 
   Future<String?> _uploadEntryToServer(LibraryEntry entry) async {
+    if (!AppConfig.isServerPaired) {
+      await _markUploadPending(entry);
+      return null;
+    }
+
+    final uploadKey = _activeUploadKey(entry);
+    if (_activeUploadKeys.contains(uploadKey)) {
+      return null;
+    }
+    _activeUploadKeys.add(uploadKey);
     try {
       final serverPieceId = await ref
           .read(serverPieceSyncRepositoryProvider)
           .uploadImportedPiece(entry);
       if (serverPieceId == null) {
+        await _markUploadPending(entry);
         return null;
       }
       await _libraryRepository.bindServerPieceId(
@@ -609,16 +830,23 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
       return serverPieceId;
     } catch (_) {
       // Local import remains the source of truth when the server is unavailable.
-      if (entry.piece.libraryStatus != LibraryStatus.uploadPending) {
-        await _libraryRepository.updatePiece(
-          entry.piece.copyWith(
-            libraryStatus: LibraryStatus.uploadPending,
-            updatedAt: DateTime.now(),
-          ),
-        );
-      }
+      await _markUploadPending(entry);
       return null;
+    } finally {
+      _activeUploadKeys.remove(uploadKey);
     }
+  }
+
+  Future<void> _markUploadPending(LibraryEntry entry) async {
+    if (entry.piece.libraryStatus == LibraryStatus.uploadPending) {
+      return;
+    }
+    await _libraryRepository.updatePiece(
+      entry.piece.copyWith(
+        libraryStatus: LibraryStatus.uploadPending,
+        updatedAt: DateTime.now(),
+      ),
+    );
   }
 
   Future<LibraryEntry> _markProcessingIfServerUploadable(
@@ -645,6 +873,18 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
     state = AsyncValue.data(await _libraryRepository.loadLibrary());
     return updatedEntry;
   }
+}
+
+String _activeImportKey(String sourcePath) {
+  return sourcePath.replaceAll('\\', '/').toLowerCase();
+}
+
+String _activeUploadKey(LibraryEntry entry) {
+  final rawScore = entry.scoreVersions.firstWhere(
+    (scoreVersion) => scoreVersion.versionType == 'raw',
+    orElse: () => entry.primaryScore,
+  );
+  return '${entry.piece.id}:${rawScore.filePath.replaceAll('\\', '/').toLowerCase()}';
 }
 
 class _PieceSyncResult {
@@ -709,11 +949,12 @@ final parentIntakeEntriesProvider = Provider<List<LibraryEntry>>((ref) {
   final entries =
       ref.watch(allPiecesProvider).valueOrNull ?? const <LibraryEntry>[];
   return entries.where((entry) {
-    if (entry.piece.libraryStatus == LibraryStatus.archived) {
+    if (entry.piece.workflowClosed ||
+        entry.piece.libraryStatus == LibraryStatus.archived ||
+        entry.piece.libraryStatus == LibraryStatus.processing) {
       return false;
     }
-    return entry.piece.libraryStatus != LibraryStatus.ready ||
-        entry.piece.visibleToProfileIds.isEmpty;
+    return true;
   }).toList(growable: false);
 });
 

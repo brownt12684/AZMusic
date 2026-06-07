@@ -4,8 +4,7 @@ import 'package:flutter/widgets.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../presentation/providers/app_providers.dart';
-import '../presentation/providers/piece_providers.dart';
-import '../presentation/providers/review_providers.dart';
+import '../presentation/providers/parent_workflow_refresh.dart';
 
 class SyncBoundary extends ConsumerStatefulWidget {
   const SyncBoundary({
@@ -61,9 +60,7 @@ class _SyncBoundaryState extends ConsumerState<SyncBoundary>
   }
 
   void _triggerSync(SyncTrigger trigger) {
-    unawaited(
-        ref.read(allPiecesProvider.notifier).loadPieces(trigger: trigger));
-    ref.invalidate(parentReviewQueueProvider);
+    refreshParentWorkflowInBackground(ref, trigger: trigger);
   }
 
   @override

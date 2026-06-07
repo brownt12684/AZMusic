@@ -1,7 +1,14 @@
 import 'package:azmusic/core/config/app_config.dart';
+import 'package:azmusic/domain/entities/profile.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
+  setUp(() async {
+    SharedPreferences.setMockInitialValues(const <String, Object>{});
+    await AppConfig.initialize();
+  });
+
   group('AppConfig.resolveServerHost', () {
     test('prefers compile-time override when present', () {
       final host = AppConfig.resolveServerHost(
@@ -54,17 +61,29 @@ void main() {
         compileTimePort: '70000',
       );
 
-      expect(port, 8000);
+      expect(port, 8795);
     });
   });
 
   group('AppConfig pairing resolution', () {
-    test('compile-time server override counts as development pairing', () {
+    test('compile-time server override does not count as pairing', () {
       final serverId = AppConfig.resolveServerId(
-        compileTimeHost: '127.0.0.1',
+        compileTimeServerId: '',
       );
       final token = AppConfig.resolveServerPairingToken(
-        compileTimeHost: '127.0.0.1',
+        compileTimeToken: '',
+      );
+
+      expect(serverId, isNull);
+      expect(token, isNull);
+    });
+
+    test('explicit compile-time pairing token still supports dev pairing', () {
+      final serverId = AppConfig.resolveServerId(
+        compileTimeServerId: 'development-local-server',
+      );
+      final token = AppConfig.resolveServerPairingToken(
+        compileTimeToken: 'development-paired-device',
       );
 
       expect(serverId, 'development-local-server');
@@ -86,6 +105,44 @@ void main() {
     test('unpaired devices have no server id or token by default', () {
       expect(AppConfig.resolveServerId(), isNull);
       expect(AppConfig.resolveServerPairingToken(), isNull);
+    });
+  });
+
+  group('AppConfig parent PIN', () {
+    test('stores and verifies a salted parent PIN hash', () async {
+      await AppConfig.setParentPin('2468');
+
+      expect(AppConfig.hasParentPin, isTrue);
+      expect(AppConfig.verifyParentPin('2468'), isTrue);
+      expect(AppConfig.verifyParentPin('1357'), isFalse);
+    });
+
+    test('validates parent PIN setup input', () {
+      expect(AppConfig.isValidParentPinFormat('2468'), isTrue);
+      expect(AppConfig.isValidParentPinFormat('abc1'), isFalse);
+      expect(AppConfig.isValidParentPinFormat('123'), isFalse);
+      expect(AppConfig.isDisallowedParentPin('0000'), isFalse);
+    });
+  });
+
+  group('AppConfig student profiles', () {
+    test('persists parent-created student profile maps', () async {
+      final now = DateTime.utc(2026, 5, 28);
+      final profile = Profile(
+        id: 'student-kai',
+        displayName: 'Kai',
+        role: ProfileRole.student,
+        instrument: InstrumentType.cello,
+        createdAt: now,
+        updatedAt: now,
+      );
+
+      await AppConfig.saveStudentProfileMaps([profile.toMap()]);
+
+      final profiles = AppConfig.loadStudentProfileMaps();
+      expect(profiles, hasLength(1));
+      expect(profiles.single['id'], 'student-kai');
+      expect(profiles.single['display_name'], 'Kai');
     });
   });
 }

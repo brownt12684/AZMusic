@@ -56,7 +56,7 @@ void main() {
     expect(importedEntry.primaryScore.isStudentVisible, isTrue);
   });
 
-  test('approved replacement hides the raw fallback and keeps musicxml hidden',
+  test('approved replacement keeps raw fallback visible and musicxml hidden',
       () async {
     final sourceFile = await createSamplePdfFile(name: 'approved_study.pdf');
     final importedEntry = await repository.importScoreForProfile(
@@ -74,7 +74,7 @@ void main() {
       versionType: 'approved',
       makePrimary: true,
       isStudentVisible: true,
-      hideExistingStudentVisible: true,
+      hideExistingStudentVisible: false,
     );
     await repository.importServerScoreVersion(
       localPieceId: importedEntry.piece.id,
@@ -101,7 +101,7 @@ void main() {
       (scoreVersion) => scoreVersion.format == 'musicxml',
     );
 
-    expect(rawVersion.isStudentVisible, isFalse);
+    expect(rawVersion.isStudentVisible, isTrue);
     expect(rawVersion.isPrimary, isFalse);
     expect(musicXmlVersion.isStudentVisible, isFalse);
     expect(musicXmlVersion.isPrimary, isFalse);

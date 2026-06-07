@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import json
+import os
 import shutil
 import subprocess
 from datetime import datetime
@@ -11,6 +12,7 @@ from typing import Any
 
 from server.config import settings
 from server.models.schemas import (
+    OmrStrategy,
     ProcessingExecutableStatus,
     ProcessingMode,
     ProcessingSettingsResponse,
@@ -42,6 +44,9 @@ class ProcessingSettingsStore:
         merged = {**defaults, **payload}
         if merged.get("processing_mode") not in {mode.value for mode in ProcessingMode}:
             merged["processing_mode"] = ProcessingMode.server_only.value
+        if merged.get("omr_strategy") not in {strategy.value for strategy in OmrStrategy}:
+            merged["omr_strategy"] = OmrStrategy.audiveris_quality_sweep.value
+        _apply_discovered_tool_paths(merged)
         if settings.production_mode:
             merged["production_mode"] = True
             merged["allow_stub_musicxml"] = False
@@ -65,12 +70,15 @@ class ProcessingSettingsStore:
                 "local_llm_provider",
                 "local_llm_model",
                 "ocr_language",
+                "ocr_effort",
                 "cloud_provider",
                 "cloud_model",
                 "cloud_base_url",
                 "cloud_api_key",
             } and isinstance(value, str):
                 payload[key] = value.strip() or None
+            elif isinstance(value, OmrStrategy):
+                payload[key] = value.value
             else:
                 payload[key] = value
 
@@ -109,6 +117,8 @@ class ProcessingSettingsStore:
             for key, value in update.model_dump(exclude_unset=True).items():
                 if isinstance(value, ProcessingMode):
                     payload[key] = value.value
+                elif isinstance(value, OmrStrategy):
+                    payload[key] = value.value
                 else:
                     payload[key] = value
 
@@ -117,8 +127,9 @@ class ProcessingSettingsStore:
             configured_path=payload.get("audiveris_cli_path"),
             fallback_names=("audiveris",),
         )
+        homr = homr_status(payload)
         musescore = executable_status(
-            name="MuseScore",
+            name="MuseScore Studio",
             configured_path=payload.get("musescore_cli_path"),
             fallback_names=("musescore", "mscore", "MuseScore4"),
         )
@@ -137,7 +148,7 @@ class ProcessingSettingsStore:
                 )
             if not musescore.available:
                 warnings.append(
-                    "Production processing requires MuseScore before rendered "
+                    "Production processing requires MuseScore Studio before rendered "
                     "review PDFs can be approved."
                 )
             if not ocr.available:
@@ -145,18 +156,36 @@ class ProcessingSettingsStore:
                     "Production processing requires Tesseract OCR for score "
                     "metadata and book preprocessing."
                 )
-        elif not audiveris.configured and payload.get("allow_stub_musicxml", True):
+        elif not audiveris.available and payload.get("allow_stub_musicxml", True):
             warnings.append(
                 "Audiveris is not configured; development imports will use stub MusicXML."
             )
-        if not musescore.configured:
+        if not musescore.available:
             warnings.append(
-                "MuseScore is not configured; rendered review PDFs will fall back to the raw PDF."
+                "MuseScore Studio is not configured; rendered review PDFs will "
+                "fall back to the raw PDF."
             )
         if not ocr.available:
             warnings.append(
                 "Tesseract OCR is not configured; scanned image metadata will fall back "
                 "to filename and parent review."
+            )
+        elif not _tesseract_language_available(
+            ocr.discovered_path,
+            str(payload.get("ocr_language") or "eng"),
+        ):
+            warnings.append(
+                f"Tesseract OCR is available, but language data for "
+                f"{payload.get('ocr_language') or 'eng'} was not reported."
+            )
+        omr_strategy = str(payload.get("omr_strategy") or "")
+        if omr_strategy in {
+            OmrStrategy.homr_experimental.value,
+            OmrStrategy.omr_bakeoff.value,
+            OmrStrategy.experimental_engine_bakeoff.value,
+        } and not homr.available:
+            warnings.append(
+                "HOMR is selected for experimental OMR, but the HOMR CLI is not available."
             )
         if payload.get("cloud_enabled") and not payload.get("cloud_provider"):
             warnings.append("Cloud processing is enabled but no cloud provider is configured.")
@@ -165,6 +194,10 @@ class ProcessingSettingsStore:
 
         configured_executables_are_valid = True
         if audiveris.configured and not audiveris.available:
+            configured_executables_are_valid = False
+        if homr.configured and not homr.available:
+            configured_executables_are_valid = False
+        if omr_strategy == OmrStrategy.homr_experimental.value and not homr.available:
             configured_executables_are_valid = False
         if musescore.configured and not musescore.available:
             configured_executables_are_valid = False
@@ -178,6 +211,7 @@ class ProcessingSettingsStore:
         return ProcessingValidationResponse(
             valid=configured_executables_are_valid,
             audiveris=audiveris,
+            homr=homr,
             musescore=musescore,
             ocr=ocr,
             warnings=warnings,
@@ -185,10 +219,17 @@ class ProcessingSettingsStore:
 
     def _defaults(self) -> dict[str, Any]:
         return {
-            "audiveris_cli_path": settings.audiveris_cli_path,
-            "musescore_cli_path": settings.musescore_cli_path,
-            "ocr_cli_path": settings.ocr_cli_path,
+            "audiveris_cli_path": settings.audiveris_cli_path
+            or discover_executable_path(("audiveris",)),
+            "homr_cli_path": settings.homr_cli_path or discover_executable_path(("homr",)),
+            "musescore_cli_path": settings.musescore_cli_path
+            or discover_executable_path(("musescore", "mscore", "MuseScore4")),
+            "musescore_style_path": None,
+            "ocr_cli_path": settings.ocr_cli_path or discover_executable_path(("tesseract",)),
             "ocr_language": settings.ocr_language or "eng",
+            "ocr_effort": "balanced",
+            "omr_strategy": OmrStrategy.audiveris_quality_sweep.value,
+            "max_concurrent_jobs": _clamp_int(settings.max_concurrent_jobs, 1, 4, 2),
             "processing_mode": settings.processing_mode
             if settings.processing_mode in {mode.value for mode in ProcessingMode}
             else ProcessingMode.server_only.value,
@@ -209,6 +250,12 @@ class ProcessingSettingsStore:
 
     def _response_payload(self, payload: dict[str, Any]) -> dict[str, Any]:
         response_payload = dict(payload)
+        response_payload["max_concurrent_jobs"] = _clamp_int(
+            response_payload.get("max_concurrent_jobs"),
+            1,
+            4,
+            2,
+        )
         response_payload["production_mode"] = bool(
             response_payload.get("production_mode") or settings.production_mode
         )
@@ -243,10 +290,19 @@ def executable_status(
     )
 
     if configured and resolved_path is None:
-        status.error = "Configured executable was not found."
+        status.error = (
+            _musescore_missing_error()
+            if _is_musescore_lookup(
+                name,
+                fallback_names,
+            )
+            else "Configured executable was not found."
+        )
         return status
 
     if resolved_path is None:
+        if _is_musescore_lookup(name, fallback_names):
+            status.error = _musescore_missing_error()
         return status
 
     version = _read_executable_version(resolved_path)
@@ -255,6 +311,53 @@ def executable_status(
     else:
         status.version = version or None
     return status
+
+
+def homr_status(payload: dict[str, Any]) -> ProcessingExecutableStatus:
+    """Return HOMR CLI status without requiring a formal --version response."""
+
+    configured_path = payload.get("homr_cli_path")
+    configured = bool(configured_path)
+    resolved_path = _resolve_executable(
+        configured_path if isinstance(configured_path, str) else None,
+        ("homr",),
+    )
+    status = ProcessingExecutableStatus(
+        name="HOMR",
+        configured_path=configured_path if isinstance(configured_path, str) else None,
+        discovered_path=resolved_path,
+        configured=configured,
+        available=resolved_path is not None,
+    )
+    if configured and resolved_path is None:
+        status.error = "Configured HOMR executable was not found."
+        return status
+    if resolved_path is None:
+        status.error = (
+            "HOMR CLI was not found. Install experimental HOMR support in the "
+            "server tool environment before selecting HOMR OMR modes."
+        )
+        return status
+
+    version = _read_homr_version(resolved_path)
+    if version.startswith("ERROR:"):
+        status.error = version.removeprefix("ERROR:").strip()
+    else:
+        status.version = version or "HOMR CLI available"
+    return status
+
+
+def discover_executable_path(fallback_names: tuple[str, ...]) -> str | None:
+    for fallback_name in fallback_names:
+        discovered = shutil.which(fallback_name)
+        if discovered:
+            return discovered
+
+    for candidate in _common_executable_candidates(fallback_names):
+        if candidate.exists():
+            return str(candidate)
+
+    return None
 
 
 def _resolve_executable(
@@ -270,11 +373,155 @@ def _resolve_executable(
             return discovered
         return None
 
-    for fallback_name in fallback_names:
-        discovered = shutil.which(fallback_name)
+    return discover_executable_path(fallback_names)
+
+
+def _apply_discovered_tool_paths(payload: dict[str, Any]) -> None:
+    for key, fallback_names in (
+        ("audiveris_cli_path", ("audiveris",)),
+        ("homr_cli_path", ("homr",)),
+        ("musescore_cli_path", ("musescore", "mscore", "MuseScore4")),
+        ("ocr_cli_path", ("tesseract",)),
+    ):
+        configured_path = payload.get(key)
+        if configured_path and _resolve_configured_executable(configured_path):
+            continue
+        discovered = discover_executable_path(fallback_names)
         if discovered:
-            return discovered
+            payload[key] = discovered
+
+
+def _resolve_configured_executable(configured_path: object) -> str | None:
+    if not isinstance(configured_path, str) or not configured_path.strip():
+        return None
+    path = Path(configured_path).expanduser()
+    if path.exists():
+        return str(path)
+    return shutil.which(configured_path)
+
+
+def _common_executable_candidates(fallback_names: tuple[str, ...]) -> list[Path]:
+    program_files = _windows_program_directories()
+    normalized_names = {name.lower() for name in fallback_names}
+    candidates: list[Path] = []
+
+    if "audiveris" in normalized_names:
+        for root in program_files:
+            candidates.extend(
+                [
+                    root / "Audiveris" / "Audiveris.exe",
+                    root / "Audiveris" / "bin" / "Audiveris.bat",
+                    root / "Audiveris" / "bin" / "audiveris.bat",
+                ]
+            )
+            candidates.extend(sorted(root.glob("Audiveris*/Audiveris.exe")))
+
+    if normalized_names.intersection({"musescore", "mscore", "musescore4"}):
+        for root in program_files:
+            candidates.extend(
+                [
+                    root / "MuseScore 4" / "bin" / "MuseScore4.exe",
+                    root / "MuseScore 3" / "bin" / "MuseScore3.exe",
+                    root / "MuseScore" / "bin" / "MuseScore.exe",
+                    root / "Programs" / "MuseScore 4" / "bin" / "MuseScore4.exe",
+                ]
+            )
+            candidates.extend(sorted(root.glob("MuseScore*/bin/MuseScore*.exe")))
+
+    if "tesseract" in normalized_names:
+        for root in program_files:
+            candidates.extend(
+                [
+                    root / "Tesseract-OCR" / "tesseract.exe",
+                    root / "Tesseract OCR" / "tesseract.exe",
+                ]
+            )
+
+    if "homr" in normalized_names:
+        local_app_data = os.environ.get("LOCALAPPDATA")
+        if local_app_data:
+            candidates.extend(
+                [
+                    Path(local_app_data)
+                    / "AZMusic"
+                    / "Server"
+                    / "tools"
+                    / "homr"
+                    / ".venv"
+                    / "Scripts"
+                    / "homr.exe",
+                    Path(local_app_data)
+                    / "AZMusic"
+                    / "Server"
+                    / "tools"
+                    / "homr"
+                    / "venv"
+                    / "Scripts"
+                    / "homr.exe",
+                ]
+            )
+
+    seen: set[Path] = set()
+    unique_candidates: list[Path] = []
+    for candidate in candidates:
+        normalized = candidate
+        if normalized in seen:
+            continue
+        seen.add(normalized)
+        unique_candidates.append(candidate)
+    return unique_candidates
+
+
+def _is_musescore_lookup(name: str, fallback_names: tuple[str, ...]) -> bool:
+    normalized_names = {fallback_name.lower() for fallback_name in fallback_names}
+    return name.lower().startswith("musescore") or bool(
+        normalized_names.intersection({"musescore", "mscore", "musescore4"})
+    )
+
+
+def _musescore_missing_error() -> str:
+    muse_hub_path = _discover_muse_hub_path()
+    if muse_hub_path:
+        return (
+            "Muse Hub was detected, but MuseScore Studio was not found. "
+            "Install MuseScore Studio inside Muse Hub or from musescore.org, "
+            "then rerun server setup or refresh processing settings."
+        )
+    return "MuseScore Studio executable was not found."
+
+
+def _discover_muse_hub_path() -> Path | None:
+    candidates: list[Path] = []
+    local_app_data = os.environ.get("LOCALAPPDATA")
+    if local_app_data:
+        candidates.append(Path(local_app_data) / "Programs" / "Muse Hub" / "Muse Hub.exe")
+    for root in _windows_program_directories():
+        candidates.extend(
+            [
+                root / "Muse Hub" / "Muse Hub.exe",
+                root / "MuseHub" / "Muse Hub.exe",
+            ]
+        )
+    for candidate in candidates:
+        if candidate.exists():
+            return candidate
     return None
+
+
+def _windows_program_directories() -> list[Path]:
+    roots = [
+        os.environ.get("ProgramFiles"),
+        os.environ.get("ProgramFiles(x86)"),
+        os.environ.get("LOCALAPPDATA"),
+    ]
+    paths: list[Path] = []
+    for root in roots:
+        if not root:
+            continue
+        path = Path(root)
+        if path not in paths:
+            paths.append(path)
+    return paths
 
 
 def _read_executable_version(executable_path: str) -> str:
@@ -303,5 +550,70 @@ def _read_executable_version(executable_path: str) -> str:
     return "ERROR: Executable did not return version information."
 
 
+def _read_homr_version(executable_path: str) -> str:
+    for command in (
+        [executable_path, "--version"],
+        [executable_path, "--help"],
+    ):
+        try:
+            result = subprocess.run(
+                command,
+                check=False,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=12,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return f"ERROR: {exc}"
+        output = (result.stdout or result.stderr).strip()
+        if output:
+            lowered_output = output.lower()
+            if command[-1] == "--version" and (
+                "unrecognized arguments" in lowered_output
+                or "not a valid option" in lowered_output
+            ):
+                continue
+            first_line = output.splitlines()[0][:200]
+            return first_line if command[-1] == "--version" else "HOMR CLI available"
+        if result.returncode == 0:
+            return "HOMR CLI available"
+    return "ERROR: HOMR CLI did not return help or version information."
+
+
+def _tesseract_language_available(executable_path: str | None, language: str) -> bool:
+    if not executable_path:
+        return False
+    try:
+        result = subprocess.run(
+            [executable_path, "--list-langs"],
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=10,
+        )
+    except (OSError, subprocess.TimeoutExpired):
+        return False
+    if result.returncode != 0:
+        return False
+    languages = {
+        line.strip().lower()
+        for line in (result.stdout or "").splitlines()
+        if line.strip() and "list of available languages" not in line.lower()
+    }
+    return language.strip().lower() in languages
+
+
 def _utc_now_iso() -> str:
     return datetime.utcnow().isoformat()
+
+
+def _clamp_int(value: Any, minimum: int, maximum: int, default: int) -> int:
+    try:
+        parsed = int(value)
+    except (TypeError, ValueError):
+        return default
+    return max(minimum, min(maximum, parsed))

@@ -826,9 +826,15 @@ _RowStatus _rowStatus(LibraryStatus status) {
         background: Color(0xFFFAEEDA),
         foreground: Color(0xFF854F0B),
       );
+    case LibraryStatus.needsEdits:
+      return const _RowStatus(
+        label: 'Needs edits',
+        background: Color(0xFFFAEEDA),
+        foreground: Color(0xFF854F0B),
+      );
     case LibraryStatus.uploadPending:
       return const _RowStatus(
-        label: 'Upload',
+        label: 'Server',
         background: Color(0xFFFAEEDA),
         foreground: Color(0xFF854F0B),
       );

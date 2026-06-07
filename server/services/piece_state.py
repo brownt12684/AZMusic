@@ -42,6 +42,7 @@ class PieceStateService:
         catalog_suggestions: list[dict[str, Any]] | None = None,
         validation_warnings: list[str] | None = None,
         split_confidence: float | None = None,
+        workflow_closed: bool | None = None,
         notes: str | None = None,
     ) -> dict[str, Any]:
         state = self.load(piece_id)
@@ -94,10 +95,49 @@ class PieceStateService:
             state["split_confidence"] = split_confidence
         else:
             state.setdefault("split_confidence", None)
+        if workflow_closed is not None:
+            state["workflow_closed"] = workflow_closed
+        else:
+            state.setdefault("workflow_closed", False)
         if notes is not None:
             state["notes"] = notes
         else:
             state.setdefault("notes", None)
+        return self.save(piece_id, state)
+
+    def update_identity(
+        self,
+        piece_id: str,
+        *,
+        source_content_sha256: str | None = None,
+        source_book_fingerprint: str | None = None,
+        logical_piece_key: str | None = None,
+        canonical_piece_id: str | None = None,
+        attempt_status: str | None = None,
+        duplicate_attempt_count: int | None = None,
+        duplicate_reason: str | None = None,
+    ) -> dict[str, Any]:
+        state = self.load(piece_id)
+        if source_content_sha256 is not None:
+            state["source_content_sha256"] = source_content_sha256
+        if source_book_fingerprint is not None:
+            state["source_book_fingerprint"] = source_book_fingerprint
+        if logical_piece_key is not None:
+            state["logical_piece_key"] = logical_piece_key
+        if canonical_piece_id is not None:
+            state["canonical_piece_id"] = canonical_piece_id
+        elif state.get("canonical_piece_id") is None and attempt_status == "canonical":
+            state["canonical_piece_id"] = piece_id
+        if attempt_status is not None:
+            state["attempt_status"] = attempt_status
+        else:
+            state.setdefault("attempt_status", "canonical")
+        if duplicate_attempt_count is not None:
+            state["duplicate_attempt_count"] = max(0, int(duplicate_attempt_count))
+        else:
+            state.setdefault("duplicate_attempt_count", 0)
+        if duplicate_reason is not None:
+            state["duplicate_reason"] = duplicate_reason
         return self.save(piece_id, state)
 
     def assign_profiles(self, piece_id: str, profile_ids: list[str]) -> dict[str, Any]:
@@ -107,8 +147,23 @@ class PieceStateService:
         state["visible_to_profile_ids"] = sorted(visible_to_profile_ids)
         return self.save(piece_id, state)
 
+    def close_workflow(self, piece_id: str) -> dict[str, Any]:
+        state = self.load(piece_id)
+        state["workflow_closed"] = True
+        return self.save(piece_id, state)
+
     def metadata_for_piece(self, piece: Piece) -> dict[str, Any]:
         state = self.load(piece.id)
+        attempt_status = state.get("attempt_status") or "canonical"
+        canonical_piece_id = state.get("canonical_piece_id")
+        is_duplicate_attempt = (
+            attempt_status in {"duplicate_archived", "superseded", "failed_attempt"}
+            or (
+                isinstance(canonical_piece_id, str)
+                and bool(canonical_piece_id.strip())
+                and canonical_piece_id != piece.id
+            )
+        )
         return {
             "primary_instrument": state.get("primary_instrument"),
             "book_or_collection": state.get("book_or_collection"),
@@ -122,6 +177,7 @@ class PieceStateService:
             "catalog_suggestions": state.get("catalog_suggestions", []),
             "validation_warnings": state.get("validation_warnings", []),
             "split_confidence": state.get("split_confidence"),
+            "workflow_closed": bool(state.get("workflow_closed", False)),
             "notes": state.get("notes"),
             "library_status": _library_status_for_piece(piece),
             "normalized_title": state.get("normalized_title") or _normalize_for_search(piece.title),
@@ -130,6 +186,14 @@ class PieceStateService:
             "sort_title": state.get("sort_title") or _normalize_for_sort(piece.title),
             "sort_composer": state.get("sort_composer")
             or _normalize_for_sort(piece.composer or ""),
+            "source_content_sha256": state.get("source_content_sha256"),
+            "source_book_fingerprint": state.get("source_book_fingerprint"),
+            "logical_piece_key": state.get("logical_piece_key"),
+            "canonical_piece_id": canonical_piece_id,
+            "attempt_status": attempt_status,
+            "duplicate_attempt_count": int(state.get("duplicate_attempt_count") or 0),
+            "duplicate_reason": state.get("duplicate_reason"),
+            "is_duplicate_attempt": is_duplicate_attempt,
         }
 
     def _state_file(self, piece_id: str) -> Path:
@@ -139,6 +203,8 @@ class PieceStateService:
 def _library_status_for_piece(piece: Piece) -> str:
     if piece.status == PieceStatus.approved:
         return "ready"
+    if piece.status == PieceStatus.needs_edits:
+        return "needsEdits"
     if piece.status == PieceStatus.archived:
         return "archived"
     if piece.status == PieceStatus.review_pending:

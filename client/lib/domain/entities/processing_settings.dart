@@ -1,9 +1,14 @@
 class ProcessingSettings {
   const ProcessingSettings({
     this.audiverisCliPath,
+    this.homrCliPath,
     this.musescoreCliPath,
+    this.musescoreStylePath,
     this.ocrCliPath,
     this.ocrLanguage = 'eng',
+    this.ocrEffort = 'balanced',
+    this.omrStrategy = 'audiveris_quality_sweep',
+    this.maxConcurrentJobs = 2,
     this.localLlmProvider,
     this.localLlmModel,
     this.cloudEnabled = false,
@@ -22,9 +27,14 @@ class ProcessingSettings {
   });
 
   final String? audiverisCliPath;
+  final String? homrCliPath;
   final String? musescoreCliPath;
+  final String? musescoreStylePath;
   final String? ocrCliPath;
   final String ocrLanguage;
+  final String ocrEffort;
+  final String omrStrategy;
+  final int maxConcurrentJobs;
   final String? localLlmProvider;
   final String? localLlmModel;
   final bool cloudEnabled;
@@ -43,9 +53,14 @@ class ProcessingSettings {
 
   ProcessingSettings copyWith({
     String? audiverisCliPath,
+    String? homrCliPath,
     String? musescoreCliPath,
+    String? musescoreStylePath,
     String? ocrCliPath,
     String? ocrLanguage,
+    String? ocrEffort,
+    String? omrStrategy,
+    int? maxConcurrentJobs,
     String? localLlmProvider,
     String? localLlmModel,
     bool? cloudEnabled,
@@ -62,7 +77,9 @@ class ProcessingSettings {
     String? lastCloudProcessingError,
     DateTime? updatedAt,
     bool clearAudiverisPath = false,
+    bool clearHomrPath = false,
     bool clearMuseScorePath = false,
+    bool clearMuseScoreStylePath = false,
     bool clearOcrPath = false,
     bool clearLocalLlmProvider = false,
     bool clearLocalLlmModel = false,
@@ -74,10 +91,17 @@ class ProcessingSettings {
     return ProcessingSettings(
       audiverisCliPath:
           clearAudiverisPath ? null : audiverisCliPath ?? this.audiverisCliPath,
+      homrCliPath: clearHomrPath ? null : homrCliPath ?? this.homrCliPath,
       musescoreCliPath:
           clearMuseScorePath ? null : musescoreCliPath ?? this.musescoreCliPath,
+      musescoreStylePath: clearMuseScoreStylePath
+          ? null
+          : musescoreStylePath ?? this.musescoreStylePath,
       ocrCliPath: clearOcrPath ? null : ocrCliPath ?? this.ocrCliPath,
       ocrLanguage: ocrLanguage ?? this.ocrLanguage,
+      ocrEffort: ocrEffort ?? this.ocrEffort,
+      omrStrategy: omrStrategy ?? this.omrStrategy,
+      maxConcurrentJobs: maxConcurrentJobs ?? this.maxConcurrentJobs,
       localLlmProvider: clearLocalLlmProvider
           ? null
           : localLlmProvider ?? this.localLlmProvider,
@@ -107,9 +131,14 @@ class ProcessingSettings {
   Map<String, dynamic> toUpdateJson() {
     return {
       'audiveris_cli_path': audiverisCliPath,
+      'homr_cli_path': homrCliPath,
       'musescore_cli_path': musescoreCliPath,
+      'musescore_style_path': musescoreStylePath,
       'ocr_cli_path': ocrCliPath,
       'ocr_language': ocrLanguage,
+      'ocr_effort': ocrEffort,
+      'omr_strategy': omrStrategy,
+      'max_concurrent_jobs': maxConcurrentJobs,
       'local_llm_provider': localLlmProvider,
       'local_llm_model': localLlmModel,
       'cloud_enabled': cloudEnabled,
@@ -125,9 +154,14 @@ class ProcessingSettings {
   factory ProcessingSettings.fromJson(Map<String, dynamic> json) {
     return ProcessingSettings(
       audiverisCliPath: json['audiveris_cli_path'] as String?,
+      homrCliPath: json['homr_cli_path'] as String?,
       musescoreCliPath: json['musescore_cli_path'] as String?,
+      musescoreStylePath: json['musescore_style_path'] as String?,
       ocrCliPath: json['ocr_cli_path'] as String?,
       ocrLanguage: json['ocr_language'] as String? ?? 'eng',
+      ocrEffort: json['ocr_effort'] as String? ?? 'balanced',
+      omrStrategy: json['omr_strategy'] as String? ?? 'audiveris_quality_sweep',
+      maxConcurrentJobs: json['max_concurrent_jobs'] as int? ?? 2,
       localLlmProvider: json['local_llm_provider'] as String?,
       localLlmModel: json['local_llm_model'] as String?,
       cloudEnabled: json['cloud_enabled'] as bool? ?? false,
@@ -218,6 +252,7 @@ class ProcessingCapabilities {
     required this.serverOnline,
     required this.settings,
     required this.audiveris,
+    required this.homr,
     required this.musescore,
     required this.ocr,
     required this.localLlm,
@@ -232,6 +267,7 @@ class ProcessingCapabilities {
   final bool serverOnline;
   final ProcessingSettings settings;
   final ProcessingExecutableStatus audiveris;
+  final ProcessingExecutableStatus homr;
   final ProcessingExecutableStatus musescore;
   final ProcessingExecutableStatus ocr;
   final ProcessingExecutableStatus localLlm;
@@ -250,6 +286,14 @@ class ProcessingCapabilities {
       ),
       audiveris: ProcessingExecutableStatus.fromJson(
         json['audiveris'] as Map<String, dynamic>,
+      ),
+      homr: ProcessingExecutableStatus.fromJson(
+        json['homr'] as Map<String, dynamic>? ??
+            const <String, dynamic>{
+              'name': 'HOMR',
+              'configured': false,
+              'available': false,
+            },
       ),
       musescore: ProcessingExecutableStatus.fromJson(
         json['musescore'] as Map<String, dynamic>,
@@ -304,6 +348,7 @@ class ProcessingJobSummary {
     required this.runningCount,
     required this.failedCount,
     required this.succeededCount,
+    required this.canceledCount,
     this.lastFailedJob,
   });
 
@@ -311,6 +356,7 @@ class ProcessingJobSummary {
   final int runningCount;
   final int failedCount;
   final int succeededCount;
+  final int canceledCount;
   final ProcessingJobFailure? lastFailedJob;
 
   factory ProcessingJobSummary.fromJson(Map<String, dynamic> json) {
@@ -320,6 +366,7 @@ class ProcessingJobSummary {
       runningCount: json['running_count'] as int? ?? 0,
       failedCount: json['failed_count'] as int? ?? 0,
       succeededCount: json['succeeded_count'] as int? ?? 0,
+      canceledCount: json['canceled_count'] as int? ?? 0,
       lastFailedJob: lastFailed is Map<String, dynamic>
           ? ProcessingJobFailure.fromJson(lastFailed)
           : null,
@@ -357,6 +404,7 @@ class ProcessingValidation {
   const ProcessingValidation({
     required this.valid,
     required this.audiveris,
+    required this.homr,
     required this.musescore,
     required this.ocr,
     required this.warnings,
@@ -364,6 +412,7 @@ class ProcessingValidation {
 
   final bool valid;
   final ProcessingExecutableStatus audiveris;
+  final ProcessingExecutableStatus homr;
   final ProcessingExecutableStatus musescore;
   final ProcessingExecutableStatus ocr;
   final List<String> warnings;
@@ -373,6 +422,14 @@ class ProcessingValidation {
       valid: json['valid'] as bool? ?? false,
       audiveris: ProcessingExecutableStatus.fromJson(
         json['audiveris'] as Map<String, dynamic>,
+      ),
+      homr: ProcessingExecutableStatus.fromJson(
+        json['homr'] as Map<String, dynamic>? ??
+            const <String, dynamic>{
+              'name': 'HOMR',
+              'configured': false,
+              'available': false,
+            },
       ),
       musescore: ProcessingExecutableStatus.fromJson(
         json['musescore'] as Map<String, dynamic>,

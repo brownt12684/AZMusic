@@ -52,6 +52,7 @@ async def get_processing_capabilities(db: AsyncSession = Depends(get_db)):
         server_online=True,
         settings=settings,
         audiveris=validation.audiveris,
+        homr=validation.homr,
         musescore=validation.musescore,
         ocr=validation.ocr,
         local_llm=local_llm_status(settings_payload),

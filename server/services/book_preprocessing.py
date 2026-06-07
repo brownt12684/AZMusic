@@ -5,7 +5,10 @@ from __future__ import annotations
 import re
 import subprocess
 import tempfile
+from collections import defaultdict
+from csv import DictReader
 from dataclasses import dataclass, field
+from io import StringIO
 from pathlib import Path
 from typing import Any
 
@@ -24,6 +27,7 @@ class BookPageFact:
     dark_pixel_ratio: float
     horizontal_line_count: int
     warnings: list[str] = field(default_factory=list)
+    title_ocr_text: str = ""
 
     def to_dict(self) -> dict[str, Any]:
         return {
@@ -35,6 +39,9 @@ class BookPageFact:
             "dark_pixel_ratio": self.dark_pixel_ratio,
             "horizontal_line_count": self.horizontal_line_count,
             "warnings": self.warnings,
+            "title_ocr_excerpt": _excerpt(self.title_ocr_text, max_length=260)
+            if self.title_ocr_text.strip()
+            else None,
         }
 
 
@@ -96,6 +103,8 @@ class BookPreprocessor:
 
         ocr_path = self._resolve_tesseract()
         language = self._settings.get("ocr_language") or "eng"
+        ocr_effort = str(self._settings.get("ocr_effort") or "balanced")
+        render_scale = 3 if ocr_effort == "high_accuracy" else 2
         page_facts: list[BookPageFact] = []
         warnings: list[str] = []
 
@@ -110,7 +119,7 @@ class BookPreprocessor:
                     page_number = page_index + 1
                     image_path = temp_path / f"page_{page_number:03}.png"
                     page = document[page_index]
-                    bitmap = page.render(scale=2)
+                    bitmap = page.render(scale=render_scale)
                     image = bitmap.to_pil()
                     image.save(image_path)
                     page.close()
@@ -120,7 +129,19 @@ class BookPreprocessor:
                         language=language,
                     )
                     image_facts = _analyze_page_image(image)
-                    title_candidates = _title_candidates(text, [])
+                    title_ocr_text = ""
+                    title_ocr_warnings: list[str] = []
+                    if image_facts["has_staff_hint"]:
+                        title_ocr_text, title_ocr_warnings = self._run_title_tesseract(
+                            ocr_path=ocr_path,
+                            image_path=image_path,
+                            language=language,
+                        )
+                    title_candidates = _title_candidates(
+                        text,
+                        [],
+                        title_ocr_text=title_ocr_text,
+                    )
                     classification = _classify_page(
                         page_number=page_number,
                         text=text,
@@ -137,19 +158,23 @@ class BookPreprocessor:
                             title_candidates=title_candidates,
                             has_staff_hint=image_facts["has_staff_hint"],
                             dark_pixel_ratio=image_facts["dark_pixel_ratio"],
-                            horizontal_line_count=image_facts[
-                                "horizontal_line_count"
-                            ],
-                            warnings=ocr_warnings,
+                            horizontal_line_count=image_facts["horizontal_line_count"],
+                            warnings=ocr_warnings + title_ocr_warnings,
+                            title_ocr_text=title_ocr_text,
                         )
                     )
                     warnings.extend(ocr_warnings)
+                    warnings.extend(title_ocr_warnings)
             finally:
                 document.close()
 
         toc_titles = _extract_toc_titles(page_facts)
         for fact in page_facts:
-            fact.title_candidates = _title_candidates(fact.text, toc_titles)
+            fact.title_candidates = _title_candidates(
+                fact.text,
+                toc_titles,
+                title_ocr_text=fact.title_ocr_text,
+            )
             fact.classification = _classify_page(
                 page_number=fact.page_number,
                 text=fact.text,
@@ -161,6 +186,9 @@ class BookPreprocessor:
         combined_text = "\n".join(fact.text for fact in page_facts if fact.text.strip())
         book_metadata = infer_metadata_from_text(combined_text)
         book_metadata.setdefault("source_file_name", file_name)
+        book_metadata["ocr_language"] = language
+        book_metadata["ocr_effort"] = ocr_effort
+        book_metadata["ocr_render_scale"] = render_scale
         _improve_book_metadata(book_metadata, page_facts, file_name)
         split_proposals = _propose_splits(page_facts, book_metadata)
         return BookPreprocessingResult(
@@ -188,7 +216,7 @@ class BookPreprocessor:
         image_path: Path,
         language: str,
     ) -> tuple[str, list[str]]:
-        command = [ocr_path, str(image_path), "stdout", "-l", language]
+        command = [ocr_path, str(image_path), "stdout", "-l", language, "--oem", "1"]
         try:
             result = subprocess.run(
                 command,
@@ -206,10 +234,116 @@ class BookPreprocessor:
         warnings = []
         if result.returncode != 0:
             warnings.append(
-                f"Tesseract returned {result.returncode} on {image_path.name}: "
-                f"{stderr[:240]}"
+                f"Tesseract returned {result.returncode} on {image_path.name}: {stderr[:240]}"
             )
         return stdout.replace("\x0c", "").strip(), warnings
+
+    @staticmethod
+    def _run_title_tesseract(
+        *,
+        ocr_path: str,
+        image_path: Path,
+        language: str,
+    ) -> tuple[str, list[str]]:
+        command = [
+            ocr_path,
+            str(image_path),
+            "stdout",
+            "-l",
+            language,
+            "--oem",
+            "1",
+            "--psm",
+            "11",
+            "tsv",
+        ]
+        try:
+            result = subprocess.run(
+                command,
+                check=False,
+                capture_output=True,
+                timeout=30,
+            )
+        except subprocess.TimeoutExpired:
+            return "", [f"Title OCR timed out on {image_path.name}."]
+        except OSError as exc:
+            return "", [f"Title OCR failed on {image_path.name}: {exc}"]
+
+        stdout = result.stdout.decode("utf-8", errors="replace")
+        stderr = result.stderr.decode("utf-8", errors="replace").strip()
+        warnings = []
+        if result.returncode != 0:
+            warnings.append(
+                f"Title OCR returned {result.returncode} on {image_path.name}: {stderr[:240]}"
+            )
+        return _large_title_lines_from_tesseract_tsv(stdout), warnings
+
+
+def _large_title_lines_from_tesseract_tsv(tsv_text: str) -> str:
+    line_words: dict[tuple[str, str, str], list[dict[str, object]]] = defaultdict(list)
+    reader = DictReader(StringIO(tsv_text), delimiter="\t")
+    for row in reader:
+        text = (row.get("text") or "").strip()
+        if not text:
+            continue
+        key = (
+            row.get("block_num") or "",
+            row.get("par_num") or "",
+            row.get("line_num") or "",
+        )
+        left = _int_or_default(row.get("left"), 0)
+        width = _int_or_default(row.get("width"), 0)
+        line_words[key].append(
+            {
+                "text": text,
+                "conf": _float_or_default(row.get("conf"), -1.0),
+                "height": _int_or_default(row.get("height"), 0),
+                "left": left,
+                "right": left + width,
+            }
+        )
+
+    candidates: list[str] = []
+    page_width = max(
+        (int(item["right"]) for words in line_words.values() for item in words),
+        default=0,
+    )
+    for words in line_words.values():
+        words.sort(key=lambda item: item["left"])
+        line = _clean_title(" ".join(str(item["text"]) for item in words))
+        normalized = _normalize(line)
+        if not _looks_like_title(line, normalized):
+            continue
+        if not _looks_like_standalone_title_ocr_line(line, normalized):
+            continue
+        max_confidence = max(float(item["conf"]) for item in words)
+        max_height = max(int(item["height"]) for item in words)
+        line_left = min(int(item["left"]) for item in words)
+        line_right = max(int(item["right"]) for item in words)
+        line_center_ratio = ((line_left + line_right) / 2) / page_width if page_width else 0.5
+        if max_confidence < 85 or max_height < 28:
+            continue
+        if line_right - line_left < 36:
+            continue
+        if line_center_ratio < 0.32 or line_center_ratio > 0.68:
+            continue
+        if not any(_normalize(line) == _normalize(existing) for existing in candidates):
+            candidates.append(line)
+    return "\n".join(candidates)
+
+
+def _float_or_default(value: str | None, default: float) -> float:
+    try:
+        return float(value) if value is not None else default
+    except ValueError:
+        return default
+
+
+def _int_or_default(value: str | None, default: int) -> int:
+    try:
+        return int(value) if value is not None else default
+    except ValueError:
+        return default
 
 
 def _analyze_page_image(image) -> dict[str, Any]:
@@ -337,9 +471,7 @@ def _propose_splits(
                             "Multiple short pieces detected on one page; kept together "
                             "as one shared page item."
                         ],
-                        contained_piece_titles=[
-                            _trim_title_punctuation(title) for title in titles
-                        ],
+                        contained_piece_titles=[_trim_title_punctuation(title) for title in titles],
                         multi_piece_page=True,
                     )
                 )
@@ -419,22 +551,40 @@ def _dedupe_short_false_positives(
     return cleaned
 
 
-def _title_candidates(text: str, toc_titles: list[str]) -> list[str]:
+def _title_candidates(
+    text: str,
+    toc_titles: list[str],
+    *,
+    title_ocr_text: str = "",
+) -> list[str]:
     candidates = []
-    lines = [
-        _clean_line(line)
-        for line in re.split(r"[\n\r]+", text)
-        if _clean_line(line)
-    ]
-    matched_titles = _toc_title_matches(text, toc_titles)
-    if matched_titles:
-        return matched_titles[:4]
-    for line in lines[:8]:
+    lines = [_clean_line(line) for line in re.split(r"[\n\r]+", text) if _clean_line(line)]
+    matched_titles = _toc_title_matches(
+        "\n".join(part for part in (text, title_ocr_text) if part.strip()),
+        toc_titles,
+    )
+    for title in matched_titles:
+        _append_unique_title_candidate(candidates, title)
+    for line in lines[:2]:
         line = _clean_title(line)
         normalized = _normalize(line)
-        if _looks_like_title(line, normalized) and line not in candidates:
-            candidates.append(line)
-    return candidates[:3]
+        if _looks_like_title(line, normalized) and _looks_like_standalone_title_ocr_line(
+            line, normalized
+        ):
+            _append_unique_title_candidate(candidates, line)
+    for title in _standalone_title_ocr_candidates(title_ocr_text):
+        _append_unique_title_candidate(candidates, title)
+    limit = 4 if matched_titles else 3
+    return candidates[:limit]
+
+
+def _append_unique_title_candidate(candidates: list[str], title: str) -> None:
+    normalized = _normalize(title)
+    if not normalized:
+        return
+    if any(_normalize(existing) == normalized for existing in candidates):
+        return
+    candidates.append(title)
 
 
 def _toc_title_matches(text: str, toc_titles: list[str]) -> list[str]:
@@ -462,8 +612,7 @@ def _toc_title_matches(text: str, toc_titles: list[str]) -> list[str]:
     for title in matches:
         normalized_title = _normalize(title)
         if any(
-            normalized_title != _normalize(other)
-            and normalized_title in _normalize(other)
+            normalized_title != _normalize(other) and normalized_title in _normalize(other)
             for other in matches
         ):
             continue
@@ -473,6 +622,9 @@ def _toc_title_matches(text: str, toc_titles: list[str]) -> list[str]:
 
 def _looks_like_title(line: str, normalized: str) -> bool:
     if len(line) < 3 or len(line) > 80:
+        return False
+    stripped = line.strip()
+    if not stripped or stripped[0] in {"*", "°", "«"}:
         return False
     if normalized in {
         "position pieces",
@@ -488,6 +640,8 @@ def _looks_like_title(line: str, normalized: str) -> bool:
     }:
         return False
     if normalized.endswith("d c al fine") and len(normalized.split()) <= 5:
+        return False
+    if "see the note" in normalized:
         return False
     if any(keyword in normalized for keyword in ("copyright", "isbn", "printed in")):
         return False
@@ -507,6 +661,81 @@ def _looks_like_title(line: str, normalized: str) -> bool:
     if len(words) > 7:
         return False
     return True
+
+
+def _standalone_title_ocr_candidates(text: str) -> list[str]:
+    candidates: list[str] = []
+    if not text.strip():
+        return candidates
+    for raw_line in re.split(r"[\n\r]+", text):
+        line = _clean_title(_clean_line(raw_line))
+        normalized = _normalize(line)
+        if not _looks_like_title(line, normalized):
+            continue
+        if not _looks_like_standalone_title_ocr_line(line, normalized):
+            continue
+        if line not in candidates:
+            candidates.append(line)
+    return candidates
+
+
+def _looks_like_standalone_title_ocr_line(line: str, normalized: str) -> bool:
+    if not normalized:
+        return False
+    if normalized in {
+        "thee",
+        "pee",
+        "sab",
+        "the",
+        "and",
+        "names",
+        "numbers",
+        "page",
+        "note",
+        "fine",
+        "this one",
+    }:
+        return False
+    if normalized.startswith(("j ", "d ", "m ")):
+        return False
+    words = line.split()
+    normalized_words = normalized.split()
+    if len(words) == 1:
+        word = words[0]
+        if len(word) < 4 and normalized != "jig":
+            return False
+        return word[:1].isupper()
+    allowed_short_words = {"a", "i", "c", "d", "in", "at", "so", "to", "my"}
+    if any(len(word) <= 2 and word not in allowed_short_words for word in normalized_words):
+        return False
+    noise_words = {
+        "ae",
+        "ee",
+        "es",
+        "oe",
+        "re",
+        "ss",
+        "se",
+        "te",
+        "ial",
+        "deve",
+        "pale",
+        "fpe",
+        "arco",
+        "pizz",
+    }
+    if any(word in noise_words for word in normalized_words):
+        return False
+    connector_words = {"and", "for", "in", "of", "on", "the", "to", "with"}
+    content_pairs = [
+        (word, normalized_word)
+        for word, normalized_word in zip(words, normalized_words)
+        if normalized_word not in connector_words
+    ]
+    if not content_pairs:
+        return False
+    title_words = sum(1 for word, _ in content_pairs if word[:1].isupper())
+    return title_words >= len(content_pairs)
 
 
 def _improve_book_metadata(
@@ -601,6 +830,4 @@ def _trim_title_punctuation(title: str) -> str:
 
 def _normalize(value: str) -> str:
     value = value.replace("Т", "'").replace("т", "'")
-    return " ".join(
-        "".join(char.lower() if char.isalnum() else " " for char in value).split()
-    )
+    return " ".join("".join(char.lower() if char.isalnum() else " " for char in value).split())

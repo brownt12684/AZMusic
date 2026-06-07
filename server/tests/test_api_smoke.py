@@ -2,15 +2,18 @@ import asyncio
 import hashlib
 import json
 from io import BytesIO
+from pathlib import Path
 from xml.etree import ElementTree
 
 import pytest
 import server.database as database_module
 import server.main as main_module
 import server.routers.pieces as pieces_router_module
+import server.services.processing_settings as processing_settings_module
 import server.services.server_urls as server_urls_module
 from fastapi.testclient import TestClient
-from pypdf import PdfWriter
+from PIL import Image, ImageDraw
+from pypdf import PdfReader, PdfWriter
 from server.config import settings
 from server.jobs.dispatcher import JobDispatcher
 from server.main import app
@@ -34,6 +37,53 @@ def _valid_pdf_bytes(page_count: int = 1) -> bytes:
     output = BytesIO()
     writer.write(output)
     return output.getvalue()
+
+
+def _shared_two_piece_pdf_bytes() -> bytes:
+    image = Image.new("RGB", (612, 792), "white")
+    draw = ImageDraw.Draw(image)
+    for system_y in (120, 230, 340, 520, 630, 730):
+        for staff_line in range(5):
+            y = system_y + staff_line * 5
+            draw.line((80, y, 535, y), fill="black", width=2)
+    output = BytesIO()
+    image.save(output, format="PDF", resolution=72)
+    return output.getvalue()
+
+
+def _two_part_musicxml(title: str, measure_count: int) -> str:
+    measures = "\n".join(
+        f"""
+        <measure number="{measure_number}" width="{220 + measure_number}">
+          <print>
+            <system-layout><system-distance>126</system-distance></system-layout>
+            <staff-layout number="1"><staff-distance>85</staff-distance></staff-layout>
+          </print>
+          <note default-x="{18 + measure_number}">
+            <pitch><step>D</step><octave>3</octave></pitch>
+            <duration>1</duration>
+            <type>quarter</type>
+          </note>
+        </measure>
+        """
+        for measure_number in range(1, measure_count + 1)
+    )
+    return f"""<?xml version="1.0" encoding="UTF-8"?>
+<score-partwise version="4.0">
+  <work><work-title>{title}</work-title></work>
+  <movement-title>{title}</movement-title>
+  <part-list>
+    <score-part id="P1"><part-name>Cello</part-name></score-part>
+    <score-part id="P2"><part-name>Cello</part-name></score-part>
+  </part-list>
+  <part id="P1">{measures}</part>
+  <part id="P2">{measures}</part>
+</score-partwise>
+"""
+
+
+def _xml_local_name(node) -> str:
+    return node.tag.rsplit("}", maxsplit=1)[-1]
 
 
 @pytest.fixture()
@@ -61,6 +111,11 @@ def api_client(tmp_path, monkeypatch):
     monkeypatch.setattr(main_module, "engine", test_engine)
     monkeypatch.setattr(settings, "storage_path", test_storage_path)
     monkeypatch.setattr(settings, "job_dispatcher_enabled", False)
+    monkeypatch.setattr(settings, "audiveris_cli_path", None)
+    monkeypatch.setattr(settings, "musescore_cli_path", None)
+    monkeypatch.setattr(settings, "ocr_cli_path", None)
+    monkeypatch.setenv("ProgramFiles", str(tmp_path / "empty-program-files"))
+    monkeypatch.setenv("ProgramFiles(x86)", str(tmp_path / "empty-program-files-x86"))
     app.dependency_overrides[database_module.get_db] = override_get_db
 
     with TestClient(app) as client:
@@ -220,6 +275,34 @@ def test_ocr_metadata_parser_extracts_relevant_score_fields() -> None:
     assert metadata["tempo"] == "Allegro"
 
 
+def test_ocr_metadata_parser_rejects_music_notation_noise_as_composer() -> None:
+    playing = infer_metadata_from_text(
+        """
+        62 Playing in the Park
+        J = 120
+        4 1 a 0 Ket eee Pa
+        SSS WP NU 2 2 5s oa tl
+        D.C. al Fine
+        """
+    )
+    landler = infer_metadata_from_text(
+        """
+        56 Landler
+        J = 104
+        a ©. ~~ 4 Vv
+        OOo Ee
+        D.C. al Fine
+        """
+    )
+
+    assert playing["title"] == "Playing in the Park"
+    assert "composer" not in playing
+    assert "catalog_number" not in playing
+    assert landler["title"] == "Landler"
+    assert "composer" not in landler
+    assert "publisher" not in landler
+
+
 def test_image_import_uses_ocr_metadata_for_parent_review(api_client, monkeypatch) -> None:
     client, storage_path = api_client
 
@@ -291,6 +374,23 @@ def test_image_import_uses_ocr_metadata_for_parent_review(api_client, monkeypatc
 def test_book_import_uses_ocr_metadata_for_book_record(api_client, monkeypatch) -> None:
     client, _ = api_client
 
+    class FakeBookPreprocessor:
+        def __init__(self, processing_settings) -> None:
+            pass
+
+        def preprocess(self, *, file_name: str, file_bytes: bytes):
+            return book_preprocessing_module.BookPreprocessingResult(
+                page_count=2,
+                page_facts=[],
+                split_proposals=[],
+                book_metadata={
+                    "title": "Suzuki Violin School Volume 1",
+                    "composer": "Shinichi Suzuki",
+                    "primary_instrument": "Violin",
+                    "source_file_name": file_name,
+                },
+            )
+
     def fake_extract(self, *, file_name: str, file_bytes: bytes) -> OcrMetadataResult:
         return OcrMetadataResult(
             metadata={
@@ -314,6 +414,7 @@ def test_book_import_uses_ocr_metadata_for_book_record(api_client, monkeypatch) 
             engine_name="test_ocr",
         )
 
+    monkeypatch.setattr(score_processing_module, "BookPreprocessor", FakeBookPreprocessor)
     monkeypatch.setattr(score_processing_module.OcrMetadataExtractor, "extract", fake_extract)
 
     import_response = client.post(
@@ -569,6 +670,20 @@ def test_pdf_import_processing_and_approval_flow(api_client) -> None:
     assigned_piece = next(item for item in assigned_pieces.json() if item["id"] == piece_id)
     assert assigned_piece["library_status"] == "ready"
     assert assigned_piece["visible_to_profile_ids"] == ["student-alyse"]
+    assert assigned_piece["workflow_closed"] is False
+
+    close_response = client.post(f"/api/v1/pieces/{piece_id}/workflow/close")
+    assert close_response.status_code == 200
+    closed_piece = close_response.json()
+    assert closed_piece["library_status"] == "ready"
+    assert closed_piece["workflow_closed"] is True
+    assert closed_piece["visible_to_profile_ids"] == ["student-alyse"]
+
+    assigned_after_close = client.get("/api/v1/pieces/assigned/student-alyse")
+    assert assigned_after_close.status_code == 200
+    assigned_closed = next(item for item in assigned_after_close.json() if item["id"] == piece_id)
+    assert assigned_closed["library_status"] == "ready"
+    assert assigned_closed["workflow_closed"] is True
 
     metadata_update = client.patch(
         f"/api/v1/pieces/{piece_id}",
@@ -608,6 +723,154 @@ def test_pdf_import_processing_and_approval_flow(api_client) -> None:
     approved_default = next(version for version in approved_score_versions if version["is_default"])
     assert approved_default["version_type"] == "approved"
     assert approved_payload["status"] == "approved"
+
+
+def test_parent_can_compare_and_approve_alternate_omr_candidate(
+    api_client,
+    monkeypatch,
+) -> None:
+    client, _ = api_client
+
+    def fake_generate(
+        self,
+        *,
+        raw_pdf_path,
+        output_path,
+        title,
+        composer,
+        primary_instrument=None,
+        contained_piece_titles=None,
+        multi_piece_page=False,
+        processing_settings,
+    ):
+        del self, raw_pdf_path, contained_piece_titles, multi_piece_page, processing_settings
+        output_path.write_text(
+            processing_engines_module._build_stub_musicxml(
+                title=title,
+                composer=composer,
+                primary_instrument=primary_instrument or "Cello",
+                measure_count=2,
+            ),
+            encoding="utf-8",
+        )
+        homr_path = output_path.with_name("candidate_homr.musicxml")
+        homr_path.write_text(
+            processing_engines_module._build_stub_musicxml(
+                title=f"{title} HOMR",
+                composer=composer,
+                primary_instrument=primary_instrument or "Cello",
+                measure_count=4,
+            ),
+            encoding="utf-8",
+        )
+        metadata = processing_engines_module._validate_musicxml(output_path)
+        homr_metadata = processing_engines_module._validate_musicxml(homr_path)
+        audiveris_metadata = dict(metadata)
+        metadata["omr_quality_score"] = 25.0
+        metadata["omr_attempts"] = [
+            {
+                "engine": "audiveris",
+                "profile": "default",
+                "candidate_path": str(output_path),
+                "metadata": audiveris_metadata,
+                "quality_score": 25.0,
+            },
+            {
+                "engine": "homr",
+                "profile": "experimental",
+                "candidate_path": str(homr_path),
+                "metadata": homr_metadata,
+                "quality_score": 45.0,
+                "warnings": ["HOMR candidate produced by test bakeoff."],
+            },
+        ]
+        return processing_engines_module.MusicXmlResult(
+            file_path=output_path,
+            engine_name="audiveris",
+            engine_version="test-audiveris",
+            provenance="audiveris_omr",
+            confidence=0.82,
+            warnings=["Audiveris candidate produced by test bakeoff."],
+            metadata=metadata,
+        )
+
+    def fake_render(
+        self,
+        *,
+        canonical_path,
+        raw_pdf_path,
+        output_pdf_path,
+        processing_settings,
+    ):
+        del self, canonical_path, raw_pdf_path, processing_settings
+        pdf_bytes = _valid_pdf_bytes()
+        output_pdf_path.write_bytes(pdf_bytes)
+        return processing_engines_module.RenderResult(
+            file_path=output_pdf_path,
+            renderer_name="test_musescore",
+            renderer_version="test-renderer",
+            provenance="musescore_render",
+            warnings=[],
+            validation_status="valid",
+            validation_error=None,
+            file_size_bytes=len(pdf_bytes),
+            page_count=1,
+            diagnostics={"test_renderer": True},
+        )
+
+    monkeypatch.setattr(score_processing_module.MusicXmlEngine, "generate", fake_generate)
+    monkeypatch.setattr(
+        score_processing_module.MuseScoreRenderEngine,
+        "render",
+        fake_render,
+    )
+
+    import_response = client.post(
+        "/api/v1/pieces/import",
+        data={"title": "Bakeoff Study", "primary_instrument": "Cello"},
+        files={"file": ("bakeoff_study.pdf", _valid_pdf_bytes(), "application/pdf")},
+    )
+    assert import_response.status_code == 200
+    piece_id = import_response.json()["id"]
+
+    review_item = next(
+        item for item in client.get("/api/v1/review/").json() if item["piece_id"] == piece_id
+    )
+    candidate_data = review_item["candidate_data"]
+    candidates = candidate_data["omr_candidates"]
+    assert len(candidates) == 2
+    assert candidate_data["selected_omr_candidate_id"] == "selected_best"
+    assert {candidate["engine_name"] for candidate in candidates} == {"audiveris", "homr"}
+
+    homr_candidate = next(
+        candidate for candidate in candidates if candidate["engine_name"] == "homr"
+    )
+    assert homr_candidate["rendered_file_url"].endswith("/file")
+    assert homr_candidate["canonical_file_url"].endswith("/file")
+    assert homr_candidate["omr_quality_score"] == 45.0
+
+    approve_response = client.post(
+        f"/api/v1/review/{review_item['id']}",
+        json={
+            "action": "approve",
+            "selected_candidate_id": homr_candidate["candidate_id"],
+        },
+    )
+    assert approve_response.status_code == 200
+    approved_candidate_data = approve_response.json()["candidate_data"]
+    assert approved_candidate_data["selected_omr_candidate_id"] == homr_candidate["candidate_id"]
+    assert approved_candidate_data["engine_name"] == "homr"
+    assert approved_candidate_data["score_version_id"] == homr_candidate["score_version_id"]
+
+    detail = client.get(f"/api/v1/pieces/{piece_id}").json()
+    default_version = next(version for version in detail["score_versions"] if version["is_default"])
+    assert default_version["id"] == homr_candidate["score_version_id"]
+    canonical_version = next(
+        version
+        for version in detail["score_versions"]
+        if version["id"] == homr_candidate["canonical_score_version_id"]
+    )
+    assert canonical_version["version_type"] == "approved"
 
 
 def test_parent_can_open_and_rerender_musescore_candidate(api_client, monkeypatch) -> None:
@@ -710,6 +973,331 @@ def test_parent_can_open_and_rerender_musescore_candidate(api_client, monkeypatc
     assert (storage_path / "pieces" / piece_id / "candidate_review.pdf").read_bytes() == (
         b"%PDF-1.4\n%edited by parent\n"
     )
+
+
+def test_musescore_render_forces_export_and_records_diagnostics(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    canonical_path = tmp_path / "candidate.musicxml"
+    raw_path = tmp_path / "raw_source.pdf"
+    output_path = tmp_path / "candidate_review.pdf"
+    canonical_path.write_text(
+        processing_engines_module._build_stub_musicxml(
+            title="Landler",
+            composer="Rick Mooney",
+            primary_instrument="Cello",
+            measure_count=1,
+        ),
+        encoding="utf-8",
+    )
+    raw_path.write_bytes(_valid_pdf_bytes())
+    fake_musescore = tmp_path / "MuseScore4.exe"
+    fake_musescore.write_text("fake", encoding="utf-8")
+    commands = []
+
+    class FakeExecutableStatus:
+        discovered_path = str(fake_musescore)
+        version = "MuseScore4 4.7.1"
+
+    class FakeRunResult:
+        returncode = 0
+        stdout = "rendered"
+        stderr = ""
+
+    def fake_executable_status(**_kwargs):
+        return FakeExecutableStatus()
+
+    def fake_run(command, **kwargs):
+        commands.append(command)
+        assert kwargs["timeout"] == 300
+        output_path.write_bytes(_valid_pdf_bytes())
+        return FakeRunResult()
+
+    monkeypatch.setattr(processing_engines_module, "executable_status", fake_executable_status)
+    monkeypatch.setattr(processing_engines_module.subprocess, "run", fake_run)
+
+    render_result = processing_engines_module.MuseScoreRenderEngine().render(
+        canonical_path=canonical_path,
+        raw_pdf_path=raw_path,
+        output_pdf_path=output_path,
+        processing_settings={"musescore_cli_path": str(fake_musescore)},
+    )
+
+    assert commands[0][:2] == [str(fake_musescore), "-S"]
+    assert commands[0][3:] == ["-f", str(canonical_path), "-o", str(output_path)]
+    assert render_result.validation_status == "valid"
+    assert render_result.diagnostics["command"] == commands[0]
+    assert render_result.diagnostics["style_source"] == "azmusic_default"
+    assert render_result.diagnostics["style_applied"] is True
+    assert render_result.diagnostics["exit_code"] == 0
+    assert render_result.diagnostics["stdout_excerpt"] == "rendered"
+    assert render_result.diagnostics["validation_status"] == "valid"
+
+
+def test_musescore_render_failure_includes_exit_code_diagnostics(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    canonical_path = tmp_path / "candidate.musicxml"
+    raw_path = tmp_path / "raw_source.pdf"
+    output_path = tmp_path / "candidate_review.pdf"
+    canonical_path.write_text(
+        processing_engines_module._build_stub_musicxml(
+            title="Landler",
+            composer="Rick Mooney",
+            primary_instrument="Cello",
+            measure_count=1,
+        ),
+        encoding="utf-8",
+    )
+    raw_path.write_bytes(_valid_pdf_bytes())
+    fake_musescore = tmp_path / "MuseScore4.exe"
+    fake_musescore.write_text("fake", encoding="utf-8")
+
+    class FakeExecutableStatus:
+        discovered_path = str(fake_musescore)
+        version = "MuseScore4 4.7.1"
+
+    class FakeRunResult:
+        returncode = 1320
+        stdout = ""
+        stderr = ""
+
+    monkeypatch.setattr(
+        processing_engines_module,
+        "executable_status",
+        lambda **_kwargs: FakeExecutableStatus(),
+    )
+    monkeypatch.setattr(
+        processing_engines_module.subprocess,
+        "run",
+        lambda *_args, **_kwargs: FakeRunResult(),
+    )
+
+    with pytest.raises(processing_engines_module.ProcessingEngineError) as exc_info:
+        processing_engines_module.MuseScoreRenderEngine().render(
+            canonical_path=canonical_path,
+            raw_pdf_path=raw_path,
+            output_pdf_path=output_path,
+            processing_settings={"musescore_cli_path": str(fake_musescore)},
+        )
+
+    assert "exit code 1320" in str(exc_info.value)
+    assert exc_info.value.diagnostics["exit_code"] == 1320
+    assert exc_info.value.diagnostics["output_exists"] is False
+
+
+def test_render_blocked_candidate_keeps_musicxml_and_requires_rerender(
+    api_client,
+    monkeypatch,
+) -> None:
+    client, storage_path = api_client
+
+    def fake_empty_render(
+        self, *, canonical_path, raw_pdf_path, output_pdf_path, processing_settings
+    ):
+        output_pdf_path.write_bytes(b"")
+        raise processing_engines_module.ProcessingEngineError(
+            "MuseScore did not produce a usable review PDF: Rendered PDF is empty."
+        )
+
+    monkeypatch.setattr(
+        score_processing_module.MuseScoreRenderEngine,
+        "render",
+        fake_empty_render,
+    )
+
+    import_response = client.post(
+        "/api/v1/pieces/import",
+        data={"title": "Blocked Render Study", "composer": "Server Test"},
+        files={
+            "file": (
+                "blocked_render_study.pdf",
+                _valid_pdf_bytes(),
+                "application/pdf",
+            )
+        },
+    )
+    assert import_response.status_code == 200
+    piece_id = import_response.json()["id"]
+
+    detail = client.get(f"/api/v1/pieces/{piece_id}").json()
+    canonical_version = next(
+        version
+        for version in detail["score_versions"]
+        if version["file_path"].endswith(".musicxml")
+    )
+    rendered_version = next(
+        version
+        for version in detail["score_versions"]
+        if version["file_path"].endswith("_review.pdf")
+    )
+    review_item = next(
+        item for item in client.get("/api/v1/review/").json() if item["piece_id"] == piece_id
+    )
+    candidate_data = review_item["candidate_data"]
+    assert candidate_data["render_validation_status"] == "render_failed"
+    assert "Rendered PDF is empty" in candidate_data["render_validation_error"]
+    assert "rendered_file_url" not in candidate_data
+    assert (storage_path / "pieces" / piece_id / "candidate.musicxml").exists()
+
+    failed_jobs = [job for job in client.get("/api/v1/jobs/").json() if job["piece_id"] == piece_id]
+    assert failed_jobs[0]["status"] == "failed"
+    assert "Rendered PDF is empty" in failed_jobs[0]["error_message"]
+
+    approve_response = client.post(
+        f"/api/v1/review/{review_item['id']}",
+        json={"action": "approve"},
+    )
+    assert approve_response.status_code == 409
+
+    def fake_valid_render(
+        self, *, canonical_path, raw_pdf_path, output_pdf_path, processing_settings
+    ):
+        output_pdf_path.write_bytes(_valid_pdf_bytes())
+        return processing_engines_module.RenderResult(
+            file_path=output_pdf_path,
+            renderer_name="musescore",
+            renderer_version="test-renderer",
+            provenance="musescore_render",
+            warnings=[],
+            validation_status="valid",
+            file_size_bytes=output_pdf_path.stat().st_size,
+            page_count=1,
+        )
+
+    monkeypatch.setattr(
+        pieces_router_module.MuseScoreRenderEngine,
+        "render",
+        fake_valid_render,
+    )
+    rerender_response = client.post(
+        f"/api/v1/pieces/{piece_id}/score_versions/{canonical_version['id']}/rerender",
+        json={"rendered_score_version_id": rendered_version["id"]},
+    )
+    assert rerender_response.status_code == 200
+    assert rerender_response.json()["render_validation_status"] == "valid"
+
+    refreshed_item = client.get(f"/api/v1/review/{review_item['id']}").json()
+    refreshed_candidate = refreshed_item["candidate_data"]
+    assert refreshed_candidate["render_validation_status"] == "valid"
+    assert refreshed_candidate["rendered_file_url"]
+
+    approve_response = client.post(
+        f"/api/v1/review/{review_item['id']}",
+        json={"action": "approve"},
+    )
+    assert approve_response.status_code == 200
+
+
+def test_retry_failed_render_job_reuses_existing_musicxml(
+    api_client,
+    monkeypatch,
+) -> None:
+    client, storage_path = api_client
+
+    def fake_blocked_render(
+        self, *, canonical_path, raw_pdf_path, output_pdf_path, processing_settings
+    ):
+        output_pdf_path.write_bytes(b"")
+        raise processing_engines_module.ProcessingEngineError(
+            "MuseScore Studio failed with exit code 1320 without returning diagnostic output.",
+            diagnostics={
+                "command": ["MuseScore4.exe", str(canonical_path), "-o", str(output_pdf_path)],
+                "exit_code": 1320,
+                "output_exists": False,
+            },
+        )
+
+    monkeypatch.setattr(
+        score_processing_module.MuseScoreRenderEngine,
+        "render",
+        fake_blocked_render,
+    )
+
+    import_response = client.post(
+        "/api/v1/pieces/import",
+        data={"title": "Landler", "composer": "Rick Mooney"},
+        files={
+            "file": (
+                "landler.pdf",
+                _valid_pdf_bytes(),
+                "application/pdf",
+            )
+        },
+    )
+    assert import_response.status_code == 200
+    piece_id = import_response.json()["id"]
+    failed_job = next(
+        job for job in client.get("/api/v1/jobs/").json() if job["piece_id"] == piece_id
+    )
+    assert failed_job["status"] == "failed"
+    assert failed_job["result_data"]["render_diagnostics"]["exit_code"] == 1320
+
+    retry_response = client.post(f"/api/v1/jobs/{failed_job['id']}/retry")
+    assert retry_response.status_code == 200
+    retried = retry_response.json()
+    assert retried["status"] == "queued"
+    assert retried["result_data"]["retry_mode"] == "render_only"
+
+    render_calls = []
+
+    def fail_if_omr_runs(self, **_kwargs):
+        raise AssertionError("render-only retry should not regenerate MusicXML")
+
+    def fake_valid_render(
+        self, *, canonical_path, raw_pdf_path, output_pdf_path, processing_settings
+    ):
+        render_calls.append((canonical_path, raw_pdf_path, output_pdf_path))
+        output_pdf_path.write_bytes(_valid_pdf_bytes())
+        return processing_engines_module.RenderResult(
+            file_path=output_pdf_path,
+            renderer_name="musescore",
+            renderer_version="MuseScore4 4.7.1",
+            provenance="musescore_render",
+            warnings=[],
+            validation_status="valid",
+            validation_error=None,
+            file_size_bytes=output_pdf_path.stat().st_size,
+            page_count=1,
+            diagnostics={
+                "command": [
+                    "MuseScore4.exe",
+                    "-f",
+                    str(canonical_path),
+                    "-o",
+                    str(output_pdf_path),
+                ],
+                "exit_code": 0,
+                "validation_status": "valid",
+            },
+        )
+
+    monkeypatch.setattr(score_processing_module.MusicXmlEngine, "generate", fail_if_omr_runs)
+    monkeypatch.setattr(
+        score_processing_module.MuseScoreRenderEngine,
+        "render",
+        fake_valid_render,
+    )
+
+    processed = asyncio.run(JobDispatcher(poll_interval_seconds=0.01).run_once())
+    assert processed is True
+    assert len(render_calls) == 1
+    assert render_calls[0][0] == storage_path / "pieces" / piece_id / "candidate.musicxml"
+
+    refreshed_job = client.get(f"/api/v1/jobs/{failed_job['id']}").json()
+    assert refreshed_job["status"] == "succeeded"
+    assert refreshed_job["result_data"]["render_validation_status"] == "valid"
+    assert refreshed_job["result_data"]["render_diagnostics"]["exit_code"] == 0
+
+    refreshed_item = next(
+        item for item in client.get("/api/v1/review/").json() if item["piece_id"] == piece_id
+    )
+    candidate_data = refreshed_item["candidate_data"]
+    assert candidate_data["render_validation_status"] == "valid"
+    assert candidate_data["render_diagnostics"]["exit_code"] == 0
+    assert "rendered_file_url" in candidate_data
 
 
 def test_parent_can_upload_edited_musicxml_and_refresh_review_pdf(
@@ -1126,6 +1714,502 @@ def test_book_preprocessing_keeps_multiple_short_pieces_on_one_page() -> None:
     assert proposals[1].title == "A Waltz"
 
 
+def test_book_preprocessing_uses_title_ocr_for_standalone_inner_titles() -> None:
+    candidates = book_preprocessing_module._title_candidates(
+        "Fanfare\nay\ncy\nae",
+        [],
+        title_ocr_text="Fanfare\n\nd=120\n\nSkating\n\n=108",
+    )
+
+    assert candidates[:2] == ["Fanfare", "Skating"]
+
+    proposals = book_preprocessing_module._propose_splits(
+        [
+            book_preprocessing_module.BookPageFact(
+                page_number=6,
+                text="Fanfare",
+                text_excerpt="Fanfare",
+                classification="music_piece",
+                title_candidates=candidates,
+                has_staff_hint=True,
+                dark_pixel_ratio=0.05,
+                horizontal_line_count=45,
+            )
+        ],
+        {
+            "composer": "Rick Mooney",
+            "primary_instrument": "Cello",
+        },
+    )
+
+    assert proposals[0].title == "Fanfare / Skating"
+    assert proposals[0].contained_piece_titles == ["Fanfare", "Skating"]
+    assert proposals[0].multi_piece_page is True
+
+
+def test_book_preprocessing_uses_title_ocr_when_default_ocr_misses_title() -> None:
+    candidates = book_preprocessing_module._title_candidates(
+        "Fine",
+        [],
+        title_ocr_text="Jig\n\n4 2\n\nFine",
+    )
+
+    assert candidates == ["Jig"]
+
+
+def test_multi_piece_staff_split_boundary_prefers_shared_page_separator() -> None:
+    page_39_centers = [
+        113,
+        132,
+        224,
+        233,
+        244,
+        255,
+        265,
+        355,
+        366,
+        376,
+        387,
+        398,
+        532,
+        543,
+        554,
+        564,
+        575,
+        665,
+        676,
+        686,
+        697,
+        708,
+        768,
+        774,
+        965,
+        975,
+        986,
+        997,
+        1007,
+        1097,
+        1108,
+        1115,
+        1128,
+        1139,
+        1272,
+        1283,
+        1293,
+        1304,
+        1314,
+        1404,
+        1414,
+        1424,
+        1434,
+        1445,
+    ]
+
+    boundaries = score_processing_module._multi_piece_staff_split_boundaries(
+        page_39_centers,
+        page_height=1584,
+        piece_count=2,
+    )
+
+    assert len(boundaries) == 1
+    assert 820 <= boundaries[0] <= 910
+
+
+def test_multi_piece_split_boundary_moves_above_second_heading() -> None:
+    image = Image.new("RGB", (612, 792), "white")
+    draw = ImageDraw.Draw(image)
+    draw.rectangle((246, 420, 366, 450), fill="black")
+
+    boundaries = score_processing_module._refine_multi_piece_boundaries_for_heading_text(
+        image,
+        [435],
+        piece_count=2,
+    )
+
+    assert len(boundaries) == 1
+    assert 400 <= boundaries[0] < 420
+
+
+def test_multi_piece_omr_input_splits_shared_page_pdf(tmp_path) -> None:
+    raw_pdf_path = tmp_path / "shared.pdf"
+    output_path = tmp_path / "omr_input.pdf"
+    raw_pdf_path.write_bytes(_shared_two_piece_pdf_bytes())
+
+    omr_path, warnings = score_processing_module._prepare_multi_piece_omr_input_pdf(
+        raw_pdf_path=raw_pdf_path,
+        output_path=output_path,
+        piece_titles=["The Troubadour", "Hoedown"],
+    )
+
+    assert omr_path == output_path
+    assert score_processing_module._pdf_page_count(output_path) == 2
+    assert any("OMR crop input" in warning for warning in warnings)
+
+
+def test_multi_piece_omr_piece_pdfs_split_shared_page_pdf(tmp_path) -> None:
+    raw_pdf_path = tmp_path / "shared.pdf"
+    output_dir = tmp_path / "omr_inputs"
+    raw_pdf_path.write_bytes(_shared_two_piece_pdf_bytes())
+
+    omr_paths, warnings = score_processing_module._prepare_multi_piece_omr_piece_pdfs(
+        raw_pdf_path=raw_pdf_path,
+        output_dir=output_dir,
+        piece_titles=["The Troubadour", "Hoedown"],
+    )
+
+    assert [path.name for path in omr_paths] == ["omr_piece_01.pdf", "omr_piece_02.pdf"]
+    assert all(score_processing_module._pdf_page_count(path) == 1 for path in omr_paths)
+    assert any("separate OMR input" in warning for warning in warnings)
+
+
+def test_omr_spacing_normalization_strips_audiveris_layout_hints(tmp_path) -> None:
+    raw_path = tmp_path / "audiveris.musicxml"
+    output_path = tmp_path / "candidate.musicxml"
+    raw_path.write_text(_two_part_musicxml("Landler", 2), encoding="utf-8")
+
+    normalized = processing_engines_module._normalize_result_metadata(
+        processing_engines_module.MusicXmlResult(
+            file_path=raw_path,
+            engine_name="audiveris",
+            engine_version="test",
+            provenance="audiveris_omr",
+            confidence=0.82,
+            metadata={"part_count": 2, "primary_instrument": "Voice"},
+        ),
+        output_path=output_path,
+        title="Landler",
+        composer="Rick Mooney",
+        primary_instrument="Cello",
+    )
+
+    root = ElementTree.parse(normalized.file_path).getroot()
+    assert all(
+        "width" not in node.attrib for node in root.iter() if _xml_local_name(node) == "measure"
+    )
+    assert all(
+        "default-x" not in node.attrib for node in root.iter() if _xml_local_name(node) == "note"
+    )
+    assert not any(_xml_local_name(node) == "system-layout" for node in root.iter())
+    assert not any(_xml_local_name(node) == "staff-layout" for node in root.iter())
+    assert normalized.metadata["spacing_normalization_applied"] is True
+    assert normalized.metadata["spacing_normalization_profile"] == "balanced_omr"
+    assert normalized.metadata["spacing_normalization_changes"] == {
+        "measure_width_attributes_removed": 4,
+        "note_default_x_attributes_removed": 4,
+        "system_layout_elements_removed": 4,
+        "staff_layout_elements_removed": 4,
+    }
+    assert normalized.metadata["primary_instrument"] == "Cello"
+    assert normalized.metadata["composer"] == "Rick Mooney"
+
+
+def test_musicxml_normalization_preserves_omr_attempts_for_candidate_compare(tmp_path) -> None:
+    raw_path = tmp_path / "audiveris.musicxml"
+    output_path = tmp_path / "candidate.musicxml"
+    raw_path.write_text(_two_part_musicxml("Bakeoff Study", 2), encoding="utf-8")
+    attempts = [
+        {
+            "engine": "audiveris",
+            "profile": "default",
+            "candidate_path": str(raw_path),
+            "quality_score": 7.25,
+        },
+        {
+            "engine": "homr",
+            "profile": "experimental",
+            "candidate_path": str(tmp_path / "candidate_homr.musicxml"),
+            "quality_score": 8.5,
+        },
+    ]
+
+    normalized = processing_engines_module._normalize_result_metadata(
+        processing_engines_module.MusicXmlResult(
+            file_path=raw_path,
+            engine_name="audiveris",
+            engine_version="test",
+            provenance="audiveris_omr",
+            confidence=0.82,
+            metadata={
+                "omr_strategy": "experimental_engine_bakeoff",
+                "omr_quality_score": 8.5,
+                "omr_attempts": attempts,
+            },
+        ),
+        output_path=output_path,
+        title="Bakeoff Study",
+        composer="Test Composer",
+        primary_instrument="Cello",
+    )
+
+    assert normalized.metadata["omr_strategy"] == "experimental_engine_bakeoff"
+    assert normalized.metadata["omr_quality_score"] == 8.5
+    assert normalized.metadata["omr_attempts"] == attempts
+
+
+def test_musicxml_normalization_sanitizes_recursive_omr_attempt_metadata(tmp_path) -> None:
+    raw_path = tmp_path / "audiveris.musicxml"
+    output_path = tmp_path / "candidate.musicxml"
+    raw_path.write_text(_two_part_musicxml("Bakeoff Study", 2), encoding="utf-8")
+    attempts = [
+        {
+            "engine": "homr",
+            "profile": "experimental",
+            "candidate_path": str(tmp_path / "candidate_homr.musicxml"),
+            "quality_score": 8.5,
+        }
+    ]
+    attempts[0]["metadata"] = {"omr_attempts": attempts}
+
+    normalized = processing_engines_module._normalize_result_metadata(
+        processing_engines_module.MusicXmlResult(
+            file_path=raw_path,
+            engine_name="audiveris",
+            engine_version="test",
+            provenance="audiveris_omr",
+            confidence=0.82,
+            metadata={
+                "omr_strategy": "experimental_engine_bakeoff",
+                "omr_quality_score": 8.5,
+                "omr_attempts": attempts,
+            },
+        ),
+        output_path=output_path,
+        title="Bakeoff Study",
+        composer="Test Composer",
+        primary_instrument="Cello",
+    )
+
+    assert normalized.metadata["omr_attempts"][0]["engine"] == "homr"
+    assert normalized.metadata["omr_attempts"][0]["candidate_path"].endswith(
+        "candidate_homr.musicxml"
+    )
+    assert "metadata" not in normalized.metadata["omr_attempts"][0]
+    json.dumps(normalized.metadata)
+
+
+def test_multi_piece_segment_merge_keeps_crops_sequential(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    raw_paths = [tmp_path / "piece_1.pdf", tmp_path / "piece_2.pdf"]
+    for raw_path in raw_paths:
+        raw_path.write_bytes(_valid_pdf_bytes())
+
+    def fake_generate(self, **kwargs):
+        title = kwargs["title"]
+        output_path = kwargs["output_path"]
+        measure_count = 2 if title == "The Troubadour" else 3
+        output_path.write_text(
+            _two_part_musicxml(title, measure_count),
+            encoding="utf-8",
+        )
+        return processing_engines_module.MusicXmlResult(
+            file_path=output_path,
+            engine_name="audiveris",
+            engine_version="test",
+            provenance="audiveris_omr",
+            confidence=0.82,
+            warnings=[],
+            metadata={"title": title, "part_count": 2, "measure_count": measure_count},
+        )
+
+    monkeypatch.setattr(processing_engines_module.MusicXmlEngine, "generate", fake_generate)
+
+    output_path = tmp_path / "candidate.musicxml"
+    result = processing_engines_module.MusicXmlEngine().generate_multi_piece_segments(
+        raw_pdf_paths=raw_paths,
+        output_path=output_path,
+        title="The Troubadour / Hoedown",
+        composer="Rick Mooney",
+        primary_instrument="Cello",
+        contained_piece_titles=["The Troubadour", "Hoedown"],
+        processing_settings={"allow_stub_musicxml": False},
+    )
+
+    root = ElementTree.parse(output_path).getroot()
+    parts = [child for child in list(root) if child.tag.rsplit("}", maxsplit=1)[-1] == "part"]
+    assert len(parts) == 2
+    for part in parts:
+        measures = [
+            child for child in list(part) if child.tag.rsplit("}", maxsplit=1)[-1] == "measure"
+        ]
+        assert len(measures) == 5
+
+    first_part_measures = [
+        child for child in list(parts[0]) if child.tag.rsplit("}", maxsplit=1)[-1] == "measure"
+    ]
+    assert [measure.attrib["number"] for measure in first_part_measures] == [
+        "1",
+        "2",
+        "1",
+        "2",
+        "3",
+    ]
+    boundary_measure = first_part_measures[2]
+    assert any(
+        child.tag.rsplit("}", maxsplit=1)[-1] == "print" and child.attrib.get("new-system") == "yes"
+        for child in list(boundary_measure)
+    )
+    assert any(
+        words.tag.rsplit("}", maxsplit=1)[-1] == "words" and words.text == "Hoedown"
+        for words in boundary_measure.iter()
+    )
+
+    page_layout = next(
+        node for node in root.iter() if node.tag.rsplit("}", maxsplit=1)[-1] == "page-layout"
+    )
+    page_height = next(
+        child
+        for child in list(page_layout)
+        if child.tag.rsplit("}", maxsplit=1)[-1] == "page-height"
+    )
+    page_width = next(
+        child
+        for child in list(page_layout)
+        if child.tag.rsplit("}", maxsplit=1)[-1] == "page-width"
+    )
+    assert int(page_height.text) > int(page_width.text)
+    assert all(
+        "width" not in node.attrib for node in root.iter() if _xml_local_name(node) == "measure"
+    )
+    assert all(
+        "default-x" not in node.attrib for node in root.iter() if _xml_local_name(node) == "note"
+    )
+    assert not any(_xml_local_name(node) == "system-layout" for node in root.iter())
+    assert not any(_xml_local_name(node) == "staff-layout" for node in root.iter())
+    assert result.provenance == "audiveris_omr_segment_merge"
+    assert result.metadata["multi_piece_segment_count"] == 2
+    assert result.metadata["primary_instrument"] == "Cello"
+    assert result.metadata["spacing_normalization_applied"] is True
+    assert result.metadata["spacing_normalization_profile"] == "balanced_omr"
+    assert result.metadata["spacing_normalization_changes"] == {
+        "measure_width_attributes_removed": 10,
+        "note_default_x_attributes_removed": 10,
+        "system_layout_elements_removed": 10,
+        "staff_layout_elements_removed": 10,
+    }
+
+    renormalized = processing_engines_module._normalize_result_metadata(
+        result,
+        output_path=tmp_path / "candidate.final.musicxml",
+        title="The Troubadour / Hoedown",
+        composer="Rick Mooney",
+        primary_instrument="Cello",
+        contained_piece_titles=["The Troubadour", "Hoedown"],
+        multi_piece_page=True,
+    )
+    assert renormalized.metadata["spacing_normalization_changes"] == {
+        "measure_width_attributes_removed": 10,
+        "note_default_x_attributes_removed": 10,
+        "system_layout_elements_removed": 10,
+        "staff_layout_elements_removed": 10,
+    }
+
+
+def test_multi_piece_segment_merge_exposes_homr_compare_candidate(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    raw_paths = [tmp_path / "piece_1.pdf", tmp_path / "piece_2.pdf"]
+    for raw_path in raw_paths:
+        raw_path.write_bytes(_valid_pdf_bytes())
+
+    def fake_generate(self, **kwargs):
+        del self
+        title = kwargs["title"]
+        output_path = kwargs["output_path"]
+        segment_index = 1 if "Troubadour" in title else 2
+        output_path.write_text(
+            _two_part_musicxml(title, segment_index + 1),
+            encoding="utf-8",
+        )
+        homr_path = output_path.with_name(f"{output_path.stem}_homr.musicxml")
+        homr_path.write_text(
+            _two_part_musicxml(f"{title} HOMR", segment_index + 2),
+            encoding="utf-8",
+        )
+        metadata = processing_engines_module._validate_musicxml(output_path)
+        metadata["omr_attempts"] = [
+            {
+                "engine": "audiveris",
+                "profile": "default",
+                "candidate_path": str(output_path),
+                "quality_score": 10.0 + segment_index,
+            },
+            {
+                "engine": "homr",
+                "profile": "experimental",
+                "candidate_path": str(homr_path),
+                "quality_score": 20.0 + segment_index,
+            },
+        ]
+        return processing_engines_module.MusicXmlResult(
+            file_path=output_path,
+            engine_name="audiveris",
+            engine_version="test",
+            provenance="audiveris_omr",
+            confidence=0.82,
+            warnings=[],
+            metadata=metadata,
+        )
+
+    monkeypatch.setattr(processing_engines_module.MusicXmlEngine, "generate", fake_generate)
+
+    output_path = tmp_path / "candidate.musicxml"
+    result = processing_engines_module.MusicXmlEngine().generate_multi_piece_segments(
+        raw_pdf_paths=raw_paths,
+        output_path=output_path,
+        title="The Troubadour / Hoedown",
+        composer="Rick Mooney",
+        primary_instrument="Cello",
+        contained_piece_titles=["The Troubadour", "Hoedown"],
+        processing_settings={"allow_stub_musicxml": False},
+    )
+
+    attempts = result.metadata["omr_attempts"]
+    assert len(attempts) == 1
+    homr_attempt = attempts[0]
+    assert homr_attempt["engine"] == "homr"
+    assert homr_attempt["profile"] == "experimental_segment_merge"
+    homr_merged_path = Path(homr_attempt["candidate_path"])
+    assert homr_merged_path.exists()
+    assert homr_merged_path.name == "candidate_homr_segment_merge.musicxml"
+    homr_metadata = processing_engines_module._validate_musicxml(homr_merged_path)
+    assert homr_metadata["measure_count"] == 7
+
+
+def test_spacing_normalization_metadata_is_added_to_render_diagnostics() -> None:
+    render_result = processing_engines_module.RenderResult(
+        file_path=Path("candidate_review.pdf"),
+        renderer_name="musescore",
+        renderer_version="test",
+        provenance="musescore_render",
+        diagnostics={"exit_code": 0},
+    )
+
+    score_processing_module._attach_spacing_normalization_diagnostics(
+        render_result,
+        {
+            "spacing_normalization_applied": True,
+            "spacing_normalization_profile": "balanced_omr",
+            "spacing_normalization_changes": {
+                "measure_width_attributes_removed": 2,
+                "note_default_x_attributes_removed": 4,
+            },
+        },
+    )
+
+    assert render_result.diagnostics["exit_code"] == 0
+    assert render_result.diagnostics["spacing_normalization_applied"] is True
+    assert render_result.diagnostics["spacing_normalization_profile"] == "balanced_omr"
+    assert (
+        render_result.diagnostics["spacing_normalization_changes"][
+            "measure_width_attributes_removed"
+        ]
+        == 2
+    )
+
+
 def test_musicxml_generation_uses_title_and_cello_instrument(tmp_path) -> None:
     raw_pdf_path = tmp_path / "raw.pdf"
     raw_pdf_path.write_bytes(_valid_pdf_bytes(page_count=1))
@@ -1146,9 +2230,10 @@ def test_musicxml_generation_uses_title_and_cello_instrument(tmp_path) -> None:
     assert "<work-title>The Troubadour / Hoedown</work-title>" in musicxml
     assert "<movement-title>The Troubadour</movement-title>" in musicxml
     assert "<movement-title>The Troubadour / Hoedown</movement-title>" not in musicxml
+    assert '<print new-system="yes" new-page="no" />' in musicxml
     assert (
         '<words default-x="500" font-weight="bold" font-size="16" '
-        'halign="center" justify="center">Hoedown</words>'
+        'halign="center" justify="center" valign="top">Hoedown</words>'
     ) in musicxml
     assert '<creator type="composer">Rick Mooney</creator>' in musicxml
     assert "Voice" not in musicxml
@@ -1157,6 +2242,63 @@ def test_musicxml_generation_uses_title_and_cello_instrument(tmp_path) -> None:
     assert result.metadata["primary_instrument"] == "Cello"
     assert result.metadata["title"] == "The Troubadour / Hoedown"
     assert result.metadata["movement_title"] == "The Troubadour"
+
+
+def test_homr_engine_collects_musicxml_output(tmp_path, monkeypatch) -> None:
+    raw_image = tmp_path / "source.png"
+    Image.new("RGB", (200, 120), "white").save(raw_image)
+    output_path = tmp_path / "candidate.musicxml"
+    fake_homr = tmp_path / "homr.exe"
+    fake_homr.write_text("fake homr", encoding="utf-8")
+    commands = []
+
+    class FakeHomrStatus:
+        discovered_path = str(fake_homr)
+        version = "HOMR test"
+
+    class FakeRunResult:
+        returncode = 0
+        stdout = "homr complete"
+        stderr = ""
+
+    def fake_homr_status(_settings):
+        return FakeHomrStatus()
+
+    def fake_run(command, **kwargs):
+        commands.append((command, kwargs))
+        output_dir = Path(kwargs["cwd"])
+        (output_dir / "source.musicxml").write_text(
+            processing_engines_module._build_stub_musicxml(
+                title="HOMR Study",
+                composer="Test Composer",
+                primary_instrument="Cello",
+                measure_count=2,
+            ),
+            encoding="utf-8",
+        )
+        return FakeRunResult()
+
+    monkeypatch.setattr(processing_engines_module, "homr_status", fake_homr_status)
+    monkeypatch.setattr(processing_engines_module.subprocess, "run", fake_run)
+
+    result = processing_engines_module.HomrMusicXmlEngine().generate(
+        raw_pdf_path=raw_image,
+        output_path=output_path,
+        title="HOMR Study",
+        composer="Test Composer",
+        primary_instrument="Cello",
+        processing_settings={
+            "homr_cli_path": str(fake_homr),
+            "omr_strategy": "homr_experimental",
+        },
+    )
+
+    assert result.engine_name == "homr"
+    assert result.provenance == "homr_omr"
+    assert output_path.exists()
+    assert commands[0][0][0] == str(fake_homr)
+    assert result.metadata["omr_strategy"] == "homr_experimental"
+    assert result.metadata["omr_attempts"][0]["engine"] == "homr"
 
 
 def test_musicxml_normalization_overrides_voice_with_book_instrument(tmp_path) -> None:
@@ -1276,6 +2418,205 @@ def test_raw_book_can_be_pushed_while_children_are_processing(api_client) -> Non
     assert child_push.status_code == 409
 
 
+def test_reimporting_same_book_resumes_existing_children(api_client) -> None:
+    client, _ = api_client
+    book_bytes = _valid_pdf_bytes(page_count=2)
+    source_hash = hashlib.sha256(book_bytes).hexdigest()
+    split_hints = [
+        {
+            "title": "Resume Fanfare",
+            "page_start": 1,
+            "page_end": 1,
+            "composer": "Debug Composer",
+            "primary_instrument": "Cello",
+            "confidence": 0.91,
+        },
+        {
+            "title": "Resume Skating",
+            "page_start": 2,
+            "page_end": 2,
+            "composer": "Debug Composer",
+            "primary_instrument": "Cello",
+            "confidence": 0.92,
+        },
+    ]
+
+    def import_book():
+        return client.post(
+            "/api/v1/pieces/import",
+            data={
+                "title": "Resume Book",
+                "composer": "Debug Composer",
+                "catalog_mode": "book",
+                "split_hints": json.dumps(split_hints),
+            },
+            files={
+                "file": (
+                    "resume_book.pdf",
+                    book_bytes,
+                    "application/pdf",
+                )
+            },
+        )
+
+    first_import = import_book()
+    assert first_import.status_code == 200
+    first_book = first_import.json()
+
+    second_import = import_book()
+    assert second_import.status_code == 200
+    second_book = second_import.json()
+
+    assert second_book["id"] == first_book["id"]
+    assert second_book["source_content_sha256"] == source_hash
+    assert second_book["attempt_status"] == "canonical"
+
+    pieces = client.get("/api/v1/pieces/?include_attempts=true").json()
+    matching_books = [
+        piece
+        for piece in pieces
+        if piece["piece_kind"] == "book" and piece["source_content_sha256"] == source_hash
+    ]
+    assert [book["id"] for book in matching_books] == [first_book["id"]]
+
+    children = [piece for piece in pieces if piece["source_book_id"] == first_book["id"]]
+    assert sorted(piece["title"] for piece in children) == [
+        "Resume Fanfare",
+        "Resume Skating",
+    ]
+    assert all(piece["logical_piece_key"] for piece in children)
+
+    jobs = client.get("/api/v1/jobs/").json()
+    book_import_jobs = [
+        job
+        for job in jobs
+        if job["piece_id"] == first_book["id"] and job["job_type"] == "book_import"
+    ]
+    assert len(book_import_jobs) == 1
+
+    split_reviews = [
+        item
+        for item in client.get("/api/v1/review/").json()
+        if item["candidate_data"].get("source_book_id") == first_book["id"]
+        and item["candidate_data"].get("processing_stage") == "split_review_needed"
+    ]
+    assert len(split_reviews) == 2
+
+
+def test_reimporting_same_standalone_pdf_reuses_existing_piece(api_client) -> None:
+    client, _ = api_client
+    pdf_bytes = _valid_pdf_bytes()
+    source_hash = hashlib.sha256(pdf_bytes).hexdigest()
+
+    def import_piece():
+        return client.post(
+            "/api/v1/pieces/import",
+            data={"title": "Standalone Duplicate Guard"},
+            files={
+                "file": (
+                    "standalone_duplicate_guard.pdf",
+                    pdf_bytes,
+                    "application/pdf",
+                )
+            },
+        )
+
+    first_import = import_piece()
+    assert first_import.status_code == 200
+    second_import = import_piece()
+    assert second_import.status_code == 200
+
+    first_piece = first_import.json()
+    second_piece = second_import.json()
+    assert second_piece["id"] == first_piece["id"]
+
+    pieces = client.get("/api/v1/pieces/?include_attempts=true").json()
+    matching_pieces = [
+        piece
+        for piece in pieces
+        if piece["piece_kind"] == "piece" and piece["source_content_sha256"] == source_hash
+    ]
+    assert [piece["id"] for piece in matching_pieces] == [first_piece["id"]]
+
+
+def test_debug_duplicate_cleanup_archives_attempts_without_deleting_access(api_client) -> None:
+    client, _ = api_client
+    created = []
+    for suffix in ("a", "b"):
+        piece = client.post(
+            "/api/v1/pieces/",
+            json={
+                "title": "Duplicate Jig",
+                "composer": "Debug Composer",
+                "file_name": f"duplicate_jig_{suffix}.pdf",
+            },
+        ).json()
+        patch = client.patch(
+            f"/api/v1/pieces/{piece['id']}",
+            json={
+                "primary_instrument": "Cello",
+                "book_or_collection": "Position Pieces for Cello, Book 1",
+                "source_page_start": 46,
+                "source_page_end": 46,
+                "catalog_metadata": {
+                    "title": "Duplicate Jig",
+                    "composer": "Debug Composer",
+                    "primary_instrument": "Cello",
+                    "book_or_collection": "Position Pieces for Cello, Book 1",
+                    "source_page_start": 46,
+                    "source_page_end": 46,
+                },
+            },
+        )
+        assert patch.status_code == 200
+        review = client.post(
+            "/api/v1/review/",
+            json={
+                "piece_id": piece["id"],
+                "item_type": "score_candidate",
+                "title": "Review book split for Duplicate Jig",
+                "candidate_data": {
+                    "piece_title": "Duplicate Jig",
+                    "source_book_id": "legacy-position-pieces",
+                    "source_page_start": 46,
+                    "source_page_end": 46,
+                    "processing_stage": "split_review_needed",
+                    "catalog_metadata": {
+                        "title": "Duplicate Jig",
+                        "composer": "Debug Composer",
+                        "primary_instrument": "Cello",
+                        "book_or_collection": "Position Pieces for Cello, Book 1",
+                        "source_page_start": 46,
+                        "source_page_end": 46,
+                    },
+                },
+            },
+        )
+        assert review.status_code == 200
+        created.append(piece["id"])
+
+    duplicate_report = client.get("/api/v1/debug/duplicates").json()
+    assert duplicate_report["duplicate_group_count"] == 1
+    assert duplicate_report["duplicate_piece_count"] == 1
+
+    cleanup = client.post("/api/v1/debug/duplicates/cleanup")
+    assert cleanup.status_code == 200
+    cleanup_payload = cleanup.json()
+    assert cleanup_payload["archived_piece_count"] == 1
+    assert cleanup_payload["superseded_review_item_count"] == 1
+
+    visible_piece_ids = {piece["id"] for piece in client.get("/api/v1/pieces/").json()}
+    assert len(visible_piece_ids & set(created)) == 1
+
+    all_piece_ids = {
+        piece["id"] for piece in client.get("/api/v1/pieces/?include_attempts=true").json()
+    }
+    assert set(created).issubset(all_piece_ids)
+
+    review_queue_piece_ids = {item["piece_id"] for item in client.get("/api/v1/review/").json()}
+    assert len(review_queue_piece_ids & set(created)) == 1
+
+
 def test_async_dispatcher_processes_approved_book_split(api_client) -> None:
     client, _ = api_client
     split_hints = [
@@ -1353,6 +2694,70 @@ def test_async_dispatcher_processes_approved_book_split(api_client) -> None:
     assert summary["queued_count"] == 0
     assert summary["running_count"] == 0
     assert summary["succeeded_count"] >= 1
+
+
+def test_async_dispatcher_honors_configured_concurrency_limit(
+    api_client,
+    monkeypatch,
+) -> None:
+    client, _ = api_client
+    settings_response = client.patch(
+        "/api/v1/processing/settings",
+        json={"max_concurrent_jobs": 2},
+    )
+    assert settings_response.status_code == 200
+    for index in range(3):
+        piece_response = client.post(
+            "/api/v1/pieces/",
+            json={
+                "title": f"Concurrent Piece {index + 1}",
+                "file_name": f"concurrent_piece_{index + 1}.pdf",
+            },
+        )
+        assert piece_response.status_code == 200
+        job_response = client.post(
+            "/api/v1/jobs/trigger",
+            json={
+                "job_type": "score_processing",
+                "piece_id": piece_response.json()["id"],
+            },
+        )
+        assert job_response.status_code == 200
+
+    async def exercise_dispatcher() -> list[str]:
+        started_job_ids: list[str] = []
+        release = asyncio.Event()
+
+        async def fake_process_claimed_job(self, job_id: str) -> None:
+            started_job_ids.append(job_id)
+            await release.wait()
+
+        monkeypatch.setattr(
+            JobDispatcher,
+            "_process_claimed_job",
+            fake_process_claimed_job,
+        )
+        dispatcher = JobDispatcher(poll_interval_seconds=0, stale_after_seconds=1)
+        try:
+            assert await dispatcher.start_available_jobs() == 2
+            await asyncio.sleep(0)
+            assert len(started_job_ids) == 2
+            assert len(dispatcher._running_tasks) == 2
+            return started_job_ids
+        finally:
+            release.set()
+            if dispatcher._running_tasks:
+                await asyncio.gather(
+                    *dispatcher._running_tasks,
+                    return_exceptions=True,
+                )
+
+    started_job_ids = asyncio.run(exercise_dispatcher())
+    assert len(started_job_ids) == 2
+
+    jobs = client.get("/api/v1/jobs/").json()
+    assert sum(1 for job in jobs if job["status"] == "running") == 2
+    assert sum(1 for job in jobs if job["status"] == "queued") == 1
 
 
 def test_bulk_approve_book_split_reviews_is_scoped_to_source_book(api_client) -> None:
@@ -1486,6 +2891,74 @@ def test_bulk_approve_book_candidate_reviews_marks_pieces_ready(api_client) -> N
     assert pieces[children[1]["id"]]["library_status"] == "ready"
 
 
+def test_score_candidate_approval_keeps_authoritative_catalog_metadata(api_client) -> None:
+    client, _ = api_client
+    piece = client.post(
+        "/api/v1/pieces/",
+        json={"title": "Landler", "composer": "Rick Mooney", "file_name": "landler.pdf"},
+    ).json()
+    update_response = client.patch(
+        f"/api/v1/pieces/{piece['id']}",
+        json={
+            "title": "Landler",
+            "composer": "Rick Mooney",
+            "primary_instrument": "Cello",
+            "book_or_collection": "Position Pieces for Cello, Book 1",
+            "source_page_start": 57,
+            "source_page_end": 57,
+            "catalog_metadata": {
+                "title": "Landler",
+                "composer": "Rick Mooney",
+                "primary_instrument": "Cello",
+                "book_or_collection": "Position Pieces for Cello, Book 1",
+                "source_page_start": 57,
+                "source_page_end": 57,
+            },
+        },
+    )
+    assert update_response.status_code == 200
+
+    review = client.post(
+        "/api/v1/review/",
+        json={
+            "piece_id": piece["id"],
+            "item_type": "score_candidate",
+            "title": "Review reconstructed score for Landler",
+            "candidate_data": {
+                "piece_title": "Landler",
+                "processing_stage": "candidate_review_needed",
+                "catalog_suggestions": [
+                    {
+                        "source": "ocr_text",
+                        "confidence": 0.78,
+                        "fields": {
+                            "title": "Landler",
+                            "composer": "OOo Ee",
+                            "catalog_number": "D.C. al Fine",
+                            "publisher": "a ©. ~~ 4 Vv",
+                        },
+                    }
+                ],
+            },
+        },
+    )
+    assert review.status_code == 200
+
+    approval = client.post(
+        f"/api/v1/review/{review.json()['id']}",
+        json={"action": "approve"},
+    )
+    assert approval.status_code == 200
+
+    detail = client.get(f"/api/v1/pieces/{piece['id']}").json()
+    assert detail["composer"] == "Rick Mooney"
+    assert detail["catalog_metadata"]["composer"] == "Rick Mooney"
+    assert detail["catalog_metadata"]["primary_instrument"] == "Cello"
+    assert detail["catalog_metadata"]["book_or_collection"] == "Position Pieces for Cello, Book 1"
+    assert detail["catalog_metadata"].get("catalog_number") != "D.C. al Fine"
+    assert detail["catalog_metadata"].get("publisher") != "a ©. ~~ 4 Vv"
+
+
 def test_async_dispatcher_retries_then_fails_visibly(api_client) -> None:
     client, storage_path = api_client
     split_hints = [
@@ -1591,6 +3064,249 @@ def test_async_dispatcher_requeues_stale_running_jobs(api_client) -> None:
     assert requeued_job["result_data"]["requeued_after_stale_running"] is True
 
 
+def test_cancel_queued_job_prevents_dispatch_and_updates_summary(api_client) -> None:
+    client, _ = api_client
+    job_response = client.post(
+        "/api/v1/jobs/trigger",
+        json={"job_type": "score_processing", "piece_id": "missing-piece"},
+    )
+    assert job_response.status_code == 200
+    job_id = job_response.json()["id"]
+
+    cancel_response = client.post(f"/api/v1/jobs/{job_id}/cancel")
+    assert cancel_response.status_code == 200
+    canceled = cancel_response.json()
+    assert canceled["status"] == "canceled"
+    assert canceled["progress"] == 100.0
+    assert canceled["error_message"] == "Canceled by parent debug tools."
+
+    dispatcher = JobDispatcher(poll_interval_seconds=0, stale_after_seconds=1)
+    assert asyncio.run(dispatcher.run_once()) is False
+
+    summary = client.get("/api/v1/jobs/summary").json()
+    assert summary["queued_count"] == 0
+    assert summary["running_count"] == 0
+    assert summary["canceled_count"] == 1
+
+
+def test_cancel_completed_job_is_idempotent(api_client) -> None:
+    client, _ = api_client
+    job = client.post(
+        "/api/v1/jobs/trigger",
+        json={"job_type": "score_processing"},
+    ).json()
+    update_response = client.patch(
+        f"/api/v1/jobs/{job['id']}",
+        json={"status": "succeeded", "progress": 100.0},
+    )
+    assert update_response.status_code == 200
+
+    cancel_response = client.post(f"/api/v1/jobs/{job['id']}/cancel")
+    assert cancel_response.status_code == 200
+    assert cancel_response.json()["status"] == "succeeded"
+
+
+def test_job_list_includes_linked_piece_display_fields(api_client) -> None:
+    client, _ = api_client
+    piece_response = client.post(
+        "/api/v1/pieces/",
+        json={
+            "title": "Landler",
+            "composer": "Rick Mooney",
+            "file_name": "landler.pdf",
+        },
+    )
+    assert piece_response.status_code == 200
+    piece = piece_response.json()
+
+    job_response = client.post(
+        "/api/v1/jobs/trigger",
+        json={"job_type": "score_processing", "piece_id": piece["id"]},
+    )
+    assert job_response.status_code == 200
+    job = job_response.json()
+    assert job["piece_title"] == "Landler"
+    assert job["piece_composer"] == "Rick Mooney"
+    assert job["piece_status"] == "imported"
+
+    listed_job = next(
+        item for item in client.get("/api/v1/jobs/").json() if item["id"] == job["id"]
+    )
+    assert listed_job["piece_title"] == "Landler"
+    assert listed_job["piece_composer"] == "Rick Mooney"
+    assert listed_job["piece_status"] == "imported"
+
+
+def test_retry_failed_score_processing_job_requeues_same_piece(api_client) -> None:
+    client, _ = api_client
+    piece_response = client.post(
+        "/api/v1/pieces/",
+        json={
+            "title": "Retry Etude",
+            "composer": "Debug Composer",
+            "file_name": "retry_etude.pdf",
+        },
+    )
+    assert piece_response.status_code == 200
+    piece = piece_response.json()
+
+    job = client.post(
+        "/api/v1/jobs/trigger",
+        json={"job_type": "score_processing", "piece_id": piece["id"]},
+    ).json()
+    failed_response = client.patch(
+        f"/api/v1/jobs/{job['id']}",
+        json={
+            "status": "failed",
+            "progress": 100,
+            "error_message": "MuseScore Studio failed without returning diagnostic output.",
+            "result_data": {"retry_count": 2, "last_error": "MuseScore failed"},
+        },
+    )
+    assert failed_response.status_code == 200
+
+    retry_response = client.post(f"/api/v1/jobs/{job['id']}/retry")
+    assert retry_response.status_code == 200
+    retried = retry_response.json()
+    assert retried["status"] == "queued"
+    assert retried["progress"] == 0
+    assert retried["error_message"] is None
+    assert retried["piece_title"] == "Retry Etude"
+    assert retried["result_data"]["retry_count"] == 0
+    assert retried["result_data"]["manual_retry_count"] == 1
+    assert retried["result_data"]["previous_retry_error"] == (
+        "MuseScore Studio failed without returning diagnostic output."
+    )
+    assert "last_manual_retry_at" in retried["result_data"]
+    assert "last_error" not in retried["result_data"]
+
+
+def test_retry_rejects_non_failed_or_non_score_jobs(api_client) -> None:
+    client, _ = api_client
+    queued_job = client.post(
+        "/api/v1/jobs/trigger",
+        json={"job_type": "score_processing"},
+    ).json()
+    queued_retry = client.post(f"/api/v1/jobs/{queued_job['id']}/retry")
+    assert queued_retry.status_code == 409
+
+    other_job = client.post(
+        "/api/v1/jobs/trigger",
+        json={"job_type": "book_import"},
+    ).json()
+    failed_other = client.patch(
+        f"/api/v1/jobs/{other_job['id']}",
+        json={"status": "failed", "progress": 100},
+    )
+    assert failed_other.status_code == 200
+    other_retry = client.post(f"/api/v1/jobs/{other_job['id']}/retry")
+    assert other_retry.status_code == 409
+
+
+def test_debug_clear_workflow_preserves_settings_and_clears_generated_data(
+    api_client,
+) -> None:
+    client, storage_path = api_client
+    settings_file = storage_path / "processing_settings.json"
+    settings_file.parent.mkdir(parents=True, exist_ok=True)
+    settings_file.write_text('{"musescore_cli_path":"C:/MuseScore/MuseScore4.exe"}')
+    generated_piece = storage_path / "pieces" / "piece-1" / "candidate.pdf"
+    generated_state = storage_path / "piece_state" / "piece-1.json"
+    generated_piece.parent.mkdir(parents=True, exist_ok=True)
+    generated_state.parent.mkdir(parents=True, exist_ok=True)
+    generated_piece.write_bytes(b"pdf")
+    generated_state.write_text("{}")
+
+    import_response = client.post(
+        "/api/v1/pieces/import",
+        data={"title": "Debug Clear Piece"},
+        files={
+            "file": (
+                "debug_clear.pdf",
+                _valid_pdf_bytes(page_count=1),
+                "application/pdf",
+            )
+        },
+    )
+    assert import_response.status_code == 200
+    assert client.get("/api/v1/pieces/").json()
+    assert client.get("/api/v1/jobs/").json()
+    preserved_settings = settings_file.read_text()
+
+    clear_response = client.post("/api/v1/debug/clear-workflow")
+    assert clear_response.status_code == 200
+    payload = clear_response.json()
+    assert payload["status"] == "cleared"
+    assert "backup_dir" in payload
+
+    assert client.get("/api/v1/pieces/").json() == []
+    assert client.get("/api/v1/review/").json() == []
+    assert client.get("/api/v1/jobs/").json() == []
+    assert settings_file.read_text() == preserved_settings
+    assert not generated_piece.exists()
+    assert not generated_state.exists()
+
+
+def test_multi_piece_review_warns_when_rendered_staff_lines_drop(monkeypatch, tmp_path) -> None:
+    raw_pdf = tmp_path / "raw.pdf"
+    rendered_pdf = tmp_path / "rendered.pdf"
+    raw_pdf.write_bytes(b"%PDF raw")
+    rendered_pdf.write_bytes(b"%PDF rendered")
+
+    def fake_line_count(path):
+        return 44 if path == raw_pdf else 32
+
+    monkeypatch.setattr(score_processing_module, "_pdf_horizontal_line_count", fake_line_count)
+
+    warnings = score_processing_module._score_candidate_review_warnings(
+        raw_pdf_path=raw_pdf,
+        raw_page_count=1,
+        render_result=processing_engines_module.RenderResult(
+            file_path=rendered_pdf,
+            renderer_name="musescore",
+            renderer_version="test",
+            provenance="musescore_render",
+            validation_status="valid",
+            validation_error=None,
+            file_size_bytes=1000,
+            page_count=1,
+        ),
+        musicxml_provenance="audiveris_omr",
+        contained_piece_titles=["The Troubadour", "Hoedown"],
+        multi_piece_page=True,
+    )
+
+    assert any("fewer detected staff-line groups" in warning for warning in warnings)
+
+
+def test_multi_piece_review_pdf_title_overlay_centers_second_title(tmp_path) -> None:
+    rendered_pdf = tmp_path / "rendered.pdf"
+    rendered_pdf.write_bytes(_valid_pdf_bytes())
+    render_result = processing_engines_module.RenderResult(
+        file_path=rendered_pdf,
+        renderer_name="musescore",
+        renderer_version="test",
+        provenance="musescore_render",
+        validation_status="valid",
+        validation_error=None,
+        file_size_bytes=rendered_pdf.stat().st_size,
+        page_count=1,
+    )
+
+    score_processing_module._repair_multi_piece_review_pdf_titles(
+        render_result,
+        contained_piece_titles=["The Troubadour", "Hoedown"],
+        multi_piece_page=True,
+    )
+
+    assert render_result.validation_status == "valid"
+    assert render_result.page_count == 1
+    assert render_result.diagnostics["multi_piece_title_overlay_applied"] is True
+    assert render_result.diagnostics["multi_piece_title_overlay_titles"] == ["Hoedown"]
+    text = PdfReader(str(rendered_pdf)).pages[0].extract_text()
+    assert "Hoedown" in text
+
+
 def test_review_reprocess_records_unavailable_local_llm(api_client) -> None:
     client, _ = api_client
 
@@ -1675,7 +3391,7 @@ def test_score_reprocess_is_wired_as_coming_soon(api_client) -> None:
     assert refreshed_item["candidate_data"]["reprocess_history"][0]["reprocess_type"] == "score"
 
 
-def test_rejected_review_archives_piece_and_leaves_pending_queue(api_client) -> None:
+def test_rejected_review_keeps_original_pushable(api_client) -> None:
     client, _ = api_client
 
     import_response = client.post(
@@ -1710,14 +3426,37 @@ def test_rejected_review_archives_piece_and_leaves_pending_queue(api_client) -> 
     assert resolved_item["status"] == "rejected"
 
     piece_detail = client.get(f"/api/v1/pieces/{piece_id}").json()
-    assert piece_detail["status"] == "archived"
-    assert piece_detail["library_status"] == "archived"
+    assert piece_detail["status"] == "needs_edits"
+    assert piece_detail["library_status"] == "needsEdits"
+    assert any(
+        version["score_version_role"] == "original_pdf"
+        for version in piece_detail["score_versions"]
+    )
+    assert any(
+        version["score_version_role"] == "canonical_musicxml"
+        and version["version_type"] == "rejected"
+        for version in piece_detail["score_versions"]
+    )
 
     push_response = client.post(
         f"/api/v1/pieces/{piece_id}/push",
         json={"profile_ids": ["student-alyse"]},
     )
     assert push_response.status_code == 409
+
+    original_push_response = client.post(
+        f"/api/v1/pieces/{piece_id}/push",
+        json={"profile_ids": ["student-alyse"], "mode": "original_pdf"},
+    )
+    assert original_push_response.status_code == 200
+    pushed_piece = original_push_response.json()
+    assert pushed_piece["status"] == "needs_edits"
+    assert pushed_piece["visible_to_profile_ids"] == ["student-alyse"]
+
+    assigned_response = client.get("/api/v1/pieces/assigned/student-alyse")
+    assert assigned_response.status_code == 200
+    assigned_ids = [piece["id"] for piece in assigned_response.json()]
+    assert piece_id in assigned_ids
 
 
 def test_processing_settings_and_device_worker_registration(api_client) -> None:
@@ -1731,6 +3470,9 @@ def test_processing_settings_and_device_worker_registration(api_client) -> None:
     assert settings_payload["local_llm_provider"] is None
     assert settings_payload["cloud_enabled"] is False
     assert settings_payload["cloud_api_key_configured"] is False
+    assert settings_payload["max_concurrent_jobs"] == 2
+    assert settings_payload["ocr_language"] == "eng"
+    assert "homr_cli_path" in settings_payload
 
     missing_audiveris = storage_path / "missing-audiveris.exe"
     validation_response = client.post(
@@ -1742,6 +3484,20 @@ def test_processing_settings_and_device_worker_registration(api_client) -> None:
     assert validation["valid"] is False
     assert validation["audiveris"]["configured"] is True
     assert validation["audiveris"]["available"] is False
+    assert validation["homr"]["name"] == "HOMR"
+
+    missing_homr_response = client.post(
+        "/api/v1/processing/settings/validate",
+        json={
+            "homr_cli_path": str(storage_path / "missing-homr.exe"),
+            "omr_strategy": "homr_experimental",
+        },
+    )
+    assert missing_homr_response.status_code == 200
+    missing_homr = missing_homr_response.json()
+    assert missing_homr["valid"] is False
+    assert missing_homr["homr"]["available"] is False
+    assert any("HOMR" in warning for warning in missing_homr["warnings"])
 
     update_response = client.patch(
         "/api/v1/processing/settings",
@@ -1754,6 +3510,7 @@ def test_processing_settings_and_device_worker_registration(api_client) -> None:
             "cloud_provider": "openai",
             "cloud_model": "gpt-test",
             "cloud_api_key": "test-secret",
+            "max_concurrent_jobs": 4,
         },
     )
     assert update_response.status_code == 200
@@ -1766,6 +3523,13 @@ def test_processing_settings_and_device_worker_registration(api_client) -> None:
     assert updated["cloud_model"] == "gpt-test"
     assert updated["cloud_api_key_configured"] is True
     assert "cloud_api_key" not in updated
+    assert updated["max_concurrent_jobs"] == 4
+
+    invalid_concurrency_response = client.patch(
+        "/api/v1/processing/settings",
+        json={"max_concurrent_jobs": 5},
+    )
+    assert invalid_concurrency_response.status_code == 422
 
     register_response = client.post(
         "/api/v1/processing/device-workers/register",
@@ -1791,6 +3555,64 @@ def test_processing_settings_and_device_worker_registration(api_client) -> None:
     assert "not implemented yet" in capabilities["local_llm"]["error"]
     assert capabilities["cloud_llm"]["configured"] is True
     assert capabilities["cloud_llm"]["available"] is True
+
+
+def test_processing_settings_auto_discovers_standard_windows_tool_paths(
+    tmp_path, monkeypatch
+) -> None:
+    program_files = tmp_path / "Program Files"
+    audiveris = program_files / "Audiveris" / "Audiveris.exe"
+    musescore = program_files / "MuseScore 4" / "bin" / "MuseScore4.exe"
+    tesseract = program_files / "Tesseract-OCR" / "tesseract.exe"
+    for executable in (audiveris, musescore, tesseract):
+        executable.parent.mkdir(parents=True, exist_ok=True)
+        executable.write_text("fake executable", encoding="utf-8")
+
+    monkeypatch.setenv("ProgramFiles", str(program_files))
+    monkeypatch.delenv("ProgramFiles(x86)", raising=False)
+    monkeypatch.setattr(processing_settings_module.settings, "audiveris_cli_path", None)
+    monkeypatch.setattr(processing_settings_module.settings, "musescore_cli_path", None)
+    monkeypatch.setattr(processing_settings_module.settings, "ocr_cli_path", None)
+
+    store = processing_settings_module.ProcessingSettingsStore(
+        settings_path=tmp_path / "processing_settings.json"
+    )
+    settings_payload = store.load_response().model_dump()
+    validation = store.validate()
+
+    assert settings_payload["audiveris_cli_path"] == str(audiveris)
+    assert settings_payload["musescore_cli_path"] == str(musescore)
+    assert settings_payload["ocr_cli_path"] == str(tesseract)
+    assert validation.audiveris.available is True
+    assert validation.musescore.available is True
+    assert validation.ocr.available is True
+    assert not any("Audiveris is not configured" in item for item in validation.warnings)
+    assert not any("MuseScore is not configured" in item for item in validation.warnings)
+    assert not any("Tesseract OCR is not configured" in item for item in validation.warnings)
+
+    stale_settings_path = tmp_path / "stale_processing_settings.json"
+    stale_settings_path.write_text(
+        json.dumps(
+            {
+                "audiveris_cli_path": str(tmp_path / "old" / "Audiveris.exe"),
+                "musescore_cli_path": str(tmp_path / "old" / "MuseScore4.exe"),
+                "ocr_cli_path": str(tmp_path / "old" / "tesseract.exe"),
+            }
+        ),
+        encoding="utf-8",
+    )
+    stale_store = processing_settings_module.ProcessingSettingsStore(
+        settings_path=stale_settings_path
+    )
+    stale_payload = stale_store.load_response().model_dump()
+    stale_validation = stale_store.validate()
+
+    assert stale_payload["audiveris_cli_path"] == str(audiveris)
+    assert stale_payload["musescore_cli_path"] == str(musescore)
+    assert stale_payload["ocr_cli_path"] == str(tesseract)
+    assert stale_validation.audiveris.available is True
+    assert stale_validation.musescore.available is True
+    assert stale_validation.ocr.available is True
 
 
 def test_pairing_code_claim_flow(api_client) -> None:
@@ -1839,7 +3661,7 @@ def test_pairing_code_claim_flow(api_client) -> None:
 def test_server_setup_page_hosts_pairing_qr(api_client) -> None:
     client, _ = api_client
 
-    setup_response = client.get("http://localhost:8000/setup")
+    setup_response = client.get("http://localhost:8795/setup")
     assert setup_response.status_code == 200
     assert "Pair an AZMusic device" in setup_response.text
     assert "azmusic://pair?" in setup_response.text
@@ -1855,29 +3677,38 @@ def test_local_setup_page_pairs_with_detected_lan_url(api_client, monkeypatch) -
         lambda: ["192.168.50.25", "10.0.0.8"],
     )
 
-    setup_response = client.get("http://localhost:8000/setup")
+    setup_response = client.get("http://localhost:8795/setup")
 
     assert setup_response.status_code == 200
-    assert "server_url=http%3A%2F%2F192.168.50.25%3A8000" in setup_response.text
-    assert "alt_server_url=http%3A%2F%2F10.0.0.8%3A8000" in setup_response.text
+    assert "server_url=http%3A%2F%2F192.168.50.25%3A8795" in setup_response.text
+    assert "alt_server_url=http%3A%2F%2F10.0.0.8%3A8795" in setup_response.text
     assert "Alternate URLs if pairing times out" in setup_response.text
     assert "Opened from:" in setup_response.text
 
 
+def test_detected_server_urls_prefer_lan_over_windows_sandbox_addresses() -> None:
+    addresses = server_urls_module._select_reachable_ipv4_candidates(
+        ["172.31.2.102", "192.168.50.25", "10.0.0.8"]
+    )
+
+    assert [str(address) for address in addresses] == [
+        "192.168.50.25",
+        "10.0.0.8",
+        "172.31.2.102",
+    ]
+
+
 def test_public_server_url_overrides_pairing_payload(api_client, monkeypatch) -> None:
     client, _ = api_client
-    monkeypatch.setattr(settings, "public_server_url", "http://music-server.local:8000/")
+    monkeypatch.setattr(settings, "public_server_url", "http://music-server.local:8795/")
 
     code_response = client.get("/api/v1/pairing/code")
 
     assert code_response.status_code == 200
     code_payload = code_response.json()
-    assert code_payload["server_url"] == "http://music-server.local:8000"
+    assert code_payload["server_url"] == "http://music-server.local:8795"
     assert code_payload["alternate_server_urls"] == []
-    assert (
-        "server_url=http%3A%2F%2Fmusic-server.local%3A8000"
-        in code_payload["pairing_uri"]
-    )
+    assert "server_url=http%3A%2F%2Fmusic-server.local%3A8795" in code_payload["pairing_uri"]
 
 
 def test_student_device_pairing_code_includes_profile_assignment(api_client) -> None:
@@ -1952,6 +3783,182 @@ def test_protected_routes_can_require_qr_paired_device_tokens(
         headers={"X-AZMusic-Device-Token": token},
     )
     assert paired_response.status_code == 200
+
+
+def test_protected_processing_settings_require_parent_pairing_token(
+    api_client,
+    monkeypatch,
+) -> None:
+    client, _ = api_client
+    monkeypatch.setattr(settings, "require_device_auth", True)
+
+    unpaired_response = client.get("/api/v1/processing/settings")
+    assert unpaired_response.status_code == 401
+
+    code_response = client.get(
+        "/api/v1/pairing/code",
+        params={
+            "purpose": "parent_setup",
+            "profile_id": "parent-main",
+            "profile_name": "Parent",
+            "role": "parent",
+        },
+    )
+    assert code_response.status_code == 200
+    claim_response = client.post(
+        "/api/v1/pairing/claim",
+        json={
+            "pairing_code": code_response.json()["pairing_code"],
+            "device_id": "parent-surface",
+            "device_name": "Parent Surface",
+            "platform": "windows",
+        },
+    )
+    assert claim_response.status_code == 200
+    token = claim_response.json()["device_token"]
+    auth_headers = {"X-AZMusic-Device-Token": token}
+
+    settings_response = client.get(
+        "/api/v1/processing/settings",
+        headers=auth_headers,
+    )
+    assert settings_response.status_code == 200
+    assert settings_response.json()["processing_mode"] == "server_only"
+
+    validation_response = client.post(
+        "/api/v1/processing/settings/validate",
+        json={},
+        headers=auth_headers,
+    )
+    assert validation_response.status_code == 200
+
+    capabilities_response = client.get(
+        "/api/v1/processing/capabilities",
+        headers=auth_headers,
+    )
+    assert capabilities_response.status_code == 200
+
+    update_response = client.patch(
+        "/api/v1/processing/settings",
+        json={"processing_mode": "server_plus_device_workers"},
+        headers=auth_headers,
+    )
+    assert update_response.status_code == 200
+    assert update_response.json()["processing_mode"] == "server_plus_device_workers"
+
+
+def test_release_install_pair_import_review_push_smoke_loop(
+    api_client,
+    monkeypatch,
+) -> None:
+    client, _ = api_client
+    monkeypatch.setattr(settings, "require_device_auth", True)
+
+    parent_code_response = client.get(
+        "/api/v1/pairing/code",
+        params={
+            "purpose": "parent_setup",
+            "profile_id": "parent-main",
+            "profile_name": "Parent",
+            "role": "parent",
+        },
+    )
+    assert parent_code_response.status_code == 200
+    parent_claim_response = client.post(
+        "/api/v1/pairing/claim",
+        json={
+            "pairing_code": parent_code_response.json()["pairing_code"],
+            "device_id": "parent-installer-smoke",
+            "device_name": "Parent Installer Smoke",
+            "platform": "windows",
+        },
+    )
+    assert parent_claim_response.status_code == 200
+    parent_headers = {"X-AZMusic-Device-Token": parent_claim_response.json()["device_token"]}
+
+    assert (
+        client.get(
+            "/api/v1/processing/settings",
+            headers=parent_headers,
+        ).status_code
+        == 200
+    )
+
+    student_profile_id = "student-kai"
+    student_code_response = client.get(
+        "/api/v1/pairing/code",
+        params={
+            "purpose": "student_device",
+            "profile_id": student_profile_id,
+            "profile_name": "Kai",
+            "role": "student",
+        },
+    )
+    assert student_code_response.status_code == 200
+    student_claim_response = client.post(
+        "/api/v1/pairing/claim",
+        json={
+            "pairing_code": student_code_response.json()["pairing_code"],
+            "device_id": "kai-android-smoke",
+            "device_name": "Kai Android Smoke",
+            "platform": "android",
+        },
+    )
+    assert student_claim_response.status_code == 200
+    student_headers = {"X-AZMusic-Device-Token": student_claim_response.json()["device_token"]}
+
+    import_response = client.post(
+        "/api/v1/pieces/import",
+        data={
+            "title": "Smoke Etude",
+            "composer": "AZMusic",
+            "primary_instrument": "Cello",
+        },
+        files={
+            "file": (
+                "smoke_etude.pdf",
+                b"%PDF-1.4\n%AZMusic release smoke pdf\n",
+                "application/pdf",
+            )
+        },
+        headers=parent_headers,
+    )
+    assert import_response.status_code == 200
+    piece_id = import_response.json()["id"]
+
+    jobs_response = client.get("/api/v1/jobs/", headers=parent_headers)
+    assert jobs_response.status_code == 200
+    job = next(job for job in jobs_response.json() if job["piece_id"] == piece_id)
+    assert job["status"] == "succeeded"
+
+    review_response = client.get("/api/v1/review/", headers=parent_headers)
+    assert review_response.status_code == 200
+    review_item = next(item for item in review_response.json() if item["piece_id"] == piece_id)
+    assert review_item["item_type"] == "score_candidate"
+
+    approve_response = client.post(
+        f"/api/v1/review/{review_item['id']}",
+        json={"action": "approve"},
+        headers=parent_headers,
+    )
+    assert approve_response.status_code == 200
+
+    push_response = client.post(
+        f"/api/v1/pieces/{piece_id}/push",
+        json={"profile_ids": [student_profile_id]},
+        headers=parent_headers,
+    )
+    assert push_response.status_code == 200
+    assert push_response.json()["visible_to_profile_ids"] == [student_profile_id]
+
+    assigned_response = client.get(
+        f"/api/v1/pieces/assigned/{student_profile_id}",
+        headers=student_headers,
+    )
+    assert assigned_response.status_code == 200
+    assigned_piece = next(item for item in assigned_response.json() if item["id"] == piece_id)
+    assert assigned_piece["library_status"] == "ready"
+    assert assigned_piece["primary_instrument"] == "Cello"
 
 
 def test_production_processing_mode_requires_real_tools(

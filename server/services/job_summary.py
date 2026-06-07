@@ -37,5 +37,6 @@ async def build_job_summary(db: AsyncSession) -> JobSummaryResponse:
         running_count=counts.get(JobStatus.running, 0),
         failed_count=counts.get(JobStatus.failed, 0),
         succeeded_count=counts.get(JobStatus.succeeded, 0),
+        canceled_count=counts.get(JobStatus.canceled, 0),
         last_failed_job=last_failed_job,
     )

@@ -33,6 +33,7 @@ class PieceStatus(StrEnum):
     processing = "processing"
     review_pending = "review_pending"
     approved = "approved"
+    needs_edits = "needs_edits"
     archived = "archived"
 
 
@@ -48,6 +49,7 @@ class JobStatus(StrEnum):
     running = "running"
     succeeded = "succeeded"
     failed = "failed"
+    canceled = "canceled"
 
 
 class ReviewItemType(StrEnum):

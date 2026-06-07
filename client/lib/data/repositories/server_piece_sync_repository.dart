@@ -1,11 +1,13 @@
 import 'package:dio/dio.dart';
 import 'package:path/path.dart' as path;
 
+import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
 import '../../domain/entities/library_entry.dart';
 import '../../domain/entities/processing_settings.dart';
 import '../../domain/entities/review_candidate_package.dart';
 import '../../domain/entities/server_pairing.dart';
+import '../../domain/entities/server_job.dart';
 
 class ServerPieceSyncRepository {
   ServerPieceSyncRepository({
@@ -17,6 +19,10 @@ class ServerPieceSyncRepository {
   Dio get client => _apiClient.client;
 
   Future<String?> uploadImportedPiece(LibraryEntry entry) async {
+    if (!AppConfig.isServerPaired) {
+      return null;
+    }
+
     final rawScore = entry.scoreVersions.firstWhere(
       (scoreVersion) => scoreVersion.versionType == 'raw',
       orElse: () => entry.primaryScore,
@@ -104,6 +110,29 @@ class ServerPieceSyncRepository {
     );
   }
 
+  Future<List<ServerJob>> fetchJobs() async {
+    final response = await _apiClient.get('/api/v1/jobs/');
+    final items = response.data as List<dynamic>;
+    return items
+        .map((item) => ServerJob.fromJson(item as Map<String, dynamic>))
+        .toList();
+  }
+
+  Future<ServerJob> cancelJob(String jobId) async {
+    final response = await _apiClient.post('/api/v1/jobs/$jobId/cancel');
+    return ServerJob.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<ServerJob> retryJob(String jobId) async {
+    final response = await _apiClient.post('/api/v1/jobs/$jobId/retry');
+    return ServerJob.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<Map<String, dynamic>> clearServerWorkflowData() async {
+    final response = await _apiClient.post('/api/v1/debug/clear-workflow');
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
   Future<ServerPairingCode> fetchPairingCode({
     String purpose = 'student_device',
     String? profileId,
@@ -145,9 +174,18 @@ class ServerPieceSyncRepository {
     return ReviewQueueEntry.fromJson(response.data as Map<String, dynamic>);
   }
 
-  Future<void> approveReviewItem(String itemId) async {
-    await _apiClient
-        .post('/api/v1/review/$itemId', data: {'action': 'approve'});
+  Future<void> approveReviewItem(
+    String itemId, {
+    String? selectedCandidateId,
+  }) async {
+    await _apiClient.post(
+      '/api/v1/review/$itemId',
+      data: {
+        'action': 'approve',
+        if (selectedCandidateId != null && selectedCandidateId.trim().isNotEmpty)
+          'selected_candidate_id': selectedCandidateId.trim(),
+      },
+    );
   }
 
   Future<void> rejectReviewItem(String itemId) async {
@@ -239,11 +277,29 @@ class ServerPieceSyncRepository {
 
   Future<RemotePieceDetail> pushPieceToProfiles(
     String serverPieceId,
-    List<String> profileIds,
-  ) async {
+    List<String> profileIds, {
+    String mode = 'processed',
+  }) async {
     final response = await _apiClient.post(
       '/api/v1/pieces/$serverPieceId/push',
-      data: {'profile_ids': profileIds},
+      data: {
+        'profile_ids': profileIds,
+        'mode': mode,
+      },
+    );
+    return RemotePieceDetail.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<RemotePieceDetail> pullPieceForEdits(String serverPieceId) async {
+    final response = await _apiClient.post(
+      '/api/v1/pieces/$serverPieceId/workflow/pull-for-edits',
+    );
+    return RemotePieceDetail.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<RemotePieceDetail> closePieceWorkflow(String serverPieceId) async {
+    final response = await _apiClient.post(
+      '/api/v1/pieces/$serverPieceId/workflow/close',
     );
     return RemotePieceDetail.fromJson(response.data as Map<String, dynamic>);
   }
@@ -327,8 +383,13 @@ class ServerPieceSyncRepository {
       try {
         final remotePiece = await fetchPieceDetail(serverPieceId);
         final defaultVersion = remotePiece.scoreVersions.firstWhere(
-          (version) => version.isDefault,
-          orElse: () => remotePiece.scoreVersions.first,
+          (version) =>
+              version.scoreVersionRole == 'processed_render_pdf' &&
+              (version.format == 'pdf' || version.format == 'image'),
+          orElse: () => remotePiece.scoreVersions.firstWhere(
+            (version) => version.isDefault,
+            orElse: () => remotePiece.scoreVersions.first,
+          ),
         );
 
         final hasVersion = entry.scoreVersions.any(

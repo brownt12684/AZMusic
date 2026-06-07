@@ -61,7 +61,7 @@ Verify the server:
 
 ```powershell
 .\scripts\dev.ps1 -Task check-server
-curl http://localhost:8000/health
+curl http://localhost:8795/health
 ```
 
 Important server paths:
@@ -76,7 +76,7 @@ Key settings in `server/.env`:
 | Setting | Default | Notes |
 |---------|---------|-------|
 | `HOST` | `0.0.0.0` | Uvicorn bind address |
-| `PORT` | `8000` | Uvicorn port |
+| `PORT` | `8795` | Uvicorn port |
 | `DATABASE_URL` | `sqlite+aiosqlite:///./azmusic_server.db` | Relative SQLite paths are normalized against `server/` |
 | `STORAGE_PATH` | `./storage` | Relative storage paths are normalized against `server/` |
 | `LAN_AUTH_TOKEN` | *(empty)* | Placeholder only; routes do not enforce auth yet |
@@ -90,6 +90,7 @@ Key settings in `server/.env`:
 | `OCR_CLI_PATH` | *(empty)* | Optional Tesseract OCR path; required in production mode |
 | `PROCESSING_MODE` | `server_only` | Use `server_plus_device_workers` only for experimental device-worker registration |
 | `ALLOW_STUB_MUSICXML` | `true` | Allows development imports to produce deterministic placeholder MusicXML when Audiveris is not configured |
+| `HOMR_CLI_PATH` | empty | Optional experimental HOMR CLI path for server-side MusicXML OMR bakeoff |
 
 Processing settings are persisted at `server/storage/processing_settings.json` after being changed from the parent app or `/api/v1/processing/settings`. Device-worker registrations are persisted at `server/storage/device_workers.json`.
 
@@ -116,7 +117,7 @@ Start the primary Windows target:
 For same-machine testing against a local `run-server` session, override the checked-in LAN target at launch time:
 
 ```powershell
-.\scripts\dev.ps1 -Task run-client -ClientServerHost 127.0.0.1 -ClientServerPort 8000
+.\scripts\dev.ps1 -Task run-client -ClientServerHost 127.0.0.1 -ClientServerPort 8795
 ```
 
 Start the Android target:
@@ -139,11 +140,13 @@ Release build outputs:
 - Windows: `client/build/windows/x64/runner/Release/azmusic.exe`
 - Android APK: `client/build/app/outputs/flutter-apk/app-release.apk`
 - Android app bundle: `client/build/app/outputs/bundle/release/app-release.aab`
-- Release assets: `dist/AZMusic-server-windows-v0.1.0-pretesting.zip`, `dist/AZMusic-windows-v0.1.0-pretesting.zip`, `dist/AZMusic-android-v0.1.0-pretesting.apk`, and `dist/SHA256SUMS.txt`
+- End-user release assets: `dist/AZMusic Server Setup.exe`, `dist/AZMusic Windows Client Setup.exe`, `dist/AZMusic Android.apk`, and `dist/SHA256SUMS.txt`
 
 These build tasks pass `AZMUSIC_PRODUCTION=true` into the client. Android release signing reads `client/android/key.properties` when present; otherwise it uses debug signing only for internal development installs.
 
-The Windows server package is a portable ZIP. Extract it on the server PC, run `Setup AZMusic Server.cmd`, then run `Start AZMusic Server.cmd`. The package includes helper scripts for opening Audiveris, MuseScore, and Tesseract installer pages, but those tools remain separately installed and configured.
+The preferred Windows server install path is `AZMusic Server Setup.exe`. It embeds the internal portable server package, installs the bundled `azmusic-server.exe`, creates desktop and Start Menu shortcuts, runs setup, and offers guided links for Audiveris, MuseScore, Tesseract, and optional experimental HOMR. HOMR is installed into a separate Python virtual environment when selected; it is not bundled into the AZMusic executable.
+
+The preferred Windows client install path is `AZMusic Windows Client Setup.exe`. It embeds the internal Windows client package, installs `azmusic.exe` for the current user, and creates Desktop and Start Menu shortcuts.
 
 Start the sandbox target for fast client iteration:
 
@@ -151,7 +154,7 @@ Start the sandbox target for fast client iteration:
 .\scripts\dev.ps1 -Task run-client-sandbox
 .\scripts\dev.ps1 -Task run-client-sandbox -SandboxSurface library
 .\scripts\dev.ps1 -Task run-client-sandbox -SandboxSurface sandbox -ResetSandboxOnLaunch
-.\scripts\dev.ps1 -Task run-client-sandbox -SandboxSurface review-queue -ClientServerHost 127.0.0.1 -ClientServerPort 8000
+.\scripts\dev.ps1 -Task run-client-sandbox -SandboxSurface review-queue -ClientServerHost 127.0.0.1 -ClientServerPort 8795
 ```
 
 Sandbox launch behavior:
@@ -168,14 +171,14 @@ Sandbox launch behavior:
 Use this sequence when you want to validate the current milestone end to end:
 
 1. Bootstrap and run the server.
-2. Bootstrap and run the Windows client. If you launched the server on the same machine, prefer `-ClientServerHost 127.0.0.1 -ClientServerPort 8000`.
+2. Bootstrap and run the Windows client. If you launched the server on the same machine, prefer `-ClientServerHost 127.0.0.1 -ClientServerPort 8795`.
 3. Sign in as the parent profile and choose `Import music`.
 4. Select a `pdf`, `png`, `jpg`, `jpeg`, or `webp` file.
 5. Confirm the intake item is written locally immediately. If the import is a PDF and the server is reachable, confirm it also appears in the parent review queue.
 6. Approve the candidate and push the ready piece to one or more student profiles when you want to validate the server-backed flow.
 7. Switch to a student profile, open the piece from the student library or piece detail, and confirm the reader opens the local score.
 
-For first-time server setup, open `http://<server-address>:8000/setup` on the server or another device on the same network. That page shows the parent/admin QR code used to initialize the parent device. If the page is opened as `localhost` on the server PC, the QR payload uses the detected LAN address instead of `localhost` so tablets can reach the server. If the displayed server URL is still wrong, set `PUBLIC_SERVER_URL=http://<server-lan-ip>:8000` in `server/.env` and restart the server. After the parent device is connected, use the parent section in the app to generate separate student-device QR codes for each student. Android and Windows clients can scan pairing QR codes from the pairing dialog; manual QR payload/code entry remains available as a fallback.
+For first-time server setup, open `http://<server-address>:8795/setup` on the server or another device on the same network. That page shows the parent/admin QR code used to initialize the parent device. If the page is opened as `localhost` on the server PC, the QR payload uses the detected LAN address instead of `localhost` so tablets can reach the server. If the displayed server URL is still wrong, set `PUBLIC_SERVER_URL=http://<server-lan-ip>:8795` in `server/.env` and restart the server. After the parent device is connected, use the parent section in the app to generate separate student-device QR codes for each student. Android and Windows clients can scan pairing QR codes from the pairing dialog; manual QR payload/code entry remains available as a fallback.
 
 For real OMR testing, open the parent server-processing settings screen and configure Audiveris before importing the PDF. Without Audiveris, the development fallback can still generate stub MusicXML if `ALLOW_STUB_MUSICXML` remains enabled. Configure MuseScore when you want rendered review PDFs produced from MusicXML instead of raw-PDF fallback copies.
 
@@ -219,9 +222,10 @@ The current milestone splits cleanly into a fast sandbox path and one still-manu
 ## Client config notes
 
 - Runtime config is in `client/lib/core/config/app_config.dart`.
-- The old checked-in server base URL is `http://192.168.1.100:8000`, but unpaired devices no longer prefill it in the pairing dialog.
-- `-ClientServerHost` and `-ClientServerPort` override that value for a single launch by passing `AZMUSIC_SERVER_HOST` and `AZMUSIC_SERVER_PORT` as compile-time Dart defines.
-- There is no settings UI yet for changing host and port; treat that value as a development default.
+- The old checked-in server base URL is `http://192.168.1.100:8795`, but unpaired devices no longer prefill it in the pairing dialog.
+- `-ClientServerHost` and `-ClientServerPort` override that value for development launches by passing `AZMUSIC_SERVER_HOST` and `AZMUSIC_SERVER_PORT` as compile-time Dart defines.
+- A server-host override does not mark the client as paired. Use the server setup QR flow, or provide an explicit `AZMUSIC_SERVER_PAIRING_TOKEN` only for controlled development tests.
+- Release packages ignore `-ClientServerHost`; UAT clients should start unpaired and use QR pairing.
 - Do not assume a local `run-server` session will be discovered automatically by the client; same-machine testing requires the configured host to match the actual server address.
 - The current sync banner reports real client-side states: `offline-ready`, `syncing`, `synced`, and `failed-usable`.
 - The banner is still derived from the client sync flow today, not from direct rendering of the server `/api/v1/sync` response.
@@ -266,8 +270,8 @@ Verification caveats:
 | Server data appears in an unexpected directory | Check `server/.env`; server-relative paths are normalized against `server/` |
 | `client/windows` or `client/android` is missing | Rerun `.\scripts\dev.ps1 -Task bootstrap-client` |
 | You want to iterate without the native file picker | Use `.\scripts\dev.ps1 -Task run-client-sandbox` and optionally `-SandboxSurface` to jump straight into a screen |
-| Client cannot reach the intended server | Check the `AppConfig` host/port values and whether the client is still pointed at the checked-in LAN default `192.168.1.100:8000`. For same-machine testing, launch with `-ClientServerHost 127.0.0.1 -ClientServerPort 8000`. |
-| QR pairing scans but claim fails on Android | Confirm the setup page shows the server LAN URL, not `localhost`. If it is wrong, set `PUBLIC_SERVER_URL=http://<server-lan-ip>:8000` in `server/.env`, restart the server, and generate a fresh QR. |
+| Client cannot reach the intended server | Check the `AppConfig` host/port values and whether the client is still pointed at the checked-in LAN default `192.168.1.100:8795`. For same-machine testing, launch with `-ClientServerHost 127.0.0.1 -ClientServerPort 8795`. |
+| QR pairing scans but claim fails on Android | Confirm the setup page shows the server LAN URL, not `localhost`. If it is wrong, set `PUBLIC_SERVER_URL=http://<server-lan-ip>:8795` in `server/.env`, restart the server, and generate a fresh QR. |
 
 ## Cleanup
 

@@ -68,7 +68,7 @@ Run repo tasks from the root with PowerShell:
 - `Automated coverage`: Green. `check-client` covers the import workflow cancellation path, local image import persistence, app-config host and port resolution, library sync banner states, alpha-jump behavior, reader spread layout rules, the local-library repository, and the core app-shell routes. `check-client-windows` adds a Windows empty-sandbox launch smoke path.
 - `Prototype loop`: Green. `.\scripts\dev.ps1 -Task run-client-sandbox` launches an empty local sandbox with direct routing into the library and review-queue surfaces. Piece-detail and reader routes require an imported piece.
 - `Next`: Manual Windows QA of the real file-picker import flow versus the sandbox fast path.
-- `Next`: Install/configure Audiveris and MuseScore for real OMR/rendering, then replace the current development MusicXML fallback with the real processing path during manual QA.
+- `Next`: Continue real OMR QA with Audiveris as the production baseline, optional HOMR bakeoff runs, and MuseScore-rendered review PDFs before disabling the development MusicXML fallback.
 - `Next`: Decide how much of the client banner state should move onto the server `/api/v1/sync` contract and replace JSON client persistence with a stronger local database layer.
 
 ## Toolchain
@@ -108,7 +108,7 @@ Use the sandbox target when iterating on client UI or local-library behavior:
 .\scripts\dev.ps1 -Task run-client-sandbox
 .\scripts\dev.ps1 -Task run-client-sandbox -SandboxSurface library
 .\scripts\dev.ps1 -Task run-client-sandbox -SandboxSurface sandbox -ResetSandboxOnLaunch
-.\scripts\dev.ps1 -Task run-client-sandbox -SandboxSurface review-queue -ClientServerHost 127.0.0.1 -ClientServerPort 8000
+.\scripts\dev.ps1 -Task run-client-sandbox -SandboxSurface review-queue -ClientServerHost 127.0.0.1 -ClientServerPort 8795
 ```
 
 `run-client-sandbox` starts the app with sandbox routing and can be pointed at a local server session with the host and port override flags. It no longer seeds sample music; import real test files through the library or parent intake flow before opening piece-detail or reader surfaces.

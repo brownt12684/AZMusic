@@ -14,7 +14,7 @@ $ServerStderr = Join-Path $RepoRoot "server\dev_server_stderr.log"
 
 function Test-LocalServer {
     try {
-        $response = Invoke-RestMethod -Uri "http://127.0.0.1:8000/health" -TimeoutSec 2
+        $response = Invoke-RestMethod -Uri "http://127.0.0.1:8795/health" -TimeoutSec 2
         return $response.status -eq "ok"
     }
     catch {
@@ -49,7 +49,7 @@ function Start-LocalServer {
         }
     }
 
-    throw "AZMusic server did not become healthy on 127.0.0.1:8000."
+    throw "AZMusic server did not become healthy on 127.0.0.1:8795."
 }
 
 function Stop-ExistingSandboxClient {
@@ -73,7 +73,7 @@ $clientArgs = @{
     Task = "run-client-sandbox"
     SandboxSurface = $SandboxSurface
     ClientServerHost = "127.0.0.1"
-    ClientServerPort = "8000"
+    ClientServerPort = "8795"
 }
 
 if ($ResetSandboxOnLaunch.IsPresent) {

@@ -94,6 +94,15 @@ class RemotePieceSummary {
     this.catalogSuggestions = const <Map<String, dynamic>>[],
     this.validationWarnings = const <String>[],
     this.splitConfidence,
+    this.workflowClosed = false,
+    this.sourceContentSha256,
+    this.sourceBookFingerprint,
+    this.logicalPieceKey,
+    this.canonicalPieceId,
+    this.attemptStatus = 'canonical',
+    this.duplicateAttemptCount = 0,
+    this.duplicateReason,
+    this.isDuplicateAttempt = false,
   });
 
   final String id;
@@ -117,6 +126,15 @@ class RemotePieceSummary {
   final List<Map<String, dynamic>> catalogSuggestions;
   final List<String> validationWarnings;
   final double? splitConfidence;
+  final bool workflowClosed;
+  final String? sourceContentSha256;
+  final String? sourceBookFingerprint;
+  final String? logicalPieceKey;
+  final String? canonicalPieceId;
+  final String attemptStatus;
+  final int duplicateAttemptCount;
+  final String? duplicateReason;
+  final bool isDuplicateAttempt;
 
   factory RemotePieceSummary.fromJson(Map<String, dynamic> json) {
     return RemotePieceSummary(
@@ -138,12 +156,56 @@ class RemotePieceSummary {
       catalogSuggestions: _metadataListFromJson(json['catalog_suggestions']),
       validationWarnings: _stringListFromJson(json['validation_warnings']),
       splitConfidence: (json['split_confidence'] as num?)?.toDouble(),
+      workflowClosed: json['workflow_closed'] as bool? ?? false,
+      sourceContentSha256: json['source_content_sha256'] as String?,
+      sourceBookFingerprint: json['source_book_fingerprint'] as String?,
+      logicalPieceKey: json['logical_piece_key'] as String?,
+      canonicalPieceId: json['canonical_piece_id'] as String?,
+      attemptStatus: json['attempt_status'] as String? ?? 'canonical',
+      duplicateAttemptCount: json['duplicate_attempt_count'] as int? ?? 0,
+      duplicateReason: json['duplicate_reason'] as String?,
+      isDuplicateAttempt: json['is_duplicate_attempt'] as bool? ?? false,
       status: json['status'] as String,
       libraryStatus: json['library_status'] as String? ?? 'intake',
       visibleToProfileIds:
           (json['visible_to_profile_ids'] as List<dynamic>? ?? const [])
               .map((item) => item as String)
               .toList(),
+    );
+  }
+
+  factory RemotePieceSummary.fromDetail(RemotePieceDetail detail) {
+    return RemotePieceSummary(
+      id: detail.id,
+      title: detail.title,
+      composer: detail.composer,
+      primaryInstrument: detail.primaryInstrument,
+      bookOrCollection: detail.bookOrCollection,
+      keySignature: detail.keySignature,
+      tempo: detail.tempo,
+      difficultyLevel: detail.difficultyLevel,
+      notes: detail.notes,
+      processedMetadata: detail.processedMetadata,
+      pieceKind: detail.pieceKind,
+      sourceBookId: detail.sourceBookId,
+      sourcePageStart: detail.sourcePageStart,
+      sourcePageEnd: detail.sourcePageEnd,
+      catalogMetadata: detail.catalogMetadata,
+      catalogSuggestions: detail.catalogSuggestions,
+      validationWarnings: detail.validationWarnings,
+      splitConfidence: detail.splitConfidence,
+      workflowClosed: detail.workflowClosed,
+      sourceContentSha256: detail.sourceContentSha256,
+      sourceBookFingerprint: detail.sourceBookFingerprint,
+      logicalPieceKey: detail.logicalPieceKey,
+      canonicalPieceId: detail.canonicalPieceId,
+      attemptStatus: detail.attemptStatus,
+      duplicateAttemptCount: detail.duplicateAttemptCount,
+      duplicateReason: detail.duplicateReason,
+      isDuplicateAttempt: detail.isDuplicateAttempt,
+      status: detail.status,
+      libraryStatus: detail.libraryStatus,
+      visibleToProfileIds: detail.visibleToProfileIds,
     );
   }
 }
@@ -155,6 +217,7 @@ class RemoteScoreVersion {
     required this.filePath,
     required this.fileUrl,
     required this.isDefault,
+    this.scoreVersionRole,
   });
 
   final String id;
@@ -162,6 +225,7 @@ class RemoteScoreVersion {
   final String filePath;
   final String fileUrl;
   final bool isDefault;
+  final String? scoreVersionRole;
 
   String get fileExtension {
     final dotIndex = filePath.lastIndexOf('.');
@@ -197,6 +261,7 @@ class RemoteScoreVersion {
       filePath: json['file_path'] as String,
       fileUrl: json['file_url'] as String? ?? '',
       isDefault: json['is_default'] as bool? ?? false,
+      scoreVersionRole: json['score_version_role'] as String?,
     );
   }
 }
@@ -225,6 +290,15 @@ class RemotePieceDetail {
     this.catalogSuggestions = const <Map<String, dynamic>>[],
     this.validationWarnings = const <String>[],
     this.splitConfidence,
+    this.workflowClosed = false,
+    this.sourceContentSha256,
+    this.sourceBookFingerprint,
+    this.logicalPieceKey,
+    this.canonicalPieceId,
+    this.attemptStatus = 'canonical',
+    this.duplicateAttemptCount = 0,
+    this.duplicateReason,
+    this.isDuplicateAttempt = false,
   });
 
   final String id;
@@ -245,6 +319,15 @@ class RemotePieceDetail {
   final List<Map<String, dynamic>> catalogSuggestions;
   final List<String> validationWarnings;
   final double? splitConfidence;
+  final bool workflowClosed;
+  final String? sourceContentSha256;
+  final String? sourceBookFingerprint;
+  final String? logicalPieceKey;
+  final String? canonicalPieceId;
+  final String attemptStatus;
+  final int duplicateAttemptCount;
+  final String? duplicateReason;
+  final bool isDuplicateAttempt;
   final String status;
   final String libraryStatus;
   final List<String> visibleToProfileIds;
@@ -270,6 +353,15 @@ class RemotePieceDetail {
       catalogSuggestions: _metadataListFromJson(json['catalog_suggestions']),
       validationWarnings: _stringListFromJson(json['validation_warnings']),
       splitConfidence: (json['split_confidence'] as num?)?.toDouble(),
+      workflowClosed: json['workflow_closed'] as bool? ?? false,
+      sourceContentSha256: json['source_content_sha256'] as String?,
+      sourceBookFingerprint: json['source_book_fingerprint'] as String?,
+      logicalPieceKey: json['logical_piece_key'] as String?,
+      canonicalPieceId: json['canonical_piece_id'] as String?,
+      attemptStatus: json['attempt_status'] as String? ?? 'canonical',
+      duplicateAttemptCount: json['duplicate_attempt_count'] as int? ?? 0,
+      duplicateReason: json['duplicate_reason'] as String?,
+      isDuplicateAttempt: json['is_duplicate_attempt'] as bool? ?? false,
       status: json['status'] as String,
       libraryStatus: json['library_status'] as String? ?? 'intake',
       visibleToProfileIds:

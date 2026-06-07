@@ -1,3 +1,7 @@
+import 'dart:convert';
+import 'dart:math';
+
+import 'package:crypto/crypto.dart';
 import 'package:flutter/foundation.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -23,12 +27,19 @@ class AppConfig {
   static const bool isProductionBuild = bool.fromEnvironment(
     'AZMUSIC_PRODUCTION',
   );
+  static const bool showExperimentalFeatures = bool.fromEnvironment(
+    'AZMUSIC_SHOW_EXPERIMENTAL',
+    defaultValue: false,
+  );
   static const String _pairedProfileNameOverride = String.fromEnvironment(
     'AZMUSIC_PAIRED_PROFILE_NAME',
     defaultValue: '',
   );
   static const String _defaultServerHost = '192.168.1.100';
-  static const int _defaultServerPort = 8000;
+  static const int _defaultServerPort = 8795;
+  static const String _parentPinSaltKey = 'parent_pin_salt';
+  static const String _parentPinHashKey = 'parent_pin_hash';
+  static const String _studentProfilesKey = 'local_student_profiles';
 
   /// Server host (LAN IP or localhost).
   static String get serverHost => _serverHost;
@@ -58,6 +69,12 @@ class AppConfig {
 
   static String? get pairedProfileName => _pairedProfileName;
   static String? _pairedProfileName;
+
+  static bool get hasParentPin {
+    final salt = _prefs.getString(_parentPinSaltKey);
+    final hash = _prefs.getString(_parentPinHashKey);
+    return (salt?.isNotEmpty ?? false) && (hash?.isNotEmpty ?? false);
+  }
 
   /// Maximum retry attempts for network requests.
   static int get maxRetries => _maxRetries;
@@ -93,12 +110,10 @@ class AppConfig {
     _serverId = resolveServerId(
       storedServerId: _prefs.getString('server_id'),
       compileTimeServerId: _serverIdOverride,
-      compileTimeHost: _serverHostOverride,
     );
     _serverPairingToken = resolveServerPairingToken(
       storedToken: _prefs.getString('server_pairing_token'),
       compileTimeToken: _serverPairingTokenOverride,
-      compileTimeHost: _serverHostOverride,
     );
     _pairedProfileId = _prefs.getString('paired_profile_id');
     _pairedProfileRole = _prefs.getString('paired_profile_role');
@@ -118,7 +133,6 @@ class AppConfig {
   static String? resolveServerId({
     String? storedServerId,
     String compileTimeServerId = '',
-    String compileTimeHost = '',
   }) {
     final normalizedOverride = compileTimeServerId.trim();
     if (normalizedOverride.isNotEmpty) {
@@ -131,10 +145,6 @@ class AppConfig {
       return normalizedStoredServerId;
     }
 
-    if (compileTimeHost.trim().isNotEmpty) {
-      return 'development-local-server';
-    }
-
     return null;
   }
 
@@ -142,7 +152,6 @@ class AppConfig {
   static String? resolveServerPairingToken({
     String? storedToken,
     String compileTimeToken = '',
-    String compileTimeHost = '',
   }) {
     final normalizedOverride = compileTimeToken.trim();
     if (normalizedOverride.isNotEmpty) {
@@ -152,10 +161,6 @@ class AppConfig {
     final normalizedStoredToken = storedToken?.trim();
     if (normalizedStoredToken != null && normalizedStoredToken.isNotEmpty) {
       return normalizedStoredToken;
-    }
-
-    if (compileTimeHost.trim().isNotEmpty) {
-      return 'development-paired-device';
     }
 
     return null;
@@ -218,7 +223,7 @@ class AppConfig {
   }) async {
     final uri = Uri.parse(serverUrl);
     final host = uri.host;
-    final port = uri.hasPort ? uri.port : 8000;
+    final port = uri.hasPort ? uri.port : _defaultServerPort;
     await setServerHost(host);
     await setServerPort(port);
     _serverId = serverId;
@@ -246,6 +251,59 @@ class AppConfig {
     }
   }
 
+  static Future<void> setParentPin(String pin) async {
+    final trimmed = pin.trim();
+    final salt = _generateSalt();
+    await _prefs.setString(_parentPinSaltKey, salt);
+    await _prefs.setString(_parentPinHashKey, _hashPin(trimmed, salt));
+  }
+
+  static bool verifyParentPin(String pin) {
+    final salt = _prefs.getString(_parentPinSaltKey);
+    final storedHash = _prefs.getString(_parentPinHashKey);
+    if (salt == null ||
+        salt.isEmpty ||
+        storedHash == null ||
+        storedHash.isEmpty) {
+      return false;
+    }
+    return _hashPin(pin.trim(), salt) == storedHash;
+  }
+
+  static bool isValidParentPinFormat(String pin) {
+    return RegExp(r'^\d{4,}$').hasMatch(pin.trim());
+  }
+
+  static bool isDisallowedParentPin(String pin) {
+    return false;
+  }
+
+  static List<Map<String, dynamic>> loadStudentProfileMaps() {
+    final rawProfiles = _prefs.getString(_studentProfilesKey);
+    if (rawProfiles == null || rawProfiles.isEmpty) {
+      return const <Map<String, dynamic>>[];
+    }
+
+    try {
+      final decoded = jsonDecode(rawProfiles);
+      if (decoded is! List) {
+        return const <Map<String, dynamic>>[];
+      }
+      return decoded
+          .whereType<Map>()
+          .map((item) => Map<String, dynamic>.from(item))
+          .toList(growable: false);
+    } catch (_) {
+      return const <Map<String, dynamic>>[];
+    }
+  }
+
+  static Future<void> saveStudentProfileMaps(
+    List<Map<String, dynamic>> profiles,
+  ) async {
+    await _prefs.setString(_studentProfilesKey, jsonEncode(profiles));
+  }
+
   /// Toggle AI features.
   static Future<void> setAiEnabled(bool enabled) async {
     _aiEnabled = enabled;
@@ -269,5 +327,15 @@ class AppConfig {
       return normalizedStored;
     }
     return null;
+  }
+
+  static String _generateSalt() {
+    final random = Random.secure();
+    final bytes = List<int>.generate(16, (_) => random.nextInt(256));
+    return base64UrlEncode(bytes);
+  }
+
+  static String _hashPin(String pin, String salt) {
+    return sha256.convert(utf8.encode('$salt:$pin')).toString();
   }
 }

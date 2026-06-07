@@ -1,7 +1,7 @@
 name: azmusic
 description: Private family music practice system for violin-family students.
 publish_to: 'none'
-version: 0.1.0+1
+version: 0.2.0+2
 
 environment:
   sdk: '>=3.2.0 <4.0.0'
@@ -20,6 +20,7 @@ dependencies:
   sqlite3_flutter_libs: ^0.5.20
 
   # Networking
+  crypto: ^3.0.7
   dio: ^5.4.0
   http: ^1.2.0
 

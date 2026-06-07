@@ -10,7 +10,11 @@ import '../../../core/config/app_config.dart';
 import '../../../core/pairing/pairing_payload.dart';
 import '../../../domain/entities/profile.dart';
 import '../../../domain/entities/server_pairing.dart';
+import '../../providers/app_providers.dart';
+import '../../providers/piece_providers.dart';
+import '../../providers/processing_settings_providers.dart';
 import '../../providers/profile_providers.dart';
+import '../../providers/review_providers.dart';
 import '../../widgets/pairing_qr_scanner.dart';
 
 class LoginScreen extends ConsumerStatefulWidget {
@@ -24,6 +28,14 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   @override
   Widget build(BuildContext context) {
     final profiles = ref.watch(availableProfilesProvider);
+    final studentProfiles = profiles
+        .where((profile) => profile.role == ProfileRole.student)
+        .toList(growable: false);
+    final parentProfiles = profiles
+        .where((profile) => profile.role == ProfileRole.parent)
+        .toList(growable: false);
+    final parentProfile =
+        parentProfiles.isNotEmpty ? parentProfiles.first : null;
     final theme = Theme.of(context);
 
     return Scaffold(
@@ -36,29 +48,61 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                RichText(
-                  text: TextSpan(
-                    style: theme.textTheme.displaySmall?.copyWith(
-                      fontWeight: FontWeight.w500,
-                      letterSpacing: -1.2,
-                      color: const Color(0xFF111111),
-                    ),
-                    children: const [
-                      TextSpan(text: 'AZ'),
-                      TextSpan(
-                        text: 'Music',
-                        style: TextStyle(color: Color(0xFF1D9E75)),
+                Row(
+                  crossAxisAlignment: CrossAxisAlignment.center,
+                  children: [
+                    ClipRRect(
+                      borderRadius: BorderRadius.circular(20),
+                      child: Image.asset(
+                        'assets/images/azmusic_logo_mark.png',
+                        width: 72,
+                        height: 72,
+                        fit: BoxFit.cover,
+                        semanticLabel: 'AZMusic logo',
+                        errorBuilder: (context, error, stackTrace) => Container(
+                          width: 72,
+                          height: 72,
+                          color: const Color(0xFFFDF8EE),
+                          child: const Icon(
+                            Icons.library_music_outlined,
+                            color: Color(0xFF0F3F2B),
+                          ),
+                        ),
                       ),
-                    ],
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Family music practice',
-                  style: theme.textTheme.bodySmall?.copyWith(
-                    color: const Color(0xFFAAAAAA),
-                    letterSpacing: 0.1,
-                  ),
+                    ),
+                    const SizedBox(width: 14),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          RichText(
+                            text: TextSpan(
+                              style: theme.textTheme.displaySmall?.copyWith(
+                                fontWeight: FontWeight.w500,
+                                letterSpacing: -1.2,
+                                color: const Color(0xFF111111),
+                              ),
+                              children: const [
+                                TextSpan(text: 'AZ'),
+                                TextSpan(
+                                  text: 'Music',
+                                  style: TextStyle(color: Color(0xFF1D9E75)),
+                                ),
+                              ],
+                            ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            'Family music practice',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: const Color(0xFFAAAAAA),
+                              letterSpacing: 0.1,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 44),
                 Text(
@@ -68,32 +112,47 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 14),
-                ...profiles
-                    .where((profile) => profile.role == ProfileRole.student)
-                    .map(
-                      (profile) => Padding(
-                        padding: const EdgeInsets.only(bottom: 8),
-                        child: _ProfileButton(
-                          profile: profile,
-                          showDefaultBadge: profile.isDefaultOnDevice,
-                          onPressed: () => _activateProfile(profile),
-                        ),
-                      ),
+                ...studentProfiles.map(
+                  (profile) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _ProfileButton(
+                      profile: profile,
+                      showDefaultBadge: profile.isDefaultOnDevice,
+                      onPressed: () => _activateProfile(profile),
                     ),
-                Container(
-                  margin: const EdgeInsets.symmetric(vertical: 12),
-                  height: 1,
-                  color: const Color(0xFFEBEBEB),
-                ),
-                _ProfileButton(
-                  profile: profiles.firstWhere(
-                      (profile) => profile.role == ProfileRole.parent),
-                  showDefaultBadge: false,
-                  onPressed: () => _activateProfile(
-                    profiles.firstWhere(
-                        (profile) => profile.role == ProfileRole.parent),
                   ),
                 ),
+                if (parentProfile != null) ...[
+                  Container(
+                    margin: const EdgeInsets.symmetric(vertical: 12),
+                    height: 1,
+                    color: const Color(0xFFEBEBEB),
+                  ),
+                  _ProfileButton(
+                    profile: parentProfile,
+                    showDefaultBadge: false,
+                    onPressed: () => _activateProfile(parentProfile),
+                  ),
+                ] else if (studentProfiles.isEmpty) ...[
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.symmetric(
+                      horizontal: 14,
+                      vertical: 12,
+                    ),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFFFFF7E8),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Text(
+                      'This device is not assigned to a student yet. Pair it from the parent device.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: const Color(0xFF7A4E00),
+                        height: 1.45,
+                      ),
+                    ),
+                  ),
+                ],
                 const SizedBox(height: 20),
                 Container(
                   width: double.infinity,
@@ -151,7 +210,20 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
   }
 
   Future<void> _activateProfile(Profile profile) async {
-    if (profile.requiresPin) {
+    if (profile.role == ProfileRole.parent) {
+      if (!AppConfig.hasParentPin) {
+        final created = await _promptForParentPinSetup();
+        if (!created || !mounted) {
+          return;
+        }
+        ref.invalidate(availableProfilesProvider);
+      } else {
+        final accepted = await _promptForPin(profile);
+        if (!accepted || !mounted) {
+          return;
+        }
+      }
+    } else if (profile.localPin?.isNotEmpty ?? false) {
       final accepted = await _promptForPin(profile);
       if (!accepted || !mounted) {
         return;
@@ -174,6 +246,7 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         return AlertDialog(
           title: Text('Enter ${profile.displayName} PIN'),
           content: TextField(
+            key: AppKeys.parentPinEntryField,
             controller: controller,
             autofocus: true,
             obscureText: true,
@@ -197,7 +270,10 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (accepted != true) {
       return false;
     }
-    if (controller.text.trim() == (profile.localPin ?? '')) {
+    final pinAccepted = profile.role == ProfileRole.parent
+        ? AppConfig.verifyParentPin(controller.text)
+        : controller.text.trim() == (profile.localPin ?? '');
+    if (pinAccepted) {
       return true;
     }
     if (!mounted) {
@@ -207,6 +283,15 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
       const SnackBar(content: Text('Incorrect PIN.')),
     );
     return false;
+  }
+
+  Future<bool> _promptForParentPinSetup() async {
+    final created = await showDialog<bool>(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => const _ParentPinSetupDialog(),
+    );
+    return created == true;
   }
 
   Future<void> _promptForPairing() async {
@@ -229,13 +314,53 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
         profileRole: claim.role,
         profileName: claim.profileName,
       );
+      ref.invalidate(localStudentProfilesProvider);
+      ref.invalidate(availableProfilesProvider);
+      ref.invalidate(defaultDeviceProfileProvider);
+      final pairedStudentProfileId = claim.role == 'student' &&
+              claim.profileId != null &&
+              claim.profileId!.isNotEmpty
+          ? claim.profileId
+          : null;
+      if (pairedStudentProfileId != null) {
+        ref.read(selectedProfileIdProvider.notifier).state =
+            pairedStudentProfileId;
+      }
+      ref.invalidate(serverPieceSyncRepositoryProvider);
+      ref.invalidate(serverHealthProvider);
+      ref.invalidate(parentReviewQueueProvider);
+      ref.invalidate(parentSyncedPiecesProvider);
+      ref.invalidate(processingSettingsProvider);
+      ref.invalidate(processingCapabilitiesProvider);
+      await ref.read(allPiecesProvider.notifier).loadPieces(
+            trigger: SyncTrigger.connectivityReturn,
+          );
+
+      Object? settingsVerificationError;
+      try {
+        await ref
+            .read(serverPieceSyncRepositoryProvider)
+            .fetchProcessingSettings();
+      } catch (error) {
+        settingsVerificationError = error;
+      }
+
       if (!mounted) {
         return;
       }
       setState(() {});
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Paired with ${claim.serverName}.')),
+        SnackBar(
+          content: Text(
+            settingsVerificationError == null
+                ? 'Paired with ${claim.serverName}.'
+                : 'Paired with ${claim.serverName}, but server settings did not load: ${_pairingFailureSummary(settingsVerificationError)}',
+          ),
+        ),
       );
+      if (pairedStudentProfileId != null && mounted) {
+        Navigator.of(context).pushReplacementNamed(AppRouter.library);
+      }
     } catch (error) {
       if (!mounted) {
         return;
@@ -277,6 +402,105 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     throw _PairingConnectionException(failures);
+  }
+}
+
+class _ParentPinSetupDialog extends StatefulWidget {
+  const _ParentPinSetupDialog();
+
+  @override
+  State<_ParentPinSetupDialog> createState() => _ParentPinSetupDialogState();
+}
+
+class _ParentPinSetupDialogState extends State<_ParentPinSetupDialog> {
+  final TextEditingController _pinController = TextEditingController();
+  final TextEditingController _confirmController = TextEditingController();
+  String? _errorText;
+
+  @override
+  void dispose() {
+    _pinController.dispose();
+    _confirmController.dispose();
+    super.dispose();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('Create parent PIN'),
+      content: SizedBox(
+        width: 360,
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              'Set a parent PIN for this device before opening parent tools.',
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: AppKeys.parentPinSetupField,
+              controller: _pinController,
+              autofocus: true,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'New PIN',
+                helperText: 'Use at least 4 digits.',
+                errorText: _errorText,
+                border: const OutlineInputBorder(),
+              ),
+            ),
+            const SizedBox(height: 12),
+            TextField(
+              key: AppKeys.parentPinConfirmField,
+              controller: _confirmController,
+              obscureText: true,
+              keyboardType: TextInputType.number,
+              decoration: const InputDecoration(
+                labelText: 'Confirm PIN',
+                border: OutlineInputBorder(),
+              ),
+              onSubmitted: (_) => _createPin(),
+            ),
+          ],
+        ),
+      ),
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false),
+          child: const Text('Cancel'),
+        ),
+        FilledButton(
+          key: AppKeys.parentPinCreateButton,
+          onPressed: _createPin,
+          child: const Text('Create PIN'),
+        ),
+      ],
+    );
+  }
+
+  Future<void> _createPin() async {
+    final pin = _pinController.text.trim();
+    final confirmation = _confirmController.text.trim();
+    String? error;
+    if (!AppConfig.isValidParentPinFormat(pin)) {
+      error = 'PIN must be at least 4 digits.';
+    } else if (pin != confirmation) {
+      error = 'PIN confirmation does not match.';
+    }
+
+    if (error != null) {
+      setState(() {
+        _errorText = error;
+      });
+      return;
+    }
+
+    await AppConfig.setParentPin(pin);
+    if (!mounted) {
+      return;
+    }
+    Navigator.of(context).pop(true);
   }
 }
 
@@ -469,7 +693,7 @@ class _PairingConnectionException implements Exception {
     final detail = failures.isEmpty
         ? 'No server URLs were available.'
         : failures.join(' | ');
-    return 'Could not reach the AZMusic server. Check that the phone/tablet is on the same Wi-Fi, the server window is still running, and Windows Firewall allows TCP port 8000. Tried: $detail';
+    return 'Could not reach the AZMusic server. Check that the phone/tablet is on the same Wi-Fi, the server window is still running, and Windows Firewall allows the server port shown on the setup screen. Tried: $detail';
   }
 }
 

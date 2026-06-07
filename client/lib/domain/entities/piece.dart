@@ -5,6 +5,7 @@ enum LibraryStatus {
   processing,
   review,
   ready,
+  needsEdits,
   archived,
 }
 
@@ -38,6 +39,7 @@ class Piece {
   final List<Map<String, dynamic>> catalogSuggestions;
   final List<String> validationWarnings;
   final double? splitConfidence;
+  final bool workflowClosed;
   final DateTime createdAt;
   final DateTime updatedAt;
 
@@ -71,6 +73,7 @@ class Piece {
     this.catalogSuggestions = const <Map<String, dynamic>>[],
     this.validationWarnings = const <String>[],
     this.splitConfidence,
+    this.workflowClosed = false,
     required this.createdAt,
     required this.updatedAt,
   })  : normalizedTitle = normalizedTitle ?? _normalizeForSearch(title),
@@ -106,9 +109,11 @@ class Piece {
     List<Map<String, dynamic>>? catalogSuggestions,
     List<String>? validationWarnings,
     double? splitConfidence,
+    bool? workflowClosed,
     DateTime? createdAt,
     DateTime? updatedAt,
     bool clearComposer = false,
+    bool clearServerPieceId = false,
     bool clearPrimaryInstrument = false,
     bool clearBookOrCollection = false,
     bool clearKeySignature = false,
@@ -123,7 +128,8 @@ class Piece {
       id: id ?? this.id,
       title: title ?? this.title,
       composer: clearComposer ? null : composer ?? this.composer,
-      serverPieceId: serverPieceId ?? this.serverPieceId,
+      serverPieceId:
+          clearServerPieceId ? null : serverPieceId ?? this.serverPieceId,
       assignedProfileId: assignedProfileId ?? this.assignedProfileId,
       visibleToProfileIds: visibleToProfileIds ?? this.visibleToProfileIds,
       primaryInstrument: clearPrimaryInstrument
@@ -158,6 +164,7 @@ class Piece {
       validationWarnings: validationWarnings ?? this.validationWarnings,
       splitConfidence:
           clearSplitConfidence ? null : splitConfidence ?? this.splitConfidence,
+      workflowClosed: workflowClosed ?? this.workflowClosed,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
     );
@@ -194,6 +201,7 @@ class Piece {
       'catalog_suggestions': catalogSuggestions,
       'validation_warnings': validationWarnings,
       'split_confidence': splitConfidence,
+      'workflow_closed': workflowClosed,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
     };
@@ -228,6 +236,9 @@ class Piece {
               return LibraryStatus.ready;
             case 'review_pending':
               return LibraryStatus.review;
+            case 'needs_edits':
+            case 'needsedits':
+              return LibraryStatus.needsEdits;
             case 'upload_pending':
               return LibraryStatus.uploadPending;
             case 'processing':
@@ -276,6 +287,7 @@ class Piece {
               .map((item) => item.toString())
               .toList(),
       splitConfidence: (map['split_confidence'] as num?)?.toDouble(),
+      workflowClosed: map['workflow_closed'] as bool? ?? false,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),
     );

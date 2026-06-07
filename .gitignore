@@ -126,3 +126,6 @@ local.properties
 
 # Local analysis artifacts
 client/analyze_output.txt
+
+# Local sandbox smoke results
+sandbox-results/

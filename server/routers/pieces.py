@@ -1,5 +1,6 @@
 """Router for piece import, listing, metadata management, and score file access."""
 
+import asyncio
 import hashlib
 import json
 import subprocess
@@ -32,11 +33,21 @@ from server.models.schemas import (
     PieceDetailResponse,
     PieceHistoryDraftCreate,
     PieceHistoryDraftResponse,
+    PiecePushMode,
     PiecePushRequest,
     PieceResponse,
     PieceUpdate,
     ScoreVersionRerenderRequest,
     ScoreVersionResponse,
+)
+from server.services.piece_identity import (
+    find_active_book_by_source_hash,
+    find_active_piece_by_logical_key,
+    find_active_piece_by_source_hash,
+    is_duplicate_metadata,
+    logical_piece_key,
+    sha256_bytes,
+    source_book_fingerprint,
 )
 from server.services.piece_state import PieceStateService
 from server.services.processing_engines import (
@@ -46,7 +57,13 @@ from server.services.processing_engines import (
     _validate_musicxml,
 )
 from server.services.processing_settings import ProcessingSettingsStore, executable_status
-from server.services.score_processing import BookSplitHint, ScoreProcessingService
+from server.services.score_processing import (
+    BookSplitHint,
+    ScoreProcessingService,
+    _child_file_name,
+    _extract_pdf_page_range,
+    _repair_multi_piece_review_pdf_titles,
+)
 
 router = APIRouter()
 _piece_state_service = PieceStateService()
@@ -54,6 +71,7 @@ _SUPPORTED_IMPORT_EXTENSIONS = {".pdf", ".png", ".jpg", ".jpeg", ".webp", ".tif"
 _IMAGE_IMPORT_EXTENSIONS = _SUPPORTED_IMPORT_EXTENSIONS - {".pdf"}
 _MUSICXML_EXTENSIONS = {".musicxml", ".xml", ".mxl"}
 _AUTO_BOOK_IMPORT_PAGE_THRESHOLD = 8
+_import_locks: dict[str, asyncio.Lock] = {}
 _BOOK_IMPORT_KEYWORDS = (
     "book",
     "collection",
@@ -64,6 +82,15 @@ _BOOK_IMPORT_KEYWORDS = (
     "position pieces",
     "suzuki",
 )
+
+
+def _import_lock_for(source_hash: str, *, import_kind: str) -> asyncio.Lock:
+    key = f"{import_kind}:{source_hash}"
+    lock = _import_locks.get(key)
+    if lock is None:
+        lock = asyncio.Lock()
+        _import_locks[key] = lock
+    return lock
 
 
 def _piece_to_response(piece: Piece) -> PieceResponse:
@@ -87,8 +114,17 @@ def _piece_to_response(piece: Piece) -> PieceResponse:
         catalog_suggestions=metadata["catalog_suggestions"],
         validation_warnings=metadata["validation_warnings"],
         split_confidence=metadata["split_confidence"],
+        workflow_closed=metadata["workflow_closed"],
         visible_to_profile_ids=metadata["visible_to_profile_ids"],
         library_status=metadata["library_status"],
+        source_content_sha256=metadata["source_content_sha256"],
+        source_book_fingerprint=metadata["source_book_fingerprint"],
+        logical_piece_key=metadata["logical_piece_key"],
+        canonical_piece_id=metadata["canonical_piece_id"],
+        attempt_status=metadata["attempt_status"],
+        duplicate_attempt_count=metadata["duplicate_attempt_count"],
+        duplicate_reason=metadata["duplicate_reason"],
+        is_duplicate_attempt=metadata["is_duplicate_attempt"],
         status=piece.status,
         created_at=piece.created_at,
         updated_at=piece.updated_at,
@@ -133,6 +169,19 @@ def _score_version_download_metadata(file_path: Path) -> tuple[str, int | None, 
     )
 
 
+def _score_version_role(score_version: ScoreVersion) -> str:
+    file_path = Path(score_version.file_path)
+    suffix = file_path.suffix.lower()
+    name = file_path.name.lower()
+    if suffix in _MUSICXML_EXTENSIONS:
+        return "canonical_musicxml"
+    if score_version.version_type == ScoreVersionType.raw or name.startswith("raw_source"):
+        return "original_pdf"
+    if suffix in _SUPPORTED_IMPORT_EXTENSIONS:
+        return "processed_render_pdf"
+    return "unknown"
+
+
 def _piece_to_detail_response(request: Request, piece: Piece) -> PieceDetailResponse:
     sorted_score_versions = sorted(
         piece.score_versions,
@@ -153,6 +202,7 @@ def _piece_to_detail_response(request: Request, piece: Piece) -> PieceDetailResp
                 content_type=content_type,
                 file_size_bytes=file_size_bytes,
                 content_sha256=content_sha256,
+                score_version_role=_score_version_role(score_version),
                 is_default=score_version.is_default,
                 created_at=score_version.created_at,
             )
@@ -200,8 +250,17 @@ def _piece_to_detail_response(request: Request, piece: Piece) -> PieceDetailResp
         catalog_suggestions=metadata["catalog_suggestions"],
         validation_warnings=metadata["validation_warnings"],
         split_confidence=metadata["split_confidence"],
+        workflow_closed=metadata["workflow_closed"],
         visible_to_profile_ids=metadata["visible_to_profile_ids"],
         library_status=metadata["library_status"],
+        source_content_sha256=metadata["source_content_sha256"],
+        source_book_fingerprint=metadata["source_book_fingerprint"],
+        logical_piece_key=metadata["logical_piece_key"],
+        canonical_piece_id=metadata["canonical_piece_id"],
+        attempt_status=metadata["attempt_status"],
+        duplicate_attempt_count=metadata["duplicate_attempt_count"],
+        duplicate_reason=metadata["duplicate_reason"],
+        is_duplicate_attempt=metadata["is_duplicate_attempt"],
         status=piece.status,
         created_at=piece.created_at,
         updated_at=piece.updated_at,
@@ -239,11 +298,25 @@ async def _piece_has_raw_score_version(db: AsyncSession, piece_id: str) -> bool:
     return result.scalar_one_or_none() is not None
 
 
+async def _load_raw_score_version(db: AsyncSession, piece_id: str) -> ScoreVersion | None:
+    result = await db.execute(
+        select(ScoreVersion)
+        .where(
+            ScoreVersion.piece_id == piece_id,
+            ScoreVersion.version_type == ScoreVersionType.raw,
+        )
+        .order_by(ScoreVersion.created_at.asc())
+        .limit(1)
+    )
+    return result.scalar_one_or_none()
+
+
 async def _load_existing_score_version_file(
     db: AsyncSession,
     *,
     piece_id: str,
     score_version_id: str,
+    require_exists: bool = True,
 ) -> tuple[ScoreVersion, Path]:
     result = await db.execute(
         select(ScoreVersion).where(
@@ -255,7 +328,7 @@ async def _load_existing_score_version_file(
     if not score_version:
         raise HTTPException(status_code=404, detail="Score version not found.")
     file_path = Path(score_version.file_path)
-    if not file_path.exists():
+    if require_exists and not file_path.exists():
         raise HTTPException(status_code=404, detail="Stored score file missing from disk.")
     return score_version, file_path
 
@@ -269,6 +342,11 @@ async def _mark_review_render_refreshed(
     rendered_at: str,
     renderer_name: str,
     renderer_version: str | None,
+    render_validation_status: str,
+    render_validation_error: str | None,
+    rendered_file_size_bytes: int | None,
+    rendered_page_count: int | None,
+    render_diagnostics: dict,
     warnings: list[str],
 ) -> None:
     result = await db.execute(
@@ -280,29 +358,119 @@ async def _mark_review_render_refreshed(
     changed = False
     for item in result.scalars().all():
         candidate_data = dict(item.candidate_data or {})
-        if candidate_data.get("canonical_score_version_id") != canonical_score_version_id:
+        refresh_payload = {
+            "manual_musescore_rendered_at": rendered_at,
+            "renderer_name": renderer_name,
+            "renderer_version": renderer_version,
+            "render_validation_status": render_validation_status,
+            "render_validation_error": render_validation_error,
+            "rendered_file_size_bytes": rendered_file_size_bytes,
+            "rendered_page_count": rendered_page_count,
+            "render_diagnostics": render_diagnostics,
+        }
+        matched_top_level = (
+            candidate_data.get("canonical_score_version_id") == canonical_score_version_id
+            and candidate_data.get("score_version_id") == rendered_score_version_id
+        )
+        matched_option = False
+        updated_options = []
+        for option in candidate_data.get("omr_candidates") or []:
+            if not isinstance(option, dict):
+                continue
+            updated_option = dict(option)
+            if (
+                updated_option.get("canonical_score_version_id") == canonical_score_version_id
+                and updated_option.get("score_version_id") == rendered_score_version_id
+            ):
+                updated_option.update(refresh_payload)
+                if warnings:
+                    updated_option["warnings"] = sorted(
+                        set(list(updated_option.get("warnings") or []) + warnings)
+                    )
+                matched_option = True
+            updated_options.append(updated_option)
+        if matched_option:
+            candidate_data["omr_candidates"] = updated_options
+        if matched_top_level:
+            candidate_data.update(refresh_payload)
+            if warnings:
+                candidate_data["warnings"] = sorted(
+                    set(list(candidate_data.get("warnings") or []) + warnings)
+                )
+        if not matched_top_level and not matched_option:
             continue
-        if candidate_data.get("score_version_id") != rendered_score_version_id:
-            continue
-        candidate_data["manual_musescore_rendered_at"] = rendered_at
-        candidate_data["renderer_name"] = renderer_name
-        candidate_data["renderer_version"] = renderer_version
-        if warnings:
-            candidate_data["warnings"] = sorted(
-                set(list(candidate_data.get("warnings") or []) + warnings)
-            )
         item.candidate_data = candidate_data
         changed = True
     if changed:
         await db.commit()
 
 
+async def _candidate_data_for_score_versions(
+    db: AsyncSession,
+    *,
+    piece_id: str,
+    canonical_score_version_id: str,
+    rendered_score_version_id: str,
+) -> dict:
+    result = await db.execute(
+        select(ReviewItem).where(
+            ReviewItem.piece_id == piece_id,
+            ReviewItem.status == "pending",
+        )
+    )
+    for item in result.scalars().all():
+        candidate_data = dict(item.candidate_data or {})
+        if candidate_data.get("canonical_score_version_id") != canonical_score_version_id:
+            option_data = _candidate_option_data_for_score_versions(
+                candidate_data,
+                canonical_score_version_id=canonical_score_version_id,
+                rendered_score_version_id=rendered_score_version_id,
+            )
+            if option_data is not None:
+                return {**candidate_data, **option_data}
+            continue
+        if candidate_data.get("score_version_id") != rendered_score_version_id:
+            option_data = _candidate_option_data_for_score_versions(
+                candidate_data,
+                canonical_score_version_id=canonical_score_version_id,
+                rendered_score_version_id=rendered_score_version_id,
+            )
+            if option_data is not None:
+                return {**candidate_data, **option_data}
+            continue
+        return candidate_data
+    return {}
+
+
+def _candidate_option_data_for_score_versions(
+    candidate_data: dict,
+    *,
+    canonical_score_version_id: str,
+    rendered_score_version_id: str,
+) -> dict | None:
+    for option in candidate_data.get("omr_candidates") or []:
+        if not isinstance(option, dict):
+            continue
+        if option.get("canonical_score_version_id") != canonical_score_version_id:
+            continue
+        if option.get("score_version_id") != rendered_score_version_id:
+            continue
+        return dict(option)
+    return None
+
+
 @router.get("/")
-async def list_pieces(db: AsyncSession = Depends(get_db)):
+async def list_pieces(include_attempts: bool = False, db: AsyncSession = Depends(get_db)):
     """List all imported pieces."""
     result = await db.execute(select(Piece).order_by(Piece.created_at.desc()))
     pieces = result.scalars().all()
-    return [_piece_to_response(piece) for piece in pieces]
+    responses = []
+    for piece in pieces:
+        metadata = _piece_state_service.metadata_for_piece(piece)
+        if not include_attempts and is_duplicate_metadata(metadata):
+            continue
+        responses.append(_piece_to_response(piece))
+    return responses
 
 
 @router.get("/assigned/{profile_id}")
@@ -312,19 +480,21 @@ async def list_assigned_pieces(profile_id: str, db: AsyncSession = Depends(get_d
     pieces: list[PieceResponse] = []
     for piece in result.scalars().all():
         metadata = _piece_state_service.metadata_for_piece(piece)
+        if is_duplicate_metadata(metadata):
+            continue
         if profile_id not in metadata["visible_to_profile_ids"]:
             continue
-        can_show_raw_book = (
-            metadata["piece_kind"] == "book"
-            and piece.status
+        can_show_raw = (
+            piece.status
             in {
                 PieceStatus.imported,
                 PieceStatus.processing,
                 PieceStatus.review_pending,
+                PieceStatus.needs_edits,
             }
             and await _piece_has_raw_score_version(db, piece.id)
         )
-        if piece.status != PieceStatus.approved and not can_show_raw_book:
+        if piece.status != PieceStatus.approved and not can_show_raw:
             continue
         pieces.append(_piece_to_response(piece))
     return pieces
@@ -393,6 +563,7 @@ async def import_piece(
     file_bytes = await file.read()
     if not file_bytes:
         raise HTTPException(status_code=400, detail="Uploaded file was empty.")
+    source_hash = sha256_bytes(file_bytes)
 
     parsed_split_hints = _parse_split_hints(split_hints)
     should_import_as_book = (
@@ -408,22 +579,73 @@ async def import_piece(
             )
         )
     )
-    if should_import_as_book:
-        if file_suffix != ".pdf":
-            raise HTTPException(status_code=400, detail="Book imports must be PDF files.")
-        return await _import_book_piece(
+    import_lock = _import_lock_for(
+        source_hash,
+        import_kind="book" if should_import_as_book else "piece",
+    )
+    async with import_lock:
+        if should_import_as_book:
+            if file_suffix != ".pdf":
+                raise HTTPException(status_code=400, detail="Book imports must be PDF files.")
+            existing_book = await find_active_book_by_source_hash(db, source_hash)
+            if existing_book:
+                return await _resume_existing_book_import(
+                    db,
+                    existing_book=existing_book,
+                    source_hash=source_hash,
+                    source_file_name=file_name,
+                    file_bytes=file_bytes,
+                    split_hints=parsed_split_hints,
+                    primary_instrument=primary_instrument,
+                    book_or_collection=book_or_collection,
+                )
+            return await _import_book_piece(
+                db,
+                title=resolved_title,
+                composer=resolved_composer,
+                primary_instrument=primary_instrument,
+                book_or_collection=book_or_collection,
+                file_name=file_name,
+                file_bytes=file_bytes,
+                source_hash=source_hash,
+                split_hints=parsed_split_hints,
+                allow_title_override=title_source == "filename_heuristic",
+                allow_composer_override=composer_source != "import_form",
+            )
+
+        existing_piece = await find_active_piece_by_source_hash(db, source_hash)
+        if existing_piece:
+            return _piece_to_response(existing_piece)
+
+        return await _import_standalone_piece(
             db,
-            title=resolved_title,
-            composer=resolved_composer,
-            primary_instrument=primary_instrument,
-            book_or_collection=book_or_collection,
+            file_suffix=file_suffix,
             file_name=file_name,
             file_bytes=file_bytes,
-            split_hints=parsed_split_hints,
-            allow_title_override=title_source == "filename_heuristic",
-            allow_composer_override=composer_source != "import_form",
+            source_hash=source_hash,
+            resolved_title=resolved_title,
+            resolved_composer=resolved_composer,
+            primary_instrument=primary_instrument,
+            book_or_collection=book_or_collection,
+            title_source=title_source,
+            composer_source=composer_source,
         )
 
+
+async def _import_standalone_piece(
+    db: AsyncSession,
+    *,
+    file_suffix: str,
+    file_name: str,
+    file_bytes: bytes,
+    source_hash: str,
+    resolved_title: str,
+    resolved_composer: str | None,
+    primary_instrument: str | None,
+    book_or_collection: str | None,
+    title_source: str,
+    composer_source: str,
+) -> PieceResponse:
     try:
         if file_suffix in _IMAGE_IMPORT_EXTENSIONS:
             artifacts = await ScoreProcessingService().import_image_scan(
@@ -449,6 +671,17 @@ async def import_piece(
     except ProcessingEngineError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
     processed_metadata = _processed_metadata_from_artifacts(artifacts)
+    standalone_key = logical_piece_key(
+        source_book_fingerprint=None,
+        book_or_collection=book_or_collection,
+        source_page_start=None,
+        source_page_end=None,
+        title=artifacts.piece.title,
+        composer=artifacts.piece.composer,
+        primary_instrument=primary_instrument
+        or _metadata_string(processed_metadata, "primary_instrument"),
+        source_content_sha256=source_hash,
+    )
     filename_suggestions = _filename_catalog_suggestions(
         title=resolved_title,
         composer=resolved_composer if composer_source == "filename_heuristic" else None,
@@ -485,6 +718,13 @@ async def import_piece(
         catalog_suggestions=catalog_suggestions,
         visible_to_profile_ids=[],
     )
+    _piece_state_service.update_identity(
+        artifacts.piece.id,
+        source_content_sha256=source_hash,
+        logical_piece_key=standalone_key,
+        canonical_piece_id=artifacts.piece.id,
+        attempt_status="canonical",
+    )
     if artifacts.review_item:
         candidate_data = dict(artifacts.review_item.candidate_data or {})
         candidate_data.update(
@@ -520,28 +760,122 @@ async def push_piece_to_profiles(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    """Assign an approved piece, or a raw book, to one or more student profiles."""
+    """Assign an approved processed piece or original PDF fallback to profiles."""
     piece = await db.get(Piece, piece_id)
     if not piece:
         raise HTTPException(status_code=404, detail="Piece not found")
     metadata = _piece_state_service.metadata_for_piece(piece)
-    can_push_raw_book = (
-        metadata["piece_kind"] == "book"
-        and piece.status
-        in {
-            PieceStatus.imported,
-            PieceStatus.processing,
-            PieceStatus.review_pending,
-        }
-        and await _piece_has_raw_score_version(db, piece_id)
-    )
-    if piece.status != PieceStatus.approved and not can_push_raw_book:
+    can_push_original = await _piece_has_raw_score_version(db, piece_id)
+    if body.mode == PiecePushMode.original_pdf:
+        raw_version = await _load_raw_score_version(db, piece_id)
+        if raw_version is None:
+            raise HTTPException(
+                status_code=409,
+                detail="No original PDF/image score version is available to push.",
+            )
+        if piece.status == PieceStatus.archived:
+            piece.status = PieceStatus.needs_edits
+        default_result = await db.execute(
+            select(ScoreVersion.id)
+            .where(
+                ScoreVersion.piece_id == piece_id,
+                ScoreVersion.is_default.is_(True),
+            )
+            .limit(1)
+        )
+        if default_result.scalar_one_or_none() is None:
+            raw_version.is_default = True
+    elif piece.status != PieceStatus.approved and not (
+        metadata["piece_kind"] == "book" and can_push_original
+    ):
         raise HTTPException(
             status_code=409,
-            detail="Only approved pieces or raw book PDFs can be pushed to student profiles.",
+            detail=(
+                "Only approved processed pieces can be pushed by default. "
+                "Use original_pdf mode to push the original fallback."
+            ),
         )
 
     _piece_state_service.assign_profiles(piece_id, body.profile_ids)
+    piece.updated_at = datetime.utcnow()
+    await db.commit()
+    refreshed_piece = await _load_piece_with_relations(piece_id, db)
+    if refreshed_piece is None:
+        raise HTTPException(status_code=404, detail="Piece not found")
+    return _piece_to_detail_response(request, refreshed_piece)
+
+
+@router.post("/{piece_id}/workflow/pull-for-edits")
+async def pull_piece_for_edits(
+    piece_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Return a pushed piece to parent edit workflow without hiding it from students."""
+    piece = await db.get(Piece, piece_id)
+    if not piece:
+        raise HTTPException(status_code=404, detail="Piece not found")
+    metadata = _piece_state_service.metadata_for_piece(piece)
+    if not metadata["visible_to_profile_ids"]:
+        raise HTTPException(
+            status_code=409,
+            detail="Only pieces already pushed to at least one profile can be pulled back.",
+        )
+    piece.status = PieceStatus.needs_edits
+    piece.updated_at = datetime.utcnow()
+    _piece_state_service.upsert_metadata(
+        piece.id,
+        title=piece.title,
+        composer=piece.composer,
+        primary_instrument=metadata["primary_instrument"],
+        book_or_collection=metadata["book_or_collection"],
+        visible_to_profile_ids=metadata["visible_to_profile_ids"],
+        processed_metadata=metadata["processed_metadata"],
+        piece_kind=metadata["piece_kind"],
+        source_book_id=metadata["source_book_id"],
+        source_page_start=metadata["source_page_start"],
+        source_page_end=metadata["source_page_end"],
+        catalog_metadata=metadata["catalog_metadata"],
+        catalog_suggestions=metadata["catalog_suggestions"],
+        validation_warnings=sorted(
+            set(
+                list(metadata["validation_warnings"])
+                + ["Parent pulled this piece back for edits; students keep the last pushed copy."]
+            )
+        ),
+        split_confidence=metadata["split_confidence"],
+        workflow_closed=False,
+        notes=metadata["notes"],
+    )
+    await db.commit()
+    refreshed_piece = await _load_piece_with_relations(piece_id, db)
+    if refreshed_piece is None:
+        raise HTTPException(status_code=404, detail="Piece not found")
+    return _piece_to_detail_response(request, refreshed_piece)
+
+
+@router.post("/{piece_id}/workflow/close")
+async def close_piece_workflow(
+    piece_id: str,
+    request: Request,
+    db: AsyncSession = Depends(get_db),
+):
+    """Hide a pushed piece from the parent processing workflow."""
+    piece = await _load_piece_with_relations(piece_id, db)
+    if not piece:
+        raise HTTPException(status_code=404, detail="Piece not found")
+
+    metadata = _piece_state_service.metadata_for_piece(piece)
+    if not metadata["visible_to_profile_ids"]:
+        raise HTTPException(
+            status_code=409,
+            detail="Only pieces that have been pushed to at least one profile can be closed.",
+        )
+
+    _piece_state_service.close_workflow(piece_id)
+    piece.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(piece)
     refreshed_piece = await _load_piece_with_relations(piece_id, db)
     if refreshed_piece is None:
         raise HTTPException(status_code=404, detail="Piece not found")
@@ -614,6 +948,21 @@ async def _render_score_version_for_review(
     except ProcessingEngineError as exc:
         raise HTTPException(status_code=409, detail=str(exc)) from exc
 
+    candidate_data = await _candidate_data_for_score_versions(
+        db,
+        piece_id=piece_id,
+        canonical_score_version_id=canonical_version.id,
+        rendered_score_version_id=rendered_version.id,
+    )
+    _repair_multi_piece_review_pdf_titles(
+        render_result,
+        contained_piece_titles=[
+            title
+            for title in candidate_data.get("contained_piece_titles") or []
+            if isinstance(title, str)
+        ],
+        multi_piece_page=bool(candidate_data.get("multi_piece_page")),
+    )
     rendered_at = datetime.utcnow().isoformat()
     await _mark_review_render_refreshed(
         db,
@@ -623,6 +972,11 @@ async def _render_score_version_for_review(
         rendered_at=rendered_at,
         renderer_name=render_result.renderer_name,
         renderer_version=render_result.renderer_version,
+        render_validation_status=render_result.validation_status,
+        render_validation_error=render_result.validation_error,
+        rendered_file_size_bytes=render_result.file_size_bytes,
+        rendered_page_count=render_result.page_count,
+        render_diagnostics=render_result.diagnostics,
         warnings=render_result.warnings,
     )
     content_type, file_size_bytes, content_sha256 = _score_version_download_metadata(rendered_path)
@@ -634,6 +988,10 @@ async def _render_score_version_for_review(
         "rendered_at": rendered_at,
         "renderer_name": render_result.renderer_name,
         "renderer_version": render_result.renderer_version,
+        "render_validation_status": render_result.validation_status,
+        "render_validation_error": render_result.validation_error,
+        "rendered_page_count": render_result.page_count,
+        "render_diagnostics": render_result.diagnostics,
         "warnings": render_result.warnings,
         "rendered_content_type": content_type,
         "rendered_file_size_bytes": file_size_bytes,
@@ -726,6 +1084,7 @@ async def upload_edited_score_version_candidate(
         db,
         piece_id=piece_id,
         score_version_id=rendered_score_version_id,
+        require_exists=False,
     )
     if rendered_path.suffix.lower() != ".pdf":
         raise HTTPException(
@@ -779,6 +1138,7 @@ async def rerender_score_version(
         db,
         piece_id=piece_id,
         score_version_id=body.rendered_score_version_id,
+        require_exists=False,
     )
     if rendered_path.suffix.lower() != ".pdf":
         raise HTTPException(
@@ -922,6 +1282,139 @@ async def update_piece(
     return _piece_to_response(piece)
 
 
+async def _resume_existing_book_import(
+    db: AsyncSession,
+    *,
+    existing_book: Piece,
+    source_hash: str,
+    source_file_name: str,
+    file_bytes: bytes,
+    split_hints: list[BookSplitHint],
+    primary_instrument: str | None,
+    book_or_collection: str | None,
+):
+    """Resume an exact book reimport without duplicating existing child pieces."""
+    existing_metadata = _piece_state_service.metadata_for_piece(existing_book)
+    book_fingerprint = existing_metadata["source_book_fingerprint"] or source_book_fingerprint(
+        source_hash
+    )
+    book_title = (
+        book_or_collection or existing_metadata["book_or_collection"] or existing_book.title
+    )
+    _piece_state_service.update_identity(
+        existing_book.id,
+        source_content_sha256=source_hash,
+        source_book_fingerprint=book_fingerprint,
+        logical_piece_key=f"book|{book_fingerprint}" if book_fingerprint else None,
+        canonical_piece_id=existing_book.id,
+        attempt_status="canonical",
+    )
+
+    created_children = 0
+    for split_hint in split_hints:
+        child_primary_instrument = (
+            split_hint.primary_instrument
+            or primary_instrument
+            or existing_metadata["primary_instrument"]
+        )
+        child_key = logical_piece_key(
+            source_book_fingerprint=book_fingerprint,
+            book_or_collection=book_title,
+            source_page_start=split_hint.page_start,
+            source_page_end=split_hint.page_end,
+            title=split_hint.title,
+            composer=split_hint.composer or existing_book.composer,
+            primary_instrument=child_primary_instrument,
+        )
+        if await find_active_piece_by_logical_key(db, child_key):
+            continue
+
+        child_bytes = _extract_pdf_page_range(
+            file_bytes,
+            start_page=split_hint.page_start,
+            end_page=split_hint.page_end,
+        )
+        child_artifact = await ScoreProcessingService().create_book_child_proposal(
+            db,
+            title=split_hint.title,
+            composer=split_hint.composer or existing_book.composer,
+            file_name=_child_file_name(source_file_name, split_hint),
+            file_bytes=child_bytes,
+            source_book_id=existing_book.id,
+            source_page_start=split_hint.page_start,
+            source_page_end=split_hint.page_end,
+            split_confidence=split_hint.confidence,
+            validation_warnings=split_hint.validation_warnings,
+            primary_instrument=child_primary_instrument,
+            contained_piece_titles=split_hint.contained_piece_titles,
+            multi_piece_page=split_hint.multi_piece_page,
+        )
+        processed_metadata = _processed_metadata_from_artifacts(child_artifact)
+        child_catalog_metadata = _catalog_metadata_from_split_hint(
+            split_hint,
+            book_title=book_title,
+            file_name=source_file_name,
+        )
+        if child_primary_instrument:
+            child_catalog_metadata["primary_instrument"] = child_primary_instrument
+            processed_metadata["primary_instrument"] = child_primary_instrument
+        suggestions = _catalog_suggestions_from_metadata(
+            child_catalog_metadata,
+            source="book_split_hint",
+            confidence=split_hint.confidence,
+        )
+        _piece_state_service.upsert_metadata(
+            child_artifact.piece.id,
+            title=child_artifact.piece.title,
+            composer=child_artifact.piece.composer,
+            primary_instrument=child_primary_instrument,
+            book_or_collection=book_title,
+            processed_metadata=processed_metadata,
+            piece_kind="piece",
+            source_book_id=existing_book.id,
+            source_page_start=split_hint.page_start,
+            source_page_end=split_hint.page_end,
+            catalog_metadata=child_catalog_metadata,
+            catalog_suggestions=suggestions,
+            validation_warnings=split_hint.validation_warnings,
+            split_confidence=split_hint.confidence,
+            visible_to_profile_ids=[],
+        )
+        _piece_state_service.update_identity(
+            child_artifact.piece.id,
+            source_content_sha256=sha256_bytes(child_bytes),
+            source_book_fingerprint=book_fingerprint,
+            logical_piece_key=child_key,
+            canonical_piece_id=child_artifact.piece.id,
+            attempt_status="canonical",
+        )
+        if child_artifact.review_item:
+            candidate_data = dict(child_artifact.review_item.candidate_data or {})
+            candidate_data.update(
+                {
+                    "catalog_metadata": child_catalog_metadata,
+                    "catalog_suggestions": suggestions,
+                    "source_book_id": existing_book.id,
+                    "source_page_start": split_hint.page_start,
+                    "source_page_end": split_hint.page_end,
+                    "source_book_fingerprint": book_fingerprint,
+                    "logical_piece_key": child_key,
+                    "split_confidence": split_hint.confidence,
+                    "contained_piece_titles": split_hint.contained_piece_titles,
+                    "multi_piece_page": split_hint.multi_piece_page,
+                    "validation_warnings": split_hint.validation_warnings,
+                }
+            )
+            child_artifact.review_item.candidate_data = candidate_data
+        created_children += 1
+
+    if created_children:
+        existing_book.updated_at = datetime.utcnow()
+    await db.commit()
+    await db.refresh(existing_book)
+    return _piece_to_response(existing_book)
+
+
 async def _import_book_piece(
     db: AsyncSession,
     *,
@@ -931,6 +1424,7 @@ async def _import_book_piece(
     book_or_collection: str | None,
     file_name: str,
     file_bytes: bytes,
+    source_hash: str,
     split_hints: list[BookSplitHint],
     allow_title_override: bool = False,
     allow_composer_override: bool = False,
@@ -963,6 +1457,7 @@ async def _import_book_piece(
     book_primary_instrument = primary_instrument or _metadata_string(
         book_catalog_metadata, "primary_instrument"
     )
+    book_fingerprint = source_book_fingerprint(source_hash)
     _piece_state_service.upsert_metadata(
         artifacts.book_piece.id,
         title=artifacts.book_piece.title,
@@ -975,6 +1470,14 @@ async def _import_book_piece(
         catalog_suggestions=artifacts.ocr_catalog_suggestions,
         validation_warnings=artifacts.validation_warnings,
         visible_to_profile_ids=[],
+    )
+    _piece_state_service.update_identity(
+        artifacts.book_piece.id,
+        source_content_sha256=source_hash,
+        source_book_fingerprint=book_fingerprint,
+        logical_piece_key=f"book|{book_fingerprint}" if book_fingerprint else None,
+        canonical_piece_id=artifacts.book_piece.id,
+        attempt_status="canonical",
     )
 
     for child_artifact, split_hint in zip(
@@ -995,6 +1498,16 @@ async def _import_book_piece(
         if child_primary_instrument:
             child_catalog_metadata["primary_instrument"] = child_primary_instrument
             processed_metadata["primary_instrument"] = child_primary_instrument
+        child_key = logical_piece_key(
+            source_book_fingerprint=book_fingerprint,
+            book_or_collection=book_or_collection or artifacts.book_piece.title,
+            source_page_start=split_hint.page_start,
+            source_page_end=split_hint.page_end,
+            title=child_artifact.piece.title,
+            composer=child_artifact.piece.composer,
+            primary_instrument=child_primary_instrument,
+        )
+        child_source_hash = _score_version_hash(child_artifact.raw_score_version)
         suggestions = _catalog_suggestions_from_metadata(
             child_catalog_metadata,
             source="book_split_hint",
@@ -1022,6 +1535,14 @@ async def _import_book_piece(
             split_confidence=split_hint.confidence,
             visible_to_profile_ids=[],
         )
+        _piece_state_service.update_identity(
+            child_artifact.piece.id,
+            source_content_sha256=child_source_hash,
+            source_book_fingerprint=book_fingerprint,
+            logical_piece_key=child_key,
+            canonical_piece_id=child_artifact.piece.id,
+            attempt_status="canonical",
+        )
         if child_artifact.review_item:
             candidate_data = dict(child_artifact.review_item.candidate_data or {})
             candidate_data.update(
@@ -1029,6 +1550,8 @@ async def _import_book_piece(
                     "catalog_metadata": child_catalog_metadata,
                     "catalog_suggestions": suggestions,
                     "source_book_id": artifacts.book_piece.id,
+                    "source_book_fingerprint": book_fingerprint,
+                    "logical_piece_key": child_key,
                     "source_page_start": split_hint.page_start,
                     "source_page_end": split_hint.page_end,
                     "split_confidence": split_hint.confidence,
@@ -1054,6 +1577,16 @@ def _processed_metadata_from_artifacts(artifacts) -> dict:
         if isinstance(processed_metadata, dict):
             return processed_metadata
     return {}
+
+
+def _score_version_hash(score_version: ScoreVersion) -> str | None:
+    file_path = Path(score_version.file_path)
+    if not file_path.exists():
+        return None
+    try:
+        return hashlib.sha256(file_path.read_bytes()).hexdigest()
+    except OSError:
+        return None
 
 
 async def _sync_pending_review_metadata(
@@ -1145,6 +1678,13 @@ async def _refresh_pending_candidate_outputs_for_piece(
             output_pdf_path=rendered_path,
             processing_settings=ProcessingSettingsStore().load(),
         )
+        _repair_multi_piece_review_pdf_titles(
+            render_result,
+            contained_piece_titles=[
+                title for title in contained_piece_titles if isinstance(title, str)
+            ],
+            multi_piece_page=multi_piece_page,
+        )
 
         processed_metadata = dict(candidate_data.get("processed_metadata") or {})
         processed_metadata.update(
@@ -1156,6 +1696,11 @@ async def _refresh_pending_candidate_outputs_for_piece(
         candidate_data["renderer_name"] = render_result.renderer_name
         candidate_data["renderer_version"] = render_result.renderer_version
         candidate_data["renderer_provenance"] = render_result.provenance
+        candidate_data["render_validation_status"] = render_result.validation_status
+        candidate_data["render_validation_error"] = render_result.validation_error
+        candidate_data["rendered_file_size_bytes"] = render_result.file_size_bytes
+        candidate_data["rendered_page_count"] = render_result.page_count
+        candidate_data["render_diagnostics"] = render_result.diagnostics
         candidate_data["metadata_rerendered_at"] = datetime.utcnow().isoformat()
         if render_result.warnings:
             candidate_data["warnings"] = sorted(

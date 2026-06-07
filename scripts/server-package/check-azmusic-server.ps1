@@ -1,11 +1,11 @@
 param(
-    [int]$Port = 8000
+    [int]$Port = 8795
 )
 
 $ErrorActionPreference = "Stop"
 $PackageRoot = $PSScriptRoot
 $ServerDir = Join-Path $PackageRoot "server"
-$VenvPython = Join-Path $ServerDir ".venv\Scripts\python.exe"
+$ServerExe = Join-Path $PackageRoot "azmusic-server.exe"
 $EnvFile = Join-Path $ServerDir ".env"
 
 function Get-EnvValue {
@@ -25,33 +25,122 @@ function Get-EnvValue {
     return ($line -split "=", 2)[1].Trim().Trim('"')
 }
 
-function Test-ConfiguredTool {
+function Find-ToolPath {
     param(
-        [string]$Label,
-        [string]$EnvName
+        [string]$EnvName,
+        [string[]]$CommandNames,
+        [string[]]$CommonPaths
     )
 
     $value = Get-EnvValue -Name $EnvName
-    if ([string]::IsNullOrWhiteSpace($value)) {
-        Write-Host "${Label}: not configured"
+    if (-not [string]::IsNullOrWhiteSpace($value)) {
+        if (Test-Path $value) {
+            return @{
+                Source = "configured"
+                Path = $value
+            }
+        }
+        $command = Get-Command $value -ErrorAction SilentlyContinue
+        if ($null -ne $command) {
+            return @{
+                Source = "configured command"
+                Path = $command.Source
+            }
+        }
+        return @{
+            Source = "missing configured"
+            Path = $value
+        }
+    }
+
+    foreach ($commandName in $CommandNames) {
+        $command = Get-Command $commandName -ErrorAction SilentlyContinue
+        if ($null -ne $command) {
+            return @{
+                Source = "PATH"
+                Path = $command.Source
+            }
+        }
+    }
+
+    foreach ($commonPath in $CommonPaths) {
+        if (Test-Path $commonPath) {
+            return @{
+                Source = "auto-detected"
+                Path = $commonPath
+            }
+        }
+    }
+
+    return $null
+}
+
+function Test-ConfiguredTool {
+    param(
+        [string]$Label,
+        [string]$EnvName,
+        [string[]]$CommandNames,
+        [string[]]$CommonPaths = @()
+    )
+
+    $tool = Find-ToolPath `
+        -EnvName $EnvName `
+        -CommandNames $CommandNames `
+        -CommonPaths $CommonPaths
+    if ($null -eq $tool) {
+        Write-Host "${Label}: not configured or detected"
         return
     }
 
-    if (Test-Path $value) {
-        Write-Host "${Label}: configured at $value"
+    if ($tool.Source -eq "missing configured") {
+        Write-Host "${Label}: configured path was not found: $($tool.Path)"
     } else {
-        Write-Host "${Label}: configured path was not found: $value"
+        Write-Host "${Label}: $($tool.Source) at $($tool.Path)"
     }
+}
+
+function Test-MuseHubInstalled {
+    $candidates = @(
+        "$env:LOCALAPPDATA\Programs\Muse Hub\Muse Hub.exe",
+        "$env:ProgramFiles\Muse Hub\Muse Hub.exe",
+        "${env:ProgramFiles(x86)}\Muse Hub\Muse Hub.exe"
+    )
+    foreach ($candidate in $candidates) {
+        if (-not [string]::IsNullOrWhiteSpace($candidate) -and (Test-Path $candidate)) {
+            return $true
+        }
+    }
+    return $false
 }
 
 Write-Host "AZMusic server package check"
 Write-Host "Package: $PackageRoot"
-Write-Host "Python venv: $(if (Test-Path $VenvPython) { 'ready' } else { 'missing; run setup' })"
+Write-Host "Bundled server executable: $(if (Test-Path $ServerExe) { 'ready' } else { 'missing; recreate package' })"
 Write-Host "Environment: $(if (Test-Path $EnvFile) { 'server\.env exists' } else { 'missing; run setup' })"
 
-Test-ConfiguredTool -Label "Audiveris" -EnvName "AUDIVERIS_CLI_PATH"
-Test-ConfiguredTool -Label "MuseScore" -EnvName "MUSESCORE_CLI_PATH"
-Test-ConfiguredTool -Label "Tesseract OCR" -EnvName "OCR_CLI_PATH"
+Test-ConfiguredTool `
+    -Label "Audiveris" `
+    -EnvName "AUDIVERIS_CLI_PATH" `
+    -CommandNames @("audiveris") `
+    -CommonPaths @("$env:ProgramFiles\Audiveris\Audiveris.exe", "${env:ProgramFiles(x86)}\Audiveris\Audiveris.exe")
+Test-ConfiguredTool `
+    -Label "MuseScore Studio" `
+    -EnvName "MUSESCORE_CLI_PATH" `
+    -CommandNames @("musescore", "mscore", "MuseScore4") `
+    -CommonPaths @("$env:ProgramFiles\MuseScore 4\bin\MuseScore4.exe", "${env:ProgramFiles(x86)}\MuseScore 4\bin\MuseScore4.exe", "$env:LOCALAPPDATA\Programs\MuseScore 4\bin\MuseScore4.exe")
+if (Test-MuseHubInstalled) {
+    Write-Host "Muse Hub detected. If MuseScore Studio is missing above, install MuseScore Studio inside Muse Hub."
+}
+Test-ConfiguredTool `
+    -Label "Tesseract OCR" `
+    -EnvName "OCR_CLI_PATH" `
+    -CommandNames @("tesseract") `
+    -CommonPaths @("$env:ProgramFiles\Tesseract-OCR\tesseract.exe", "${env:ProgramFiles(x86)}\Tesseract-OCR\tesseract.exe")
+Test-ConfiguredTool `
+    -Label "HOMR (experimental)" `
+    -EnvName "HOMR_CLI_PATH" `
+    -CommandNames @("homr") `
+    -CommonPaths @("$PackageRoot\tools\homr\.venv\Scripts\homr.exe", "$env:LOCALAPPDATA\AZMusic\Server\tools\homr\.venv\Scripts\homr.exe")
 
 try {
     $health = Invoke-RestMethod -Uri "http://localhost:$Port/health" -TimeoutSec 2
