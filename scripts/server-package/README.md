@@ -4,7 +4,7 @@ This package runs the AZMusic backend for family devices on the same network.
 
 ## Preferred Installer
 
-Most users should run `AZMusic Server Setup.exe` from the release. The installer extracts this server package, creates desktop and Start Menu shortcuts, runs setup, and offers guided links for processing tools.
+Most users should run `AZMusic.Server.Setup.exe` from the release. The installer extracts this server package, creates desktop and Start Menu shortcuts, runs setup, and offers guided links for processing tools.
 
 Use this ZIP manually only when testing portable installs or troubleshooting.
 

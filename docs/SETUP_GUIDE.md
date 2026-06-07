@@ -140,13 +140,13 @@ Release build outputs:
 - Windows: `client/build/windows/x64/runner/Release/azmusic.exe`
 - Android APK: `client/build/app/outputs/flutter-apk/app-release.apk`
 - Android app bundle: `client/build/app/outputs/bundle/release/app-release.aab`
-- End-user release assets: `dist/AZMusic Server Setup.exe`, `dist/AZMusic Windows Client Setup.exe`, `dist/AZMusic Android.apk`, and `dist/SHA256SUMS.txt`
+- End-user release assets: `dist/AZMusic.Server.Setup.exe`, `dist/AZMusic.Windows.Client.Setup.exe`, `dist/AZMusic.Android.apk`, and `dist/SHA256SUMS.txt`
 
 These build tasks pass `AZMUSIC_PRODUCTION=true` into the client. Android release signing reads `client/android/key.properties` when present; otherwise it uses debug signing only for internal development installs.
 
-The preferred Windows server install path is `AZMusic Server Setup.exe`. It embeds the internal portable server package, installs the bundled `azmusic-server.exe`, creates desktop and Start Menu shortcuts, runs setup, and offers guided links for Audiveris, MuseScore, Tesseract, and optional experimental HOMR. HOMR is installed into a separate Python virtual environment when selected; it is not bundled into the AZMusic executable.
+The preferred Windows server install path is `AZMusic.Server.Setup.exe`. It embeds the internal portable server package, installs the bundled `azmusic-server.exe`, creates desktop and Start Menu shortcuts, runs setup, and offers guided links for Audiveris, MuseScore, Tesseract, and optional experimental HOMR. HOMR is installed into a separate Python virtual environment when selected; it is not bundled into the AZMusic executable.
 
-The preferred Windows client install path is `AZMusic Windows Client Setup.exe`. It embeds the internal Windows client package, installs `azmusic.exe` for the current user, and creates Desktop and Start Menu shortcuts.
+The preferred Windows client install path is `AZMusic.Windows.Client.Setup.exe`. It embeds the internal Windows client package, installs `azmusic.exe` for the current user, and creates Desktop and Start Menu shortcuts.
 
 Start the sandbox target for fast client iteration:
 

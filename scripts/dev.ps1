@@ -694,7 +694,7 @@ function Invoke-ServerWindowsInstallerPackage {
     }
 
     $installerName = "AZMusic Server Setup"
-    $installerExe = Join-Path $DistDir "$installerName.exe"
+    $installerExe = Join-Path $DistDir "AZMusic.Server.Setup.exe"
     $buildRoot = Join-Path $DistDir "pyinstaller-server-installer"
     $workRoot = Join-Path $buildRoot "work"
     $specRoot = Join-Path $buildRoot "spec"
@@ -772,7 +772,7 @@ function Invoke-ClientWindowsInstallerPackage {
     }
 
     $installerName = "AZMusic Windows Client Setup"
-    $installerExe = Join-Path $DistDir "$installerName.exe"
+    $installerExe = Join-Path $DistDir "AZMusic.Windows.Client.Setup.exe"
     $buildRoot = Join-Path $DistDir "pyinstaller-client-installer"
     $workRoot = Join-Path $buildRoot "work"
     $specRoot = Join-Path $buildRoot "spec"
@@ -833,7 +833,7 @@ function Invoke-ClientAndroidApkPackage {
         New-Item -ItemType Directory -Path $DistDir | Out-Null
     }
 
-    $destinationApk = Join-Path $DistDir "AZMusic Android.apk"
+    $destinationApk = Join-Path $DistDir "AZMusic.Android.apk"
     Copy-Item -LiteralPath $apkPath -Destination $destinationApk -Force
     Write-Host "Created $destinationApk"
 }
@@ -844,9 +844,9 @@ function Invoke-ReleaseChecksums {
     }
 
     $assetNames = @(
-        "AZMusic Android.apk",
-        "AZMusic Server Setup.exe",
-        "AZMusic Windows Client Setup.exe"
+        "AZMusic.Android.apk",
+        "AZMusic.Server.Setup.exe",
+        "AZMusic.Windows.Client.Setup.exe"
     )
     $assets = foreach ($assetName in $assetNames) {
         $assetPath = Join-Path $DistDir $assetName
@@ -876,7 +876,10 @@ function Remove-InternalReleaseArtifacts {
         "AZMusic-windows-$ReleaseVersion.zip",
         "AZMusic-server-installer-windows-$ReleaseVersion.exe",
         "AZMusic-client-installer-windows-$ReleaseVersion.exe",
-        "AZMusic-android-$ReleaseVersion.apk"
+        "AZMusic-android-$ReleaseVersion.apk",
+        "AZMusic Android.apk",
+        "AZMusic Server Setup.exe",
+        "AZMusic Windows Client Setup.exe"
     )) {
         $path = Join-Path $DistDir $fileName
         if (Test-Path $path) {

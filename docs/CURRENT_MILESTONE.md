@@ -41,8 +41,8 @@ This is now a V1 package candidate, but it still needs a real-device E2E pass be
 - The library banner now reports real `offline-ready`, `syncing`, `synced`, and `failed-usable` states from the current opportunistic sync flow.
 - The Windows release build completes at `client/build/windows/x64/runner/Release/azmusic.exe`.
 - The Android release APK builds at `client/build/app/outputs/flutter-apk/app-release.apk`.
-- The preferred end-user server installer is `dist/AZMusic Server Setup.exe`, which embeds the internal bundled-server package and creates shortcuts.
-- The preferred Windows client installer is `dist/AZMusic Windows Client Setup.exe`, which embeds the Windows client package and creates shortcuts for `azmusic.exe`.
+- The preferred end-user server installer is `dist/AZMusic.Server.Setup.exe`, which embeds the internal bundled-server package and creates shortcuts.
+- The preferred Windows client installer is `dist/AZMusic.Windows.Client.Setup.exe`, which embeds the Windows client package and creates shortcuts for `azmusic.exe`.
 - The sandbox launcher can reset the local sandbox library and jump directly into the library or review-queue surfaces. Piece detail and reader routing use the first local entry when one exists.
 - Parent debug mode now exposes test-only controls for clearing local/server workflow data, refreshing jobs, canceling jobs, and retrying failed jobs with the piece title visible when the server provides it.
 - The automated client path now covers import cancellation, image-import persistence, app-config host and port resolution, sync banner state transitions, duplicate active-import blocking, stale local upload retry/removal, alpha-jump logic, reader spread layout rules, the local-library repository, and the core app-shell routes alongside the Windows sandbox smoke path.

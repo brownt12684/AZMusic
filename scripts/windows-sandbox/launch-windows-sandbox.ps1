@@ -62,8 +62,8 @@ function Ensure-WindowsSandboxFileAssociation {
 }
 
 function Assert-ReleaseAssets {
-    $serverInstaller = Join-Path $DistDir "AZMusic Server Setup.exe"
-    $clientInstaller = Join-Path $DistDir "AZMusic Windows Client Setup.exe"
+    $serverInstaller = Join-Path $DistDir "AZMusic.Server.Setup.exe"
+    $clientInstaller = Join-Path $DistDir "AZMusic.Windows.Client.Setup.exe"
 
     if ($RefreshServerPackage.IsPresent -or -not $UseExistingPackages.IsPresent -or -not (Test-Path $serverInstaller)) {
         & powershell.exe `

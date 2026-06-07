@@ -8,9 +8,9 @@ AZMusic now has a verified private-package path for the current V1 candidate:
 
 - Windows release build: `client/build/windows/x64/runner/Release/azmusic.exe`
 - Android release APK: `client/build/app/outputs/flutter-apk/app-release.apk`
-- Windows server installer: `dist/AZMusic Server Setup.exe`
-- Windows client installer: `dist/AZMusic Windows Client Setup.exe`
-- Android APK package: `dist/AZMusic Android.apk`
+- Windows server installer: `dist/AZMusic.Server.Setup.exe`
+- Windows client installer: `dist/AZMusic.Windows.Client.Setup.exe`
+- Android APK package: `dist/AZMusic.Android.apk`
 - The Windows server package includes bundled `azmusic-server.exe`; Python remains an implementation detail and should not be manually installed by end users.
 - The Windows server installer is the end-user setup path for the server PC.
 - The Windows client installer is the end-user setup path for Windows tablets.
@@ -83,9 +83,9 @@ If that file is missing, the release APK build falls back to the debug signing c
 
 The `v0.2.0` GitHub release should contain all required runtime pieces:
 
-- `AZMusic Server Setup.exe`
-- `AZMusic Windows Client Setup.exe`
-- `AZMusic Android.apk`
+- `AZMusic.Server.Setup.exe`
+- `AZMusic.Windows.Client.Setup.exe`
+- `AZMusic.Android.apk`
 - `SHA256SUMS.txt`
 
 If an older milestone release only contains the clients, delete the release and tag before recreating it from the updated commit.

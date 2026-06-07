@@ -14,8 +14,8 @@ if ($PSVersionTable.PSVersion.Major -ge 7) {
 
 $DistDir = "C:\AZMusicDist"
 $WorkRoot = "C:\AZMusicReleaseSmoke"
-$ServerInstaller = Join-Path $DistDir "AZMusic Server Setup.exe"
-$ClientInstaller = Join-Path $DistDir "AZMusic Windows Client Setup.exe"
+$ServerInstaller = Join-Path $DistDir "AZMusic.Server.Setup.exe"
+$ClientInstaller = Join-Path $DistDir "AZMusic.Windows.Client.Setup.exe"
 $ServerInstallRoot = Join-Path $WorkRoot "server"
 $ClientInstallRoot = Join-Path $WorkRoot "client"
 $BaseUrl = "http://127.0.0.1:8795"
