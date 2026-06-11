@@ -639,7 +639,7 @@ function Write-ProcessingToolNotices {
     $notice = @"
 # AZMusic Processing Tool Notices
 
-AZMusic can call external processing tools, but this Windows server package does not bundle Audiveris, MuseScore Studio, Tesseract OCR, or HOMR.
+AZMusic can call external processing tools, but this Windows server package does not bundle Audiveris, MuseScore Studio, Tesseract OCR, HOMR, or LEGATO.
 
 The setup helper opens official download pages or uses Windows Package Manager (`winget`) so those tools remain separately installed applications with their own installers, licenses, and update channels.
 
@@ -651,8 +651,11 @@ The setup helper opens official download pages or uses Windows Package Manager (
 | MuseScore Studio | MusicXML editing and PDF rendering | GPL-3.0 | https://musescore.org/en/download |
 | Tesseract OCR | OCR text extraction | Apache-2.0 | https://tesseract-ocr.github.io/tessdoc/Installation.html |
 | HOMR | Experimental optical music recognition / MusicXML generation | AGPL-3.0 | https://pypi.org/project/homr/ |
+| LEGATO | Experimental optical music recognition / ABC transcription | MIT | https://github.com/guang-yng/legato |
 
-Before commercial or public distribution, review each upstream license and installer redistribution policy with project counsel. This package currently avoids redistributing the copyleft processing applications.
+LEGATO's official `guangyangmusic/legato` model currently requires Hugging Face account access unless a local model directory is configured.
+
+Before commercial or public distribution, review each upstream license, model access term, and installer redistribution policy with project counsel. This package currently avoids redistributing the copyleft processing applications.
 "@
 
     Set-Content -LiteralPath (Join-Path $PackageRoot "PROCESSING_TOOL_NOTICES.md") -Value $notice -Encoding utf8
@@ -682,9 +685,7 @@ function Invoke-ServerWindowsReleasePackage {
 
 function Invoke-ServerWindowsInstallerPackage {
     $serverZip = Join-Path $DistDir "AZMusic-server-windows-$ReleaseVersion.zip"
-    if (-not (Test-Path $serverZip)) {
-        Invoke-ServerWindowsReleasePackage
-    }
+    Invoke-ServerWindowsReleasePackage
 
     Bootstrap-Server
 

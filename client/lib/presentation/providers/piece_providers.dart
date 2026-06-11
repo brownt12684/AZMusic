@@ -699,7 +699,8 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
         .toList(growable: false);
     final originalVersion = remotePiece.scoreVersions.firstWhereOrNull(
       (version) =>
-          version.scoreVersionRole == 'original_pdf' &&
+          (version.artifactRole == 'original_import' ||
+              version.scoreVersionRole == 'original_pdf') &&
           (version.format == 'pdf' || version.format == 'image'),
     );
     if (approvedVersions.isEmpty && originalVersion == null) {
@@ -708,6 +709,21 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
 
     final imports = <_RemoteArtifactImport>[];
     final approvedReaderVersion = approvedVersions.firstWhereOrNull(
+          (version) =>
+              version.studentDefault &&
+              (version.format == 'pdf' || version.format == 'image'),
+        ) ??
+        approvedVersions.firstWhereOrNull(
+          (version) =>
+              version.artifactRole == 'cleaned_pdf' &&
+              (version.format == 'pdf' || version.format == 'image'),
+        ) ??
+        approvedVersions.firstWhereOrNull(
+          (version) =>
+              version.artifactRole == 'corrected_render_pdf' &&
+              (version.format == 'pdf' || version.format == 'image'),
+        ) ??
+        approvedVersions.firstWhereOrNull(
           (version) =>
               version.scoreVersionRole == 'processed_render_pdf' &&
               (version.format == 'pdf' || version.format == 'image'),
@@ -742,6 +758,7 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
 
     final approvedMusicXml = approvedVersions.firstWhereOrNull(
       (version) =>
+          version.artifactRole == 'corrected_musicxml' ||
           version.scoreVersionRole == 'canonical_musicxml' ||
           version.format == 'musicxml',
     );
@@ -761,20 +778,28 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
   }
 
   String _titleForRemoteVersion(RemoteScoreVersion version) {
-    if (version.scoreVersionRole == 'original_pdf') {
+    if (version.artifactRole == 'original_import' ||
+        version.scoreVersionRole == 'original_pdf') {
       return 'Original PDF';
     }
-    if (version.scoreVersionRole == 'processed_render_pdf') {
-      return 'Processed score';
+    if (version.artifactRole == 'cleaned_pdf') {
+      return 'Student PDF';
     }
-    if (version.versionType == 'approved' && version.format == 'musicxml') {
+    if (version.artifactRole == 'corrected_render_pdf') {
+      return 'Corrected notation PDF';
+    }
+    if (version.scoreVersionRole == 'processed_render_pdf') {
+      return 'Student PDF';
+    }
+    if (version.artifactRole == 'corrected_musicxml' ||
+        (version.versionType == 'approved' && version.format == 'musicxml')) {
       return 'Approved MusicXML';
     }
     switch (version.versionType) {
       case 'approved':
         return 'Approved processed score';
       case 'reconstructed_candidate':
-        return 'Processed score candidate';
+        return 'Notation candidate';
       default:
         return 'Server score';
     }

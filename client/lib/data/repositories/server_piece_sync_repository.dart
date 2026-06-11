@@ -14,6 +14,10 @@ class ServerPieceSyncRepository {
     ApiClient? apiClient,
   }) : _apiClient = apiClient ?? ApiClient();
 
+  static const Duration _metadataReviewTimeout = Duration(minutes: 2);
+  static const Duration _scoreReviewTimeout = Duration(minutes: 6);
+  static const Duration _scoreRenderTimeout = Duration(minutes: 4);
+
   final ApiClient _apiClient;
 
   Dio get client => _apiClient.client;
@@ -110,6 +114,40 @@ class ServerPieceSyncRepository {
     );
   }
 
+  Future<GeminiOAuthStatus> fetchGeminiOAuthStatus() async {
+    final response =
+        await _apiClient.get('/api/v1/processing/gemini/oauth/status');
+    return GeminiOAuthStatus.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<GeminiOAuthStart> startGeminiOAuth() async {
+    final response =
+        await _apiClient.post('/api/v1/processing/gemini/oauth/start');
+    return GeminiOAuthStart.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<GeminiOAuthStatus> installGeminiOAuthClientSecret(
+    String filePath,
+  ) async {
+    final formData = FormData.fromMap({
+      'file': await MultipartFile.fromFile(
+        filePath,
+        filename: path.basename(filePath),
+      ),
+    });
+    final response = await _apiClient.post(
+      '/api/v1/processing/gemini/oauth/client-secret',
+      data: formData,
+    );
+    return GeminiOAuthStatus.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<GeminiOAuthStatus> disconnectGeminiOAuth() async {
+    final response =
+        await _apiClient.post('/api/v1/processing/gemini/oauth/disconnect');
+    return GeminiOAuthStatus.fromJson(response.data as Map<String, dynamic>);
+  }
+
   Future<List<ServerJob>> fetchJobs() async {
     final response = await _apiClient.get('/api/v1/jobs/');
     final items = response.data as List<dynamic>;
@@ -130,6 +168,14 @@ class ServerPieceSyncRepository {
 
   Future<Map<String, dynamic>> clearServerWorkflowData() async {
     final response = await _apiClient.post('/api/v1/debug/clear-workflow');
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<Map<String, dynamic>> clearServerPieceWorkflowData(
+    String serverPieceId,
+  ) async {
+    final response =
+        await _apiClient.delete('/api/v1/debug/pieces/$serverPieceId');
     return Map<String, dynamic>.from(response.data as Map);
   }
 
@@ -182,7 +228,8 @@ class ServerPieceSyncRepository {
       '/api/v1/review/$itemId',
       data: {
         'action': 'approve',
-        if (selectedCandidateId != null && selectedCandidateId.trim().isNotEmpty)
+        if (selectedCandidateId != null &&
+            selectedCandidateId.trim().isNotEmpty)
           'selected_candidate_id': selectedCandidateId.trim(),
       },
     );
@@ -217,13 +264,38 @@ class ServerPieceSyncRepository {
     String reprocessType = 'metadata',
     String? parentNotes,
   }) async {
-    final response = await _apiClient.post(
+    final response = await client.post(
       '/api/v1/review/$itemId/reprocess',
       data: {
         'reprocess_type': reprocessType,
         if (parentNotes != null && parentNotes.trim().isNotEmpty)
           'parent_notes': parentNotes.trim(),
       },
+      options: Options(
+        receiveTimeout: reprocessType == 'score'
+            ? _scoreReviewTimeout
+            : _metadataReviewTimeout,
+        sendTimeout: const Duration(seconds: 30),
+      ),
+    );
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<Map<String, dynamic>> requestCorrectionJsonReview(
+    String itemId, {
+    String? parentNotes,
+  }) async {
+    final response = await client.post(
+      '/api/v1/review/$itemId/llm-correction-json',
+      data: {
+        'reprocess_type': 'score',
+        if (parentNotes != null && parentNotes.trim().isNotEmpty)
+          'parent_notes': parentNotes.trim(),
+      },
+      options: Options(
+        receiveTimeout: _scoreReviewTimeout,
+        sendTimeout: const Duration(seconds: 30),
+      ),
     );
     return Map<String, dynamic>.from(response.data as Map);
   }
@@ -243,9 +315,13 @@ class ServerPieceSyncRepository {
     required String canonicalScoreVersionId,
     required String renderedScoreVersionId,
   }) async {
-    final response = await _apiClient.post(
+    final response = await client.post(
       '/api/v1/pieces/$serverPieceId/score_versions/$canonicalScoreVersionId/rerender',
       data: {'rendered_score_version_id': renderedScoreVersionId},
+      options: Options(
+        receiveTimeout: _scoreRenderTimeout,
+        sendTimeout: const Duration(seconds: 30),
+      ),
     );
     return Map<String, dynamic>.from(response.data as Map);
   }
@@ -263,9 +339,13 @@ class ServerPieceSyncRepository {
         filename: path.basename(filePath),
       ),
     });
-    final response = await _apiClient.post(
+    final response = await client.post(
       '/api/v1/pieces/$serverPieceId/score_versions/$canonicalScoreVersionId/edited-candidate',
       data: formData,
+      options: Options(
+        receiveTimeout: _scoreRenderTimeout,
+        sendTimeout: const Duration(minutes: 2),
+      ),
     );
     return Map<String, dynamic>.from(response.data as Map);
   }
@@ -278,7 +358,7 @@ class ServerPieceSyncRepository {
   Future<RemotePieceDetail> pushPieceToProfiles(
     String serverPieceId,
     List<String> profileIds, {
-    String mode = 'processed',
+    String mode = 'cleaned_pdf',
   }) async {
     final response = await _apiClient.post(
       '/api/v1/pieces/$serverPieceId/push',
@@ -288,6 +368,28 @@ class ServerPieceSyncRepository {
       },
     );
     return RemotePieceDetail.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<ServerJob> startNotationLab(String serverPieceId) async {
+    final response = await _apiClient.post(
+      '/api/v1/pieces/$serverPieceId/notation-lab/start',
+    );
+    return ServerJob.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<Map<String, dynamic>> fetchCloudStatus() async {
+    final response = await _apiClient.get('/api/v1/cloud/status');
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<Map<String, dynamic>> syncCloudManifest() async {
+    final response = await _apiClient.post('/api/v1/cloud/sync');
+    return Map<String, dynamic>.from(response.data as Map);
+  }
+
+  Future<Map<String, dynamic>> restoreCloudManifest() async {
+    final response = await _apiClient.post('/api/v1/cloud/restore');
+    return Map<String, dynamic>.from(response.data as Map);
   }
 
   Future<RemotePieceDetail> pullPieceForEdits(String serverPieceId) async {
@@ -384,11 +486,21 @@ class ServerPieceSyncRepository {
         final remotePiece = await fetchPieceDetail(serverPieceId);
         final defaultVersion = remotePiece.scoreVersions.firstWhere(
           (version) =>
-              version.scoreVersionRole == 'processed_render_pdf' &&
+              version.studentDefault &&
               (version.format == 'pdf' || version.format == 'image'),
           orElse: () => remotePiece.scoreVersions.firstWhere(
-            (version) => version.isDefault,
-            orElse: () => remotePiece.scoreVersions.first,
+            (version) =>
+                version.artifactRole == 'cleaned_pdf' &&
+                (version.format == 'pdf' || version.format == 'image'),
+            orElse: () => remotePiece.scoreVersions.firstWhere(
+              (version) =>
+                  version.scoreVersionRole == 'processed_render_pdf' &&
+                  (version.format == 'pdf' || version.format == 'image'),
+              orElse: () => remotePiece.scoreVersions.firstWhere(
+                (version) => version.isDefault,
+                orElse: () => remotePiece.scoreVersions.first,
+              ),
+            ),
           ),
         );
 
@@ -397,7 +509,8 @@ class ServerPieceSyncRepository {
         );
         if (!hasVersion &&
             defaultVersion.fileUrl.isNotEmpty &&
-            defaultVersion.format == 'pdf') {
+            (defaultVersion.format == 'pdf' ||
+                defaultVersion.format == 'image')) {
           final download = await _apiClient.client.get<List<int>>(
             defaultVersion.fileUrl,
             options: Options(responseType: ResponseType.bytes),
@@ -407,9 +520,11 @@ class ServerPieceSyncRepository {
             localPieceId: entry.piece.id,
             bytes: download.data ?? const <int>[],
             fileExtension: defaultVersion.fileExtension,
-            title: defaultVersion.versionType == 'approved'
-                ? 'Approved processed score'
-                : 'Processed score candidate',
+            title: defaultVersion.artifactRole == 'cleaned_pdf'
+                ? 'Student PDF'
+                : defaultVersion.versionType == 'approved'
+                    ? 'Approved student PDF'
+                    : 'Student PDF candidate',
             format: defaultVersion.format,
             remoteUrl: defaultVersion.fileUrl,
             makePrimary: true,

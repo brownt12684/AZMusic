@@ -25,6 +25,14 @@ import '../../providers/review_providers.dart';
 
 const _activeWorkflowPollInterval = Duration(seconds: 5);
 
+final _parentCloudStatusProvider =
+    FutureProvider.autoDispose<Map<String, dynamic>>((ref) {
+  if (!AppConfig.isServerPaired) {
+    throw const ServerNotPairedException();
+  }
+  return ref.read(serverPieceSyncRepositoryProvider).fetchCloudStatus();
+});
+
 class ParentHomeScreen extends ConsumerWidget {
   const ParentHomeScreen({super.key});
 
@@ -32,6 +40,8 @@ class ParentHomeScreen extends ConsumerWidget {
   Widget build(BuildContext context, WidgetRef ref) {
     final profile = ref.watch(activeProfileProvider);
     final reviewQueue = ref.watch(parentReviewQueueProvider);
+    final allEntries =
+        ref.watch(allPiecesProvider).valueOrNull ?? const <LibraryEntry>[];
     final intakeEntries = ref.watch(parentIntakeEntriesProvider);
     final syncedPieces = ref.watch(parentSyncedPiecesProvider);
     final debugTools = ref.watch(parentDebugToolsProvider);
@@ -103,9 +113,9 @@ class ParentHomeScreen extends ConsumerWidget {
             title: Text('${profile.displayName} tools'),
             bottom: const TabBar(
               tabs: [
-                Tab(icon: Icon(Icons.all_inbox_outlined), text: 'Intake'),
+                Tab(icon: Icon(Icons.all_inbox_outlined), text: 'Workflow'),
                 Tab(icon: Icon(Icons.people_alt_outlined), text: 'Students'),
-                Tab(icon: Icon(Icons.tune_outlined), text: 'Server'),
+                Tab(icon: Icon(Icons.tune_outlined), text: 'Advanced'),
               ],
             ),
             actions: [
@@ -126,6 +136,7 @@ class ParentHomeScreen extends ConsumerWidget {
                 child: _IntakeAndPushTab(
                   theme: theme,
                   intakeEntries: intakeEntries,
+                  allEntries: allEntries,
                   syncedPieces: syncedPieces,
                   processingCapabilities: processingCapabilities,
                   debugTools: debugTools,
@@ -157,6 +168,15 @@ class ParentHomeScreen extends ConsumerWidget {
                     return ref
                         .read(parentDebugToolsProvider.notifier)
                         .clearLocalAndServerLibraries();
+                  },
+                  onClearDebugPiece: (target) {
+                    return ref
+                        .read(parentDebugToolsProvider.notifier)
+                        .clearPiece(
+                          title: target.title,
+                          localPieceId: target.localPieceId,
+                          serverPieceId: target.serverPieceId,
+                        );
                   },
                   onRetryLocalUpload: (entry, reuploadAsNew) async {
                     await ref.read(allPiecesProvider.notifier).retryLocalUpload(
@@ -530,6 +550,7 @@ class _IntakeAndPushTab extends StatelessWidget {
   const _IntakeAndPushTab({
     required this.theme,
     required this.intakeEntries,
+    required this.allEntries,
     required this.syncedPieces,
     required this.processingCapabilities,
     required this.debugTools,
@@ -542,6 +563,7 @@ class _IntakeAndPushTab extends StatelessWidget {
     required this.onCancelDebugJob,
     required this.onRetryDebugJob,
     required this.onClearDebugLibraries,
+    required this.onClearDebugPiece,
     required this.onRetryLocalUpload,
     required this.onRemoveLocalItem,
     required this.onRepairPairing,
@@ -554,6 +576,7 @@ class _IntakeAndPushTab extends StatelessWidget {
 
   final ThemeData theme;
   final List<LibraryEntry> intakeEntries;
+  final List<LibraryEntry> allEntries;
   final AsyncValue<List<RemotePieceSummary>> syncedPieces;
   final AsyncValue<ProcessingCapabilities> processingCapabilities;
   final ParentDebugToolsState debugTools;
@@ -566,6 +589,7 @@ class _IntakeAndPushTab extends StatelessWidget {
   final Future<void> Function(String jobId) onCancelDebugJob;
   final Future<void> Function(String jobId) onRetryDebugJob;
   final Future<void> Function() onClearDebugLibraries;
+  final Future<void> Function(_DebugPieceTarget target) onClearDebugPiece;
   final Future<void> Function(LibraryEntry entry, bool reuploadAsNew)
       onRetryLocalUpload;
   final Future<void> Function(LibraryEntry entry) onRemoveLocalItem;
@@ -582,6 +606,10 @@ class _IntakeAndPushTab extends StatelessWidget {
   Widget build(BuildContext context) {
     final remotePieces =
         syncedPieces.valueOrNull ?? const <RemotePieceSummary>[];
+    final debugPieceTargets = _buildDebugPieceTargets(
+      localEntries: allEntries,
+      remotePieces: remotePieces,
+    );
     final reviewItems = reviewQueue.valueOrNull ?? const <ReviewQueueEntry>[];
     final remotePieceIds = remotePieces.map((piece) => piece.id).toSet();
     final localServerPieceIds = {
@@ -641,13 +669,13 @@ class _IntakeAndPushTab extends StatelessWidget {
         _WorkflowSection(
           title: 'Import',
           subtitle:
-              'Choose a PDF or scan. Local upload problems stay here until you retry or remove them.',
+              'Choose a PDF or scan. AZMusic preserves the original and prepares a student PDF for metadata review.',
           children: [
             FilledButton.icon(
               key: AppKeys.parentImportButton,
               onPressed: onImport,
               icon: const Icon(Icons.upload_file_outlined),
-              label: const Text('Import music for processing'),
+              label: const Text('Import music'),
             ),
             if (localUploadProblems.isEmpty)
               const _ParentEmptyState(
@@ -676,7 +704,7 @@ class _IntakeAndPushTab extends StatelessWidget {
         _WorkflowSection(
           title: 'Processing',
           subtitle:
-              'Books stay grouped here while the server splits pages and prepares review candidates.',
+              'Books stay grouped here while the server splits pages and prepares student PDFs.',
           children: [
             processingCapabilities.when(
               data: (capabilities) => _ProcessingTrackerCard(
@@ -720,18 +748,20 @@ class _IntakeAndPushTab extends StatelessWidget {
             const SizedBox(height: 12),
             _ParentDebugToolsCard(
               state: debugTools,
+              pieces: debugPieceTargets,
               onToggle: onToggleDebugTools,
               onRefreshJobs: onRefreshDebugJobs,
               onCancelJob: onCancelDebugJob,
               onRetryJob: onRetryDebugJob,
               onClearLibraries: onClearDebugLibraries,
+              onClearPiece: onClearDebugPiece,
             ),
           ],
         ),
         _WorkflowSection(
           title: 'Review',
           subtitle:
-              'Approve metadata first, then MuseScore candidates. Book reviews are grouped together.',
+              'Approve metadata and the student PDF. Notation conversion lives in Advanced Notation Lab.',
           children: [
             if (reviewQueue.hasError)
               _QueueErrorCard(
@@ -750,7 +780,7 @@ class _IntakeAndPushTab extends StatelessWidget {
               const _ParentEmptyState(
                 title: 'No review items ready',
                 body:
-                    'Metadata and MuseScore review cards appear here as processing completes.',
+                    'Metadata review cards appear here as student PDFs become ready.',
               )
             else ...[
               ...bookWorkflows
@@ -777,9 +807,9 @@ class _IntakeAndPushTab extends StatelessWidget {
           ],
         ),
         _WorkflowSection(
-          title: 'Push',
+          title: 'Ready to Push',
           subtitle:
-              'Approved pieces stay here until you assign them to a student or close them from the workflow.',
+              'Approved student PDFs stay here until you assign them to a student or close them from the workflow.',
           children: [
             if (syncedPieces.hasError)
               _QueueErrorCard(
@@ -795,7 +825,7 @@ class _IntakeAndPushTab extends StatelessWidget {
               const _ParentEmptyState(
                 title: 'Nothing ready to push',
                 body:
-                    'Approved pieces will appear here after parent review is complete.',
+                    'Approved student PDFs will appear here after parent metadata review is complete.',
               )
             else ...[
               if (readyRemotePieces.isNotEmpty)
@@ -986,7 +1016,10 @@ class _BookWorkflow {
       .length;
   int get museScorePendingCount => reviewItems
       .where(
-          (item) => _reviewProcessingStage(item) == 'candidate_review_needed')
+        (item) =>
+            _reviewProcessingStage(item) == 'notation_edit_queued' ||
+            _reviewProcessingStage(item) == 'candidate_review_needed',
+      )
       .length;
   int get approvedCount =>
       children.where((piece) => piece.libraryStatus == 'ready').length;
@@ -1084,7 +1117,9 @@ class _BookWorkflowCard extends StatelessWidget {
             children: [
               Chip(label: Text('${workflow.detectedCount} detected')),
               Chip(label: Text('${workflow.metadataPendingCount} metadata')),
-              Chip(label: Text('${workflow.museScorePendingCount} MuseScore')),
+              Chip(
+                label: Text('${workflow.museScorePendingCount} notation edits'),
+              ),
               Chip(label: Text('${workflow.approvedCount} approved')),
               if (workflow.pushedCount > 0)
                 Chip(label: Text('${workflow.pushedCount} pushed')),
@@ -1142,7 +1177,7 @@ class _BookReviewGroupCard extends StatelessWidget {
                 const SizedBox(height: 4),
                 Text(
                   '${workflow.metadataPendingCount} metadata review(s), '
-                  '${workflow.museScorePendingCount} MuseScore review(s).',
+                  '${workflow.museScorePendingCount} notation edit item(s).',
                   style: theme.textTheme.bodySmall?.copyWith(
                     color: theme.colorScheme.onSurfaceVariant,
                   ),
@@ -1278,7 +1313,7 @@ String _bookWorkflowStatus(_BookWorkflow workflow) {
     return 'metadata review';
   }
   if (workflow.museScorePendingCount > 0) {
-    return 'MuseScore review';
+    return 'notation edit';
   }
   if (workflow.processingCount > 0) {
     return 'processing';
@@ -1370,22 +1405,81 @@ class _ProcessingTrackerCard extends StatelessWidget {
   }
 }
 
+class _DebugPieceTarget {
+  const _DebugPieceTarget({
+    required this.title,
+    required this.scopeLabel,
+    this.localPieceId,
+    this.serverPieceId,
+  });
+
+  final String title;
+  final String scopeLabel;
+  final String? localPieceId;
+  final String? serverPieceId;
+
+  String get keyId => serverPieceId ?? localPieceId ?? title;
+}
+
+List<_DebugPieceTarget> _buildDebugPieceTargets({
+  required List<LibraryEntry> localEntries,
+  required List<RemotePieceSummary> remotePieces,
+}) {
+  final targets = <_DebugPieceTarget>[];
+  final seenServerPieceIds = <String>{};
+  for (final entry in localEntries) {
+    final serverPieceId = entry.piece.serverPieceId;
+    if (serverPieceId != null) {
+      seenServerPieceIds.add(serverPieceId);
+    }
+    targets.add(
+      _DebugPieceTarget(
+        title: entry.piece.title,
+        localPieceId: entry.piece.id,
+        serverPieceId: serverPieceId,
+        scopeLabel: serverPieceId == null
+            ? 'Local library data'
+            : 'Local and server workflow data',
+      ),
+    );
+  }
+  for (final piece in remotePieces) {
+    if (seenServerPieceIds.contains(piece.id)) {
+      continue;
+    }
+    targets.add(
+      _DebugPieceTarget(
+        title: piece.title,
+        serverPieceId: piece.id,
+        scopeLabel: 'Server workflow data',
+      ),
+    );
+  }
+  targets
+      .sort((a, b) => a.title.toLowerCase().compareTo(b.title.toLowerCase()));
+  return targets;
+}
+
 class _ParentDebugToolsCard extends StatelessWidget {
   const _ParentDebugToolsCard({
     required this.state,
+    required this.pieces,
     required this.onToggle,
     required this.onRefreshJobs,
     required this.onCancelJob,
     required this.onRetryJob,
     required this.onClearLibraries,
+    required this.onClearPiece,
   });
 
   final ParentDebugToolsState state;
+  final List<_DebugPieceTarget> pieces;
   final Future<void> Function(bool enabled) onToggle;
   final Future<void> Function() onRefreshJobs;
   final Future<void> Function(String jobId) onCancelJob;
   final Future<void> Function(String jobId) onRetryJob;
   final Future<void> Function() onClearLibraries;
+  final Future<void> Function(_DebugPieceTarget piece) onClearPiece;
 
   @override
   Widget build(BuildContext context) {
@@ -1471,6 +1565,36 @@ class _ParentDebugToolsCard extends StatelessWidget {
               ),
               const SizedBox(height: 14),
               Text(
+                'Pieces',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                'Clear one problem import without resetting the full library.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 8),
+              if (pieces.isEmpty)
+                Text(
+                  'No local or server pieces found.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                )
+              else
+                ...pieces.take(30).map(
+                      (piece) => _DebugPieceRow(
+                        piece: piece,
+                        busy: state.busy,
+                        onClear: () => _confirmClearPiece(context, piece),
+                      ),
+                    ),
+              const SizedBox(height: 14),
+              Text(
                 'Server jobs',
                 style: theme.textTheme.titleSmall?.copyWith(
                   fontWeight: FontWeight.w700,
@@ -1539,6 +1663,35 @@ class _ParentDebugToolsCard extends StatelessWidget {
     }
   }
 
+  Future<void> _confirmClearPiece(
+    BuildContext context,
+    _DebugPieceTarget piece,
+  ) async {
+    final confirmed = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Clear ${piece.title}?'),
+        content: Text(
+          'This removes ${piece.scopeLabel.toLowerCase()} for this piece only. '
+          'Other imports, pairing, students, parent PIN, and processing settings are preserved.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton(
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text('Clear piece'),
+          ),
+        ],
+      ),
+    );
+    if (confirmed == true && context.mounted) {
+      await onClearPiece(piece);
+    }
+  }
+
   Future<void> _confirmCancelJob(
     BuildContext context,
     ServerJob job,
@@ -1576,7 +1729,7 @@ class _ParentDebugToolsCard extends StatelessWidget {
       builder: (context) => AlertDialog(
         title: const Text('Retry processing?'),
         content: Text(
-          'Retry processing for ${job.pieceLabel}? This will send the same raw PDF and metadata back through Audiveris and MuseScore.',
+          'Retry processing for ${job.pieceLabel}? This reruns the advanced notation pipeline and will not block the already approved student PDF.',
         ),
         actions: [
           TextButton(
@@ -1617,6 +1770,64 @@ int _debugJobStatusPriority(String status) {
     'canceled' => 3,
     _ => 4,
   };
+}
+
+class _DebugPieceRow extends StatelessWidget {
+  const _DebugPieceRow({
+    required this.piece,
+    required this.busy,
+    required this.onClear,
+  });
+
+  final _DebugPieceTarget piece;
+  final bool busy;
+  final Future<void> Function() onClear;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    return Container(
+      margin: const EdgeInsets.only(bottom: 8),
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  piece.title,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  piece.scopeLabel,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          OutlinedButton.icon(
+            key: AppKeys.parentDebugClearPieceButton(piece.keyId),
+            onPressed: busy ? null : onClear,
+            icon: const Icon(Icons.delete_outline),
+            label: const Text('Clear piece'),
+          ),
+        ],
+      ),
+    );
+  }
 }
 
 class _DebugJobRow extends StatelessWidget {
@@ -1832,7 +2043,7 @@ class _StudentsTab extends StatelessWidget {
               return const _ParentEmptyState(
                 title: 'No synced pieces yet',
                 body:
-                    'Once imports reach the server, parent-managed metadata and student assignments will appear here.',
+                    'Once imports reach the server, parent-managed metadata, student PDFs, and assignments will appear here.',
               );
             }
             return Column(
@@ -1885,6 +2096,8 @@ class _ServerToolsTab extends StatelessWidget {
           serverHealth: serverHealth,
           onRepairPairing: onRepairPairing,
         ),
+        const SizedBox(height: 12),
+        const _CloudSyncCard(),
         const SizedBox(height: 12),
         const _ProcessingSettingsCard(),
       ],
@@ -2014,7 +2227,7 @@ class _IntakeEntryCard extends StatelessWidget {
               FilledButton.icon(
                 onPressed: () => onOpenReview(reviewItem!.id),
                 icon: const Icon(Icons.fact_check_outlined),
-                label: const Text('Review processed candidate'),
+                label: const Text('Review metadata'),
               ),
             ],
           ] else
@@ -2057,16 +2270,17 @@ class _IntakeEntryCard extends StatelessWidget {
 
   String _statusMessage(LibraryStatus status, bool hasReviewItem) {
     return switch (status) {
-      LibraryStatus.intake => 'Waiting for processing or server upload.',
+      LibraryStatus.intake => 'Waiting for server upload.',
       LibraryStatus.uploadPending =>
         'Waiting for server connection before upload.',
-      LibraryStatus.processing => 'Backend processing is still running.',
+      LibraryStatus.processing =>
+        'Server is preparing the student PDF and metadata.',
       LibraryStatus.review => hasReviewItem
-          ? 'Processing is complete. Review metadata and score output before pushing.'
-          : 'Processing is complete, but the review item is still syncing.',
+          ? 'Student PDF is ready. Review metadata before pushing.'
+          : 'Student PDF is ready, but the review item is still syncing.',
       LibraryStatus.needsEdits =>
-        'Processed candidate was rejected or pulled back. Push original or edit and repush.',
-      LibraryStatus.ready => 'Ready to push.',
+        'Metadata or notation was rejected or pulled back. You can still push the student PDF fallback.',
+      LibraryStatus.ready => 'Student PDF ready to push.',
       LibraryStatus.archived => 'Rejected or archived after parent review.',
     };
   }
@@ -2708,14 +2922,14 @@ class _ProcessingSettingsCard extends StatelessWidget {
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      'Server processing settings',
+                      'Advanced Notation Lab settings',
                       style: theme.textTheme.titleMedium?.copyWith(
                         fontWeight: FontWeight.w700,
                       ),
                     ),
                     const SizedBox(height: 4),
                     Text(
-                      'Configure Audiveris, MuseScore Studio, OCR, and stub fallback.',
+                      'Configure OCR, Audiveris, and MuseScore Studio for notation editing.',
                       style: theme.textTheme.bodySmall?.copyWith(
                         color: theme.colorScheme.onSurfaceVariant,
                       ),
@@ -2730,6 +2944,161 @@ class _ProcessingSettingsCard extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+
+class _CloudSyncCard extends ConsumerWidget {
+  const _CloudSyncCard();
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final status = ref.watch(_parentCloudStatusProvider);
+    return DecoratedBox(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(16),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: status.when(
+          loading: () => const Row(
+            children: [
+              SizedBox(
+                width: 20,
+                height: 20,
+                child: CircularProgressIndicator(strokeWidth: 2),
+              ),
+              SizedBox(width: 12),
+              Text('Loading cloud sync status...'),
+            ],
+          ),
+          error: (error, _) => Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Cloud sync unavailable',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 6),
+              Text(
+                formatServerConnectionError(error),
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.error,
+                ),
+              ),
+            ],
+          ),
+          data: (payload) => _CloudSyncStatusBody(payload: payload),
+        ),
+      ),
+    );
+  }
+}
+
+class _CloudSyncStatusBody extends ConsumerWidget {
+  const _CloudSyncStatusBody({required this.payload});
+
+  final Map<String, dynamic> payload;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final connected = payload['connected'] as bool? ?? false;
+    final repository = payload['repository'] as String?;
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Row(
+          children: [
+            const Icon(Icons.cloud_sync_outlined),
+            const SizedBox(width: 10),
+            Expanded(
+              child: Text(
+                'Parent cloud restore',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+            ),
+            Chip(label: Text(connected ? 'GitHub linked' : 'GitHub pending')),
+          ],
+        ),
+        const SizedBox(height: 8),
+        Text(
+          repository == null || repository.isEmpty
+              ? 'Interim GitHub sync is not configured yet. Student devices still resync from the paired server.'
+              : 'Sync target: $repository',
+          style: theme.textTheme.bodySmall?.copyWith(
+            color: theme.colorScheme.onSurfaceVariant,
+          ),
+        ),
+        const SizedBox(height: 10),
+        Wrap(
+          spacing: 8,
+          runSpacing: 8,
+          children: [
+            FilledButton.tonalIcon(
+              onPressed: () => _runCloudAction(
+                context,
+                ref,
+                action: () => ref
+                    .read(serverPieceSyncRepositoryProvider)
+                    .syncCloudManifest(),
+                successPrefix: 'Cloud manifest synced',
+              ),
+              icon: const Icon(Icons.upload_outlined),
+              label: const Text('Sync manifest'),
+            ),
+            OutlinedButton.icon(
+              onPressed: () => _runCloudAction(
+                context,
+                ref,
+                action: () => ref
+                    .read(serverPieceSyncRepositoryProvider)
+                    .restoreCloudManifest(),
+                successPrefix: 'Restore manifest checked',
+              ),
+              icon: const Icon(Icons.restore_outlined),
+              label: const Text('Check restore'),
+            ),
+          ],
+        ),
+      ],
+    );
+  }
+
+  Future<void> _runCloudAction(
+    BuildContext context,
+    WidgetRef ref, {
+    required Future<Map<String, dynamic>> Function() action,
+    required String successPrefix,
+  }) async {
+    try {
+      final result = await action();
+      ref.invalidate(_parentCloudStatusProvider);
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            '$successPrefix: ${result['pieces_count'] ?? 0} pieces, '
+            '${result['notes_count'] ?? 0} notes.',
+          ),
+        ),
+      );
+    } catch (error) {
+      if (!context.mounted) {
+        return;
+      }
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Cloud action failed: $error')),
+      );
+    }
   }
 }
 
@@ -2831,12 +3200,6 @@ class _SyncedPieceCard extends StatelessWidget {
                         onPressed: () => onPushOriginal(student.id),
                         icon: const Icon(Icons.picture_as_pdf_outlined),
                         label: Text('Push original to ${student.displayName}'),
-                      ),
-                    if (piece.libraryStatus == 'needsEdits')
-                      const Tooltip(
-                        message:
-                            'Coming soon: AI will review the rejected MusicXML against the original PDF.',
-                        child: Chip(label: Text('Fix with AI later')),
                       ),
                   ],
                 ),

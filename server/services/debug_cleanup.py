@@ -27,6 +27,10 @@ class DebugCleanupError(RuntimeError):
     """Raised when a debug cleanup target cannot be safely resolved."""
 
 
+class DebugPieceNotFoundError(DebugCleanupError):
+    """Raised when a requested debug cleanup piece is not present."""
+
+
 async def clear_workflow_data(db: AsyncSession) -> dict[str, object]:
     """Clear import/review/generated workflow data while preserving configuration."""
     backup_dir = _backup_runtime_state(db)
@@ -52,6 +56,46 @@ async def clear_workflow_data(db: AsyncSession) -> dict[str, object]:
         "status": "cleared",
         "backup_dir": str(backup_dir),
         "cleared_storage_dirs": cleared_dirs,
+        "preserved": [
+            "pairing_state",
+            "processing_settings",
+            "server_identity",
+            "device_pairings",
+        ],
+    }
+
+
+async def clear_piece_workflow_data(db: AsyncSession, piece_id: str) -> dict[str, object]:
+    """Clear one piece and its generated workflow data."""
+    piece = await db.get(Piece, piece_id)
+    if piece is None:
+        raise DebugPieceNotFoundError(f"Piece {piece_id} was not found.")
+
+    backup_dir = _backup_runtime_state(db)
+    deleted_counts: dict[str, int] = {}
+    for model in (
+        AnnotationLayer,
+        PieceHistoryDraft,
+        MediaAsset,
+        ReviewItem,
+        BackgroundJob,
+        ScoreVersion,
+    ):
+        result = await db.execute(delete(model).where(model.piece_id == piece_id))
+        deleted_counts[model.__tablename__] = result.rowcount or 0
+    result = await db.execute(delete(Piece).where(Piece.id == piece_id))
+    deleted_counts[Piece.__tablename__] = result.rowcount or 0
+    await db.commit()
+
+    removed_paths = _remove_piece_storage(piece_id)
+
+    return {
+        "status": "cleared",
+        "piece_id": piece_id,
+        "piece_title": piece.title,
+        "backup_dir": str(backup_dir),
+        "deleted_counts": deleted_counts,
+        "removed_paths": removed_paths,
         "preserved": [
             "pairing_state",
             "processing_settings",
@@ -133,3 +177,28 @@ def _clear_directory_contents(directory: Path) -> bool:
         else:
             child.unlink()
     return True
+
+
+def _remove_piece_storage(piece_id: str) -> list[str]:
+    storage_root = settings.storage_path.resolve()
+    targets = [
+        storage_root / "pieces" / piece_id,
+        storage_root / "piece_state" / f"{piece_id}.json",
+    ]
+    removed_paths: list[str] = []
+    for target in targets:
+        resolved = target.resolve()
+        try:
+            resolved.relative_to(storage_root)
+        except ValueError as exc:
+            raise DebugCleanupError(
+                f"Refusing to remove path outside server storage: {resolved}"
+            ) from exc
+        if not resolved.exists():
+            continue
+        if resolved.is_dir():
+            shutil.rmtree(resolved)
+        else:
+            resolved.unlink()
+        removed_paths.append(str(resolved))
+    return removed_paths

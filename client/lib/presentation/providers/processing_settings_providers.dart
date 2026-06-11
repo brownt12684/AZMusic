@@ -82,3 +82,52 @@ class ProcessingSettingsNotifier extends AsyncNotifier<ProcessingSettings> {
     }
   }
 }
+
+final geminiOAuthStatusProvider =
+    AsyncNotifierProvider<GeminiOAuthStatusNotifier, GeminiOAuthStatus>(
+  GeminiOAuthStatusNotifier.new,
+);
+
+class GeminiOAuthStatusNotifier extends AsyncNotifier<GeminiOAuthStatus> {
+  @override
+  Future<GeminiOAuthStatus> build() {
+    if (!AppConfig.isServerPaired) {
+      throw const ServerNotPairedException();
+    }
+    return ref.read(serverPieceSyncRepositoryProvider).fetchGeminiOAuthStatus();
+  }
+
+  Future<GeminiOAuthStart> start() {
+    return ref.read(serverPieceSyncRepositoryProvider).startGeminiOAuth();
+  }
+
+  Future<void> installClientSecret(String filePath) async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref
+          .read(serverPieceSyncRepositoryProvider)
+          .installGeminiOAuthClientSecret(filePath),
+    );
+    ref.invalidate(processingSettingsProvider);
+    ref.invalidate(processingCapabilitiesProvider);
+  }
+
+  Future<void> disconnect() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () => ref.read(serverPieceSyncRepositoryProvider).disconnectGeminiOAuth(),
+    );
+    ref.invalidate(processingSettingsProvider);
+    ref.invalidate(processingCapabilitiesProvider);
+  }
+
+  Future<void> refresh() async {
+    state = const AsyncValue.loading();
+    state = await AsyncValue.guard(
+      () =>
+          ref.read(serverPieceSyncRepositoryProvider).fetchGeminiOAuthStatus(),
+    );
+    ref.invalidate(processingSettingsProvider);
+    ref.invalidate(processingCapabilitiesProvider);
+  }
+}

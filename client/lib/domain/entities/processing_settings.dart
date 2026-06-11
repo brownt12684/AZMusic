@@ -2,6 +2,8 @@ class ProcessingSettings {
   const ProcessingSettings({
     this.audiverisCliPath,
     this.homrCliPath,
+    this.legatoCliPath,
+    this.legatoModelPath,
     this.musescoreCliPath,
     this.musescoreStylePath,
     this.ocrCliPath,
@@ -11,12 +13,16 @@ class ProcessingSettings {
     this.maxConcurrentJobs = 2,
     this.localLlmProvider,
     this.localLlmModel,
+    this.localLlmBaseUrl,
     this.cloudEnabled = false,
     this.cloudProvider,
     this.cloudModel,
     this.cloudBaseUrl,
     this.cloudApiKey,
     this.cloudApiKeyConfigured = false,
+    this.cloudAuthMode = 'oauth',
+    this.cloudOauthConnected = false,
+    this.cloudOauthAccount,
     required this.processingMode,
     required this.allowStubMusicXml,
     required this.productionMode,
@@ -28,6 +34,8 @@ class ProcessingSettings {
 
   final String? audiverisCliPath;
   final String? homrCliPath;
+  final String? legatoCliPath;
+  final String? legatoModelPath;
   final String? musescoreCliPath;
   final String? musescoreStylePath;
   final String? ocrCliPath;
@@ -37,12 +45,16 @@ class ProcessingSettings {
   final int maxConcurrentJobs;
   final String? localLlmProvider;
   final String? localLlmModel;
+  final String? localLlmBaseUrl;
   final bool cloudEnabled;
   final String? cloudProvider;
   final String? cloudModel;
   final String? cloudBaseUrl;
   final String? cloudApiKey;
   final bool cloudApiKeyConfigured;
+  final String cloudAuthMode;
+  final bool cloudOauthConnected;
+  final String? cloudOauthAccount;
   final String processingMode;
   final bool allowStubMusicXml;
   final bool productionMode;
@@ -54,6 +66,8 @@ class ProcessingSettings {
   ProcessingSettings copyWith({
     String? audiverisCliPath,
     String? homrCliPath,
+    String? legatoCliPath,
+    String? legatoModelPath,
     String? musescoreCliPath,
     String? musescoreStylePath,
     String? ocrCliPath,
@@ -63,12 +77,16 @@ class ProcessingSettings {
     int? maxConcurrentJobs,
     String? localLlmProvider,
     String? localLlmModel,
+    String? localLlmBaseUrl,
     bool? cloudEnabled,
     String? cloudProvider,
     String? cloudModel,
     String? cloudBaseUrl,
     String? cloudApiKey,
     bool? cloudApiKeyConfigured,
+    String? cloudAuthMode,
+    bool? cloudOauthConnected,
+    String? cloudOauthAccount,
     String? processingMode,
     bool? allowStubMusicXml,
     bool? productionMode,
@@ -78,11 +96,14 @@ class ProcessingSettings {
     DateTime? updatedAt,
     bool clearAudiverisPath = false,
     bool clearHomrPath = false,
+    bool clearLegatoPath = false,
+    bool clearLegatoModelPath = false,
     bool clearMuseScorePath = false,
     bool clearMuseScoreStylePath = false,
     bool clearOcrPath = false,
     bool clearLocalLlmProvider = false,
     bool clearLocalLlmModel = false,
+    bool clearLocalLlmBaseUrl = false,
     bool clearCloudProvider = false,
     bool clearCloudModel = false,
     bool clearCloudBaseUrl = false,
@@ -92,6 +113,10 @@ class ProcessingSettings {
       audiverisCliPath:
           clearAudiverisPath ? null : audiverisCliPath ?? this.audiverisCliPath,
       homrCliPath: clearHomrPath ? null : homrCliPath ?? this.homrCliPath,
+      legatoCliPath:
+          clearLegatoPath ? null : legatoCliPath ?? this.legatoCliPath,
+      legatoModelPath:
+          clearLegatoModelPath ? null : legatoModelPath ?? this.legatoModelPath,
       musescoreCliPath:
           clearMuseScorePath ? null : musescoreCliPath ?? this.musescoreCliPath,
       musescoreStylePath: clearMuseScoreStylePath
@@ -107,6 +132,8 @@ class ProcessingSettings {
           : localLlmProvider ?? this.localLlmProvider,
       localLlmModel:
           clearLocalLlmModel ? null : localLlmModel ?? this.localLlmModel,
+      localLlmBaseUrl:
+          clearLocalLlmBaseUrl ? null : localLlmBaseUrl ?? this.localLlmBaseUrl,
       cloudEnabled: cloudEnabled ?? this.cloudEnabled,
       cloudProvider:
           clearCloudProvider ? null : cloudProvider ?? this.cloudProvider,
@@ -116,6 +143,9 @@ class ProcessingSettings {
       cloudApiKey: clearCloudApiKey ? null : cloudApiKey ?? this.cloudApiKey,
       cloudApiKeyConfigured:
           cloudApiKeyConfigured ?? this.cloudApiKeyConfigured,
+      cloudAuthMode: cloudAuthMode ?? this.cloudAuthMode,
+      cloudOauthConnected: cloudOauthConnected ?? this.cloudOauthConnected,
+      cloudOauthAccount: cloudOauthAccount ?? this.cloudOauthAccount,
       processingMode: processingMode ?? this.processingMode,
       allowStubMusicXml: allowStubMusicXml ?? this.allowStubMusicXml,
       productionMode: productionMode ?? this.productionMode,
@@ -132,6 +162,8 @@ class ProcessingSettings {
     return {
       'audiveris_cli_path': audiverisCliPath,
       'homr_cli_path': homrCliPath,
+      'legato_cli_path': legatoCliPath,
+      'legato_model_path': legatoModelPath,
       'musescore_cli_path': musescoreCliPath,
       'musescore_style_path': musescoreStylePath,
       'ocr_cli_path': ocrCliPath,
@@ -141,10 +173,12 @@ class ProcessingSettings {
       'max_concurrent_jobs': maxConcurrentJobs,
       'local_llm_provider': localLlmProvider,
       'local_llm_model': localLlmModel,
+      'local_llm_base_url': localLlmBaseUrl,
       'cloud_enabled': cloudEnabled,
       'cloud_provider': cloudProvider,
       'cloud_model': cloudModel,
       'cloud_base_url': cloudBaseUrl,
+      'cloud_auth_mode': cloudAuthMode,
       if (cloudApiKey != null) 'cloud_api_key': cloudApiKey,
       'processing_mode': processingMode,
       'allow_stub_musicxml': allowStubMusicXml,
@@ -155,6 +189,8 @@ class ProcessingSettings {
     return ProcessingSettings(
       audiverisCliPath: json['audiveris_cli_path'] as String?,
       homrCliPath: json['homr_cli_path'] as String?,
+      legatoCliPath: json['legato_cli_path'] as String?,
+      legatoModelPath: json['legato_model_path'] as String?,
       musescoreCliPath: json['musescore_cli_path'] as String?,
       musescoreStylePath: json['musescore_style_path'] as String?,
       ocrCliPath: json['ocr_cli_path'] as String?,
@@ -164,11 +200,15 @@ class ProcessingSettings {
       maxConcurrentJobs: json['max_concurrent_jobs'] as int? ?? 2,
       localLlmProvider: json['local_llm_provider'] as String?,
       localLlmModel: json['local_llm_model'] as String?,
+      localLlmBaseUrl: json['local_llm_base_url'] as String?,
       cloudEnabled: json['cloud_enabled'] as bool? ?? false,
       cloudProvider: json['cloud_provider'] as String?,
       cloudModel: json['cloud_model'] as String?,
       cloudBaseUrl: json['cloud_base_url'] as String?,
       cloudApiKeyConfigured: json['cloud_api_key_configured'] as bool? ?? false,
+      cloudAuthMode: json['cloud_auth_mode'] as String? ?? 'oauth',
+      cloudOauthConnected: json['cloud_oauth_connected'] as bool? ?? false,
+      cloudOauthAccount: json['cloud_oauth_account'] as String?,
       processingMode: json['processing_mode'] as String? ?? 'server_only',
       allowStubMusicXml: json['allow_stub_musicxml'] as bool? ?? true,
       productionMode: json['production_mode'] as bool? ?? false,
@@ -177,6 +217,58 @@ class ProcessingSettings {
       lastCloudProcessingError: json['last_cloud_processing_error'] as String?,
       updatedAt: DateTime.tryParse(json['updated_at'] as String? ?? '') ??
           DateTime.fromMillisecondsSinceEpoch(0),
+    );
+  }
+}
+
+class GeminiOAuthStatus {
+  const GeminiOAuthStatus({
+    required this.configured,
+    required this.connected,
+    required this.available,
+    required this.model,
+    this.accountEmail,
+    this.error,
+    this.authorizationUrl,
+  });
+
+  final bool configured;
+  final bool connected;
+  final bool available;
+  final String model;
+  final String? accountEmail;
+  final String? error;
+  final String? authorizationUrl;
+
+  factory GeminiOAuthStatus.fromJson(Map<String, dynamic> json) {
+    return GeminiOAuthStatus(
+      configured: json['configured'] as bool? ?? false,
+      connected: json['connected'] as bool? ?? false,
+      available: json['available'] as bool? ?? false,
+      model: json['model'] as String? ?? 'gemini-2.5-flash',
+      accountEmail: json['account_email'] as String?,
+      error: json['error'] as String?,
+      authorizationUrl: json['authorization_url'] as String?,
+    );
+  }
+}
+
+class GeminiOAuthStart {
+  const GeminiOAuthStart({
+    required this.authorizationUrl,
+    required this.state,
+    required this.redirectUri,
+  });
+
+  final String authorizationUrl;
+  final String state;
+  final String redirectUri;
+
+  factory GeminiOAuthStart.fromJson(Map<String, dynamic> json) {
+    return GeminiOAuthStart(
+      authorizationUrl: json['authorization_url'] as String,
+      state: json['state'] as String,
+      redirectUri: json['redirect_uri'] as String,
     );
   }
 }
@@ -253,6 +345,7 @@ class ProcessingCapabilities {
     required this.settings,
     required this.audiveris,
     required this.homr,
+    required this.legato,
     required this.musescore,
     required this.ocr,
     required this.localLlm,
@@ -268,6 +361,7 @@ class ProcessingCapabilities {
   final ProcessingSettings settings;
   final ProcessingExecutableStatus audiveris;
   final ProcessingExecutableStatus homr;
+  final ProcessingExecutableStatus legato;
   final ProcessingExecutableStatus musescore;
   final ProcessingExecutableStatus ocr;
   final ProcessingExecutableStatus localLlm;
@@ -291,6 +385,14 @@ class ProcessingCapabilities {
         json['homr'] as Map<String, dynamic>? ??
             const <String, dynamic>{
               'name': 'HOMR',
+              'configured': false,
+              'available': false,
+            },
+      ),
+      legato: ProcessingExecutableStatus.fromJson(
+        json['legato'] as Map<String, dynamic>? ??
+            const <String, dynamic>{
+              'name': 'LEGATO',
               'configured': false,
               'available': false,
             },
@@ -405,6 +507,7 @@ class ProcessingValidation {
     required this.valid,
     required this.audiveris,
     required this.homr,
+    required this.legato,
     required this.musescore,
     required this.ocr,
     required this.warnings,
@@ -413,6 +516,7 @@ class ProcessingValidation {
   final bool valid;
   final ProcessingExecutableStatus audiveris;
   final ProcessingExecutableStatus homr;
+  final ProcessingExecutableStatus legato;
   final ProcessingExecutableStatus musescore;
   final ProcessingExecutableStatus ocr;
   final List<String> warnings;
@@ -427,6 +531,14 @@ class ProcessingValidation {
         json['homr'] as Map<String, dynamic>? ??
             const <String, dynamic>{
               'name': 'HOMR',
+              'configured': false,
+              'available': false,
+            },
+      ),
+      legato: ProcessingExecutableStatus.fromJson(
+        json['legato'] as Map<String, dynamic>? ??
+            const <String, dynamic>{
+              'name': 'LEGATO',
               'configured': false,
               'available': false,
             },

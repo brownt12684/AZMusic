@@ -559,6 +559,37 @@ void main() {
         'Cleared local and server workflow libraries.');
   });
 
+  test('debug clear piece removes one local and server workflow item',
+      () async {
+    final repository = _DebugToolsSyncRepository();
+    final container = _containerFor(
+      tempDir,
+      networkInfo: const _StaticNetworkInfo(true),
+      syncRepository: repository,
+    );
+    addTearDown(container.dispose);
+
+    await container.read(allPiecesProvider.future);
+    final sourceFile = await createSamplePdfFile(name: 'debug_piece_clear.pdf');
+    final entry = await container
+        .read(allPiecesProvider.notifier)
+        .importToIntake(sourceFile.path);
+    final serverPieceId =
+        entry.piece.serverPieceId ?? 'remote-${entry.piece.id}';
+    expect(container.read(allPiecesProvider).valueOrNull, hasLength(1));
+
+    await container.read(parentDebugToolsProvider.notifier).clearPiece(
+          title: entry.piece.title,
+          localPieceId: entry.piece.id,
+          serverPieceId: serverPieceId,
+        );
+
+    expect(repository.clearServerPieceCalls, [serverPieceId]);
+    expect(container.read(allPiecesProvider).valueOrNull, isEmpty);
+    expect(container.read(parentDebugToolsProvider).message,
+        'Cleared debug piece clear from the debug library workflow.');
+  });
+
   test('debug cancel job refreshes job list and tracker', () async {
     final repository = _DebugToolsSyncRepository(
       jobs: [
@@ -920,6 +951,7 @@ class _DebugToolsSyncRepository extends ServerPieceSyncRepository {
 
   List<ServerJob> _jobs;
   int clearServerWorkflowCalls = 0;
+  final List<String> clearServerPieceCalls = [];
   final List<String> cancelJobCalls = [];
   final List<String> retryJobCalls = [];
 
@@ -994,6 +1026,17 @@ class _DebugToolsSyncRepository extends ServerPieceSyncRepository {
   }
 
   @override
+  Future<Map<String, dynamic>> clearServerPieceWorkflowData(
+    String serverPieceId,
+  ) async {
+    clearServerPieceCalls.add(serverPieceId);
+    _jobs = _jobs
+        .where((job) => job.pieceId != serverPieceId)
+        .toList(growable: false);
+    return {'status': 'cleared', 'piece_id': serverPieceId};
+  }
+
+  @override
   Future<List<RemotePieceSummary>> fetchAllPieces() async {
     return const [];
   }
@@ -1037,6 +1080,7 @@ ProcessingCapabilities _testProcessingCapabilities() {
     ),
     audiveris: executable,
     homr: executable,
+    legato: executable,
     musescore: executable,
     ocr: executable,
     localLlm: executable,

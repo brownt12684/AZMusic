@@ -225,6 +225,16 @@ function Ensure-DetectedProcessingToolPaths {
                 "$PackageRoot\tools\homr\.venv\Scripts\homr.exe",
                 "$env:LOCALAPPDATA\AZMusic\Server\tools\homr\.venv\Scripts\homr.exe"
             )
+        },
+        @{
+            Label = "LEGATO"
+            EnvName = "LEGATO_CLI_PATH"
+            CommandNames = @("legato-runner", "legato")
+            CommonPaths = @(
+                "$PackageRoot\server\tools\legato_runner.py",
+                "$env:LOCALAPPDATA\AZMusic\Server\tools\legato\legato-runner.py",
+                "$env:LOCALAPPDATA\AZMusic\Server\tools\legato\legato-runner.cmd"
+            )
         }
     )
 
@@ -277,6 +287,7 @@ function Show-ProcessingToolGuidance {
     }
     Write-Host "Audiveris and MuseScore Studio are copyleft-licensed tools installed separately from AZMusic. Tesseract OCR is Apache-2.0 licensed."
     Write-Host "HOMR is optional experimental AGPL-3.0 OMR and can be installed into a separate Python virtual environment by the helper."
+    Write-Host "LEGATO is optional experimental MIT-licensed OMR and can be installed into a separate Python virtual environment by the helper."
     Write-Host "The helper opens official download pages or uses winget; AZMusic does not silently bundle those tools."
     Write-Host ""
     $answer = Read-Host "Open the processing tool installer helper now? [Y/n]"

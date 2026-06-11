@@ -28,3 +28,11 @@ pypdfium2>=4.30.0
 
 # Pairing QR generation
 qrcode[pil]>=7.4.2
+
+# Experimental LEGATO ABC-to-MusicXML conversion
+music21>=9.1.0
+
+# Optional parent-triggered Google Gemini OAuth vision review
+google-auth>=2.35.0
+google-auth-oauthlib>=1.2.1
+google-genai>=1.46.0

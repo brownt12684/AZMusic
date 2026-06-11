@@ -5,14 +5,30 @@ from __future__ import annotations
 from typing import Any
 
 from server.models.schemas import ProcessingExecutableStatus
+from server.services.gemini_oauth import GeminiOAuthManager
 
 
 def cloud_llm_status(settings_payload: dict[str, Any]) -> ProcessingExecutableStatus:
-    """Report cloud provider configuration without making network calls."""
+    """Report cloud provider configuration without invoking a model."""
     enabled = bool(settings_payload.get("cloud_enabled"))
-    provider = settings_payload.get("cloud_provider")
-    model = settings_payload.get("cloud_model")
+    provider = settings_payload.get("cloud_provider") or "gemini"
+    model = settings_payload.get("cloud_model") or "gemini-2.5-flash"
+    auth_mode = settings_payload.get("cloud_auth_mode") or "oauth"
     api_key_configured = bool(settings_payload.get("cloud_api_key"))
+
+    if provider == "gemini" and auth_mode == "oauth":
+        gemini_status = GeminiOAuthManager().status()
+        configured = gemini_status.configured
+        return ProcessingExecutableStatus(
+            name="Gemini Vision Review",
+            configured_path="Google OAuth",
+            discovered_path="Google OAuth" if gemini_status.connected else None,
+            configured=configured,
+            available=gemini_status.available,
+            version=model,
+            error=None if gemini_status.available else gemini_status.error,
+        )
+
     configured = enabled and bool(provider)
 
     error = None

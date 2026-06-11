@@ -39,7 +39,7 @@ String formatServerConnectionError(Object error) {
       return 'The server rejected this device pairing. Re-pair this device from the AZMusic server setup page.';
     }
     if (statusCode != null) {
-      final detail = error.response?.data;
+      final detail = _responseDetail(error.response?.data);
       return 'Server returned HTTP $statusCode: ${detail ?? error.message ?? error.type.name}';
     }
     if (isServerConnectionError(error)) {
@@ -49,4 +49,23 @@ String formatServerConnectionError(Object error) {
   }
 
   return error.toString();
+}
+
+String? _responseDetail(Object? data) {
+  if (data == null) {
+    return null;
+  }
+  if (data is Map) {
+    final detail = data['detail'];
+    if (detail is String && detail.trim().isNotEmpty) {
+      return detail;
+    }
+    if (detail != null) {
+      return detail.toString();
+    }
+  }
+  if (data is String && data.trim().isNotEmpty) {
+    return data;
+  }
+  return data.toString();
 }

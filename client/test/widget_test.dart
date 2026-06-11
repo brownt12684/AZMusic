@@ -12,6 +12,7 @@ import 'package:azmusic/domain/entities/server_job.dart';
 import 'package:azmusic/injection/container.dart';
 import 'package:azmusic/presentation/providers/app_providers.dart';
 import 'package:azmusic/presentation/providers/review_providers.dart';
+import 'package:azmusic/presentation/screens/parent/processing_settings_screen.dart';
 import 'package:azmusic/presentation/screens/parent/review_compare_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
@@ -180,7 +181,7 @@ void main() {
     expect(find.byKey(AppKeys.parentImportButton), findsOneWidget);
     expect(find.text('Import'), findsOneWidget);
 
-    await tester.tap(find.text('Server'));
+    await tester.tap(find.text('Advanced'));
     await tester.pumpAndSettle();
 
     expect(find.byKey(AppKeys.parentServerStatus), findsOneWidget);
@@ -310,10 +311,10 @@ void main() {
     await tester.tap(find.text('Unlock'));
     await tester.pump(const Duration(milliseconds: 500));
     await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
-    await scrollParentWorkflowUntilFound(tester, find.text('Push'));
+    await scrollParentWorkflowUntilFound(tester, find.text('Ready to Push'));
     await pumpUntilFound(tester, find.byKey(AppKeys.parentServerReadyList));
 
-    expect(find.text('Push'), findsOneWidget);
+    expect(find.text('Ready to Push'), findsOneWidget);
     expect(find.text('Ready Server Etude'), findsOneWidget);
 
     final pushButton = find.byKey(
@@ -452,7 +453,7 @@ void main() {
     expect(find.byKey(AppKeys.parentReviewCard), findsOneWidget);
   });
 
-  testWidgets('OMR compare counts top-level rendered candidate fallback', (
+  testWidgets('review screen hides OMR compare for backend candidates', (
     WidgetTester tester,
   ) async {
     debugUseReviewPdfPlaceholder = true;
@@ -469,31 +470,6 @@ void main() {
         'canonical_score_version_id': 'canonical-audiveris',
         'canonical_file_url': 'http://test-server/audiveris.musicxml',
         'render_validation_status': 'valid',
-      },
-    );
-
-    await pumpReviewCompareScreen(tester, reviewItem);
-    await pumpUntilFound(tester, find.text('Canon'));
-    await scrollFirstListViewUntilFound(tester, find.text('OMR compare'));
-    await tester.tap(find.text('OMR compare'));
-    await tester.pump();
-
-    expect(find.textContaining('1 OMR candidate'), findsOneWidget);
-    expect(
-        find.textContaining('only 1 rendered PDF candidate'), findsOneWidget);
-    expect(find.textContaining('0 rendered PDF candidate'), findsNothing);
-  });
-
-  testWidgets('OMR compare displays two rendered candidates side by side', (
-    WidgetTester tester,
-  ) async {
-    debugUseReviewPdfPlaceholder = true;
-    final reviewItem = _reviewEntry(
-      candidateData: const {
-        'piece_title': 'Canon',
-        'summary': 'Review rendered output.',
-        'raw_file_url': 'http://test-server/raw.pdf',
-        'raw_content_type': 'application/pdf',
         'omr_candidates': [
           {
             'candidate_id': 'audiveris-candidate',
@@ -521,17 +497,14 @@ void main() {
 
     await pumpReviewCompareScreen(tester, reviewItem);
     await pumpUntilFound(tester, find.text('Canon'));
-    await scrollFirstListViewUntilFound(tester, find.text('OMR compare'));
-    await tester.tap(find.text('OMR compare'));
-    await tester.pump();
 
-    expect(find.text('OMR candidate compare'), findsOneWidget);
-    expect(find.text('Audiveris candidate'), findsWidgets);
-    expect(find.text('HOMR candidate'), findsWidgets);
-    expect(find.textContaining('needs two rendered candidates'), findsNothing);
+    expect(find.text('Side-by-side compare'), findsOneWidget);
+    expect(find.text('OMR compare'), findsNothing);
+    expect(find.text('OMR candidate compare'), findsNothing);
+    expect(find.text('HOMR candidate'), findsNothing);
   });
 
-  testWidgets('OMR compare prioritizes HOMR over duplicate Audiveris output', (
+  testWidgets('review screen hides local LLM metadata review action', (
     WidgetTester tester,
   ) async {
     debugUseReviewPdfPlaceholder = true;
@@ -539,55 +512,203 @@ void main() {
       candidateData: const {
         'piece_title': 'Canon',
         'summary': 'Review rendered output.',
+        'provenance': 'audiveris_omr',
         'raw_file_url': 'http://test-server/raw.pdf',
         'raw_content_type': 'application/pdf',
-        'omr_candidates': [
+        'processing_stage': 'metadata_review_needed',
+      },
+    );
+
+    await pumpReviewCompareScreen(tester, reviewItem);
+    await pumpUntilFound(tester, find.text('Canon'));
+
+    expect(find.text('Send to local LLM for metadata review'), findsNothing);
+    expect(find.text('Send to LLM'), findsNothing);
+    expect(find.text('Edit metadata'), findsOneWidget);
+  });
+
+  testWidgets('review screen exposes human notation edit actions', (
+    WidgetTester tester,
+  ) async {
+    debugUseReviewPdfPlaceholder = true;
+    final reviewItem = _reviewEntry(
+      candidateData: const {
+        'piece_title': 'Canon',
+        'summary': 'Review rendered output.',
+        'provenance': 'audiveris_omr',
+        'raw_file_url': 'http://test-server/raw.pdf',
+        'raw_content_type': 'application/pdf',
+        'score_version_id': 'rendered-audiveris',
+        'rendered_file_url': 'http://test-server/audiveris.pdf',
+        'canonical_score_version_id': 'canonical-audiveris',
+        'canonical_file_url': 'http://test-server/audiveris.musicxml',
+        'render_validation_status': 'valid',
+      },
+    );
+
+    await AppConfig.applyServerPairing(
+      serverUrl: 'http://test-server',
+      serverId: 'test-server',
+      pairingToken: 'test-token',
+    );
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          serverPieceSyncRepositoryProvider.overrideWith(
+            (ref) => _FakeServerPieceSyncRepository(reviewItem: reviewItem),
+          ),
+        ],
+        child: MaterialApp(
+          home: ReviewCompareScreen(itemId: reviewItem.id),
+        ),
+      ),
+    );
+    await pumpUntilFound(tester, find.text('Canon'));
+    await scrollFirstListViewUntilFound(
+      tester,
+      find.byKey(AppKeys.reviewOpenMuseScoreButton),
+    );
+    expect(find.byKey(AppKeys.reviewOpenMuseScoreButton), findsOneWidget);
+    expect(find.text('Edit in MuseScore'), findsOneWidget);
+
+    await scrollFirstListViewUntilFound(
+      tester,
+      find.byKey(AppKeys.reviewUploadEditedMusicXmlButton),
+    );
+    expect(
+        find.byKey(AppKeys.reviewUploadEditedMusicXmlButton), findsOneWidget);
+    expect(find.text('Upload edited MusicXML'), findsOneWidget);
+
+    await scrollFirstListViewUntilFound(tester, find.text('Mark edit ready'));
+    expect(find.text('Mark edit ready'), findsOneWidget);
+    expect(find.text('Reject candidate'), findsNothing);
+    expect(find.text('Correction JSON check'), findsNothing);
+  });
+
+  testWidgets('review screen hides stale local LLM notation outcome', (
+    WidgetTester tester,
+  ) async {
+    debugUseReviewPdfPlaceholder = true;
+    final reviewItem = _reviewEntry(
+      candidateData: const {
+        'piece_title': 'Canon',
+        'summary': 'Review rendered output.',
+        'provenance': 'audiveris_omr',
+        'raw_file_url': 'http://test-server/raw.pdf',
+        'raw_content_type': 'application/pdf',
+        'score_version_id': 'rendered-audiveris',
+        'rendered_file_url': 'http://test-server/audiveris.pdf',
+        'canonical_score_version_id': 'canonical-audiveris',
+        'canonical_file_url': 'http://test-server/audiveris.musicxml',
+        'render_validation_status': 'valid',
+        'llm_notation_review_status': 'metadata_or_layout_only',
+        'llm_review_summary': 'Only a label cleanup was safe.',
+        'llm_notation_findings': [
           {
-            'candidate_id': 'selected-best',
-            'label': 'Best: Audiveris',
-            'engine_name': 'audiveris',
-            'selected': true,
-            'score_version_id': 'rendered-best',
-            'rendered_file_url': 'http://test-server/best.pdf',
-            'canonical_score_version_id': 'canonical-best',
-            'canonical_file_url': 'http://test-server/best.musicxml',
-            'render_validation_status': 'valid',
-          },
+            'measure_number': 4,
+            'note_index': 2,
+            'issue': 'Rest could not be matched safely.',
+            'recommended_action': 'Parent should edit in MuseScore.',
+          }
+        ],
+        'llm_tool_results': [
           {
-            'candidate_id': 'audiveris-default',
-            'label': 'Audiveris default',
-            'engine_name': 'audiveris',
-            'score_version_id': 'rendered-audiveris-default',
-            'rendered_file_url': 'http://test-server/audiveris-default.pdf',
-            'canonical_score_version_id': 'canonical-audiveris-default',
-            'canonical_file_url':
-                'http://test-server/audiveris-default.musicxml',
-            'render_validation_status': 'valid',
-          },
-          {
-            'candidate_id': 'homr-experimental',
-            'label': 'HOMR experimental',
-            'engine_name': 'homr',
-            'score_version_id': 'rendered-homr',
-            'rendered_file_url': 'http://test-server/homr.pdf',
-            'canonical_score_version_id': 'canonical-homr',
-            'canonical_file_url': 'http://test-server/homr.musicxml',
-            'render_validation_status': 'valid',
-          },
+            'name': 'replace_musicxml_text',
+            'message': 'Part label cleanup.',
+            'affects_notation': false,
+          }
         ],
       },
     );
 
     await pumpReviewCompareScreen(tester, reviewItem);
     await pumpUntilFound(tester, find.text('Canon'));
-    await scrollFirstListViewUntilFound(tester, find.text('OMR compare'));
-    await tester.tap(find.text('OMR compare'));
-    await tester.pump();
+    await scrollFirstListViewUntilFound(
+      tester,
+      find.byKey(AppKeys.reviewOpenMuseScoreButton),
+    );
 
-    expect(find.text('Best: Audiveris'), findsWidgets);
-    expect(find.text('HOMR experimental'), findsWidgets);
-    expect(find.text('Audiveris default'), findsNothing);
-    expect(find.textContaining('needs two rendered candidates'), findsNothing);
+    expect(find.text('LLM notation check'), findsNothing);
+    expect(find.text('Outcome: metadata/layout only'), findsNothing);
+    expect(find.text('Only a label cleanup was safe.'), findsNothing);
+    expect(find.textContaining('non-notation edit'), findsNothing);
+    expect(find.text('Edit in MuseScore'), findsOneWidget);
+  });
+
+  testWidgets('processing settings hide and preserve experimental fields', (
+    WidgetTester tester,
+  ) async {
+    await AppConfig.applyServerPairing(
+      serverUrl: 'http://test-server',
+      serverId: 'test-server',
+      pairingToken: 'test-token',
+    );
+    final repository = _FakeServerPieceSyncRepository(
+      processingSettings: ProcessingSettings(
+        audiverisCliPath: 'C:/Tools/Audiveris/bin/audiveris.bat',
+        homrCliPath: 'C:/Tools/HOMR/homr.exe',
+        legatoCliPath: 'C:/Tools/LEGATO/legato.py',
+        legatoModelPath: 'guangyangmusic/legato',
+        musescoreCliPath: 'C:/Program Files/MuseScore 4/bin/MuseScore4.exe',
+        ocrCliPath: 'C:/Program Files/Tesseract-OCR/tesseract.exe',
+        localLlmProvider: 'lmstudio',
+        localLlmBaseUrl: 'http://127.0.0.1:1234/v1',
+        cloudEnabled: true,
+        cloudProvider: 'custom',
+        cloudModel: 'vision-model',
+        cloudBaseUrl: 'http://cloud.example/v1',
+        processingMode: 'device_workers',
+        allowStubMusicXml: false,
+        productionMode: true,
+        updatedAt: DateTime(2026, 6, 11),
+      ),
+    );
+
+    await tester.pumpWidget(
+      ProviderScope(
+        overrides: [
+          serverPieceSyncRepositoryProvider.overrideWith((ref) => repository),
+          serverHealthProvider.overrideWith(
+            (ref) async => const ServerHealthState(
+              status: ServerHealthStatus.online,
+              serverUrl: 'http://test-server',
+              message: 'AZMusic server',
+            ),
+          ),
+        ],
+        child: const MaterialApp(home: ProcessingSettingsScreen()),
+      ),
+    );
+    await pumpUntilFound(
+      tester,
+      find.byKey(AppKeys.parentProcessingSettingsScreen),
+    );
+
+    expect(find.text('HOMR CLI path'), findsNothing);
+    expect(find.text('LEGATO runner path'), findsNothing);
+    expect(find.text('Local inference'), findsNothing);
+    expect(find.text('Experimental processing providers'), findsNothing);
+    expect(find.textContaining('HOMR:'), findsNothing);
+    expect(find.textContaining('LEGATO:'), findsNothing);
+    expect(find.textContaining('Local LLM:'), findsNothing);
+    expect(find.textContaining('Cloud LLM:'), findsNothing);
+
+    await scrollFirstListViewUntilFound(tester, find.text('Save'));
+    await tester.tap(find.text('Save'));
+    await tester.pumpAndSettle();
+
+    final saved = repository.savedProcessingSettings!;
+    expect(saved.processingMode, 'server_only');
+    expect(saved.omrStrategy, 'audiveris_quality_sweep');
+    expect(saved.homrCliPath, 'C:/Tools/HOMR/homr.exe');
+    expect(saved.legatoCliPath, 'C:/Tools/LEGATO/legato.py');
+    expect(saved.legatoModelPath, 'guangyangmusic/legato');
+    expect(saved.localLlmProvider, 'lmstudio');
+    expect(saved.localLlmBaseUrl, 'http://127.0.0.1:1234/v1');
+    expect(saved.cloudEnabled, isTrue);
+    expect(saved.cloudProvider, 'custom');
+    expect(saved.cloudModel, 'vision-model');
+    expect(saved.cloudBaseUrl, 'http://cloud.example/v1');
   });
 }
 
@@ -620,12 +741,21 @@ class _FakeServerPieceSyncRepository extends ServerPieceSyncRepository {
       ),
     ],
     this.reviewItem,
-  });
+    ProcessingSettings? processingSettings,
+  }) : processingSettings = processingSettings ??
+            ProcessingSettings(
+              processingMode: 'server_only',
+              allowStubMusicXml: true,
+              productionMode: false,
+              updatedAt: DateTime(2026, 6, 11),
+            );
 
   final List<RemotePieceSummary> allPieces;
   final List<ServerJob> jobs;
   final List<ProcessingJobSummary> jobSummaries;
   final ReviewQueueEntry? reviewItem;
+  ProcessingSettings processingSettings;
+  ProcessingSettings? savedProcessingSettings;
   final List<_PushCall> pushCalls = [];
   int fetchAllPiecesCalls = 0;
   int fetchReviewQueueCalls = 0;
@@ -662,14 +792,10 @@ class _FakeServerPieceSyncRepository extends ServerPieceSyncRepository {
     );
     return ProcessingCapabilities(
       serverOnline: true,
-      settings: ProcessingSettings(
-        processingMode: 'server_only',
-        allowStubMusicXml: true,
-        productionMode: false,
-        updatedAt: DateTime.now(),
-      ),
+      settings: processingSettings,
       audiveris: executable,
       homr: executable,
+      legato: executable,
       musescore: executable,
       ocr: executable,
       localLlm: executable,
@@ -679,6 +805,50 @@ class _FakeServerPieceSyncRepository extends ServerPieceSyncRepository {
       deviceWorkers: const [],
       jobSummary: jobSummary,
       warnings: const [],
+    );
+  }
+
+  @override
+  Future<ProcessingSettings> fetchProcessingSettings() async {
+    return processingSettings;
+  }
+
+  @override
+  Future<ProcessingSettings> updateProcessingSettings(
+    ProcessingSettings settings,
+  ) async {
+    savedProcessingSettings = settings;
+    processingSettings = settings;
+    return settings;
+  }
+
+  @override
+  Future<ProcessingValidation> validateProcessingSettings(
+    ProcessingSettings settings,
+  ) async {
+    const executable = ProcessingExecutableStatus(
+      name: 'Test executable',
+      configured: true,
+      available: true,
+    );
+    return const ProcessingValidation(
+      valid: true,
+      audiveris: executable,
+      homr: executable,
+      legato: executable,
+      musescore: executable,
+      ocr: executable,
+      warnings: [],
+    );
+  }
+
+  @override
+  Future<GeminiOAuthStatus> fetchGeminiOAuthStatus() async {
+    return const GeminiOAuthStatus(
+      configured: false,
+      connected: false,
+      available: false,
+      model: '',
     );
   }
 

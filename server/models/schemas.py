@@ -58,6 +58,7 @@ class ProcessingMode(str, Enum):
 
 class PiecePushMode(str, Enum):
     processed = "processed"
+    cleaned_pdf = "cleaned_pdf"
     original_pdf = "original_pdf"
 
 
@@ -65,6 +66,7 @@ class OmrStrategy(str, Enum):
     audiveris_default = "audiveris_default"
     audiveris_quality_sweep = "audiveris_quality_sweep"
     homr_experimental = "homr_experimental"
+    legato_experimental = "legato_experimental"
     omr_bakeoff = "omr_bakeoff"
     experimental_engine_bakeoff = "experimental_engine_bakeoff"
 
@@ -75,8 +77,6 @@ class PieceKind(str, Enum):
 
 
 class ReviewReprocessType(str, Enum):
-    metadata = "metadata"
-    split = "split"
     score = "score"
 
 
@@ -111,7 +111,7 @@ class PieceUpdate(BaseModel):
 
 class PiecePushRequest(BaseModel):
     profile_ids: list[str] = Field(default_factory=list)
-    mode: PiecePushMode = PiecePushMode.processed
+    mode: PiecePushMode = PiecePushMode.cleaned_pdf
 
 
 class ScoreVersionRerenderRequest(BaseModel):
@@ -226,6 +226,8 @@ class ProcessingSettingsUpdate(BaseModel):
 
     audiveris_cli_path: Optional[str] = None
     homr_cli_path: Optional[str] = None
+    legato_cli_path: Optional[str] = None
+    legato_model_path: Optional[str] = None
     musescore_cli_path: Optional[str] = None
     musescore_style_path: Optional[str] = None
     ocr_cli_path: Optional[str] = None
@@ -237,16 +239,20 @@ class ProcessingSettingsUpdate(BaseModel):
     allow_stub_musicxml: Optional[bool] = None
     local_llm_provider: Optional[str] = None
     local_llm_model: Optional[str] = None
+    local_llm_base_url: Optional[str] = None
     cloud_enabled: Optional[bool] = None
     cloud_provider: Optional[str] = None
     cloud_model: Optional[str] = None
     cloud_base_url: Optional[str] = None
     cloud_api_key: Optional[str] = None
+    cloud_auth_mode: Optional[str] = None
 
 
 class ProcessingSettingsResponse(BaseModel):
     audiveris_cli_path: Optional[str] = None
     homr_cli_path: Optional[str] = None
+    legato_cli_path: Optional[str] = None
+    legato_model_path: Optional[str] = None
     musescore_cli_path: Optional[str] = None
     musescore_style_path: Optional[str] = None
     ocr_cli_path: Optional[str] = None
@@ -260,14 +266,39 @@ class ProcessingSettingsResponse(BaseModel):
     last_processing_error: Optional[str] = None
     local_llm_provider: Optional[str] = None
     local_llm_model: Optional[str] = None
+    local_llm_base_url: Optional[str] = None
     last_llm_processing_error: Optional[str] = None
     cloud_enabled: bool = False
     cloud_provider: Optional[str] = None
     cloud_model: Optional[str] = None
     cloud_base_url: Optional[str] = None
     cloud_api_key_configured: bool = False
+    cloud_auth_mode: str = "oauth"
+    cloud_oauth_connected: bool = False
+    cloud_oauth_account: Optional[str] = None
     last_cloud_processing_error: Optional[str] = None
     updated_at: datetime
+
+
+class GeminiOAuthStatusResponse(BaseModel):
+    provider: str = "gemini"
+    auth_mode: str = "oauth"
+    configured: bool = False
+    connected: bool = False
+    available: bool = False
+    account_email: Optional[str] = None
+    model: str = "gemini-2.5-flash"
+    error: Optional[str] = None
+    scopes: list[str] = Field(default_factory=list)
+    authorization_url: Optional[str] = None
+    updated_at: Optional[datetime] = None
+
+
+class GeminiOAuthStartResponse(BaseModel):
+    authorization_url: str
+    state: str
+    redirect_uri: str
+    expires_at: datetime
 
 
 class ProcessingExecutableStatus(BaseModel):
@@ -284,6 +315,7 @@ class ProcessingValidationResponse(BaseModel):
     valid: bool
     audiveris: ProcessingExecutableStatus
     homr: ProcessingExecutableStatus
+    legato: ProcessingExecutableStatus
     musescore: ProcessingExecutableStatus
     ocr: ProcessingExecutableStatus
     warnings: list[str] = Field(default_factory=list)
@@ -330,6 +362,7 @@ class ProcessingCapabilityResponse(BaseModel):
     settings: ProcessingSettingsResponse
     audiveris: ProcessingExecutableStatus
     homr: ProcessingExecutableStatus
+    legato: ProcessingExecutableStatus
     musescore: ProcessingExecutableStatus
     ocr: ProcessingExecutableStatus
     local_llm: ProcessingExecutableStatus
@@ -432,8 +465,94 @@ class ScoreVersionResponse(BaseModel):
     file_size_bytes: Optional[int] = None
     content_sha256: Optional[str] = None
     score_version_role: Optional[str] = None
+    artifact_role: Optional[str] = None
+    replaces_score_version_id: Optional[str] = None
+    display_rank: int = 0
+    student_default: bool = False
+    approved_by_parent: bool = False
     is_default: bool = False
     created_at: datetime
+
+
+class CloudConnectGithubRequest(BaseModel):
+    repository: Optional[str] = Field(default=None, max_length=300)
+    branch: str = Field(default="main", min_length=1, max_length=100)
+    path_prefix: str = Field(default="azmusic-sync", min_length=1, max_length=200)
+
+
+class CloudStatusResponse(BaseModel):
+    provider: str = "github"
+    configured: bool = False
+    connected: bool = False
+    account_scope: str = "parent_teacher"
+    repository: Optional[str] = None
+    branch: str = "main"
+    path_prefix: str = "azmusic-sync"
+    last_sync_at: Optional[datetime] = None
+    last_restore_at: Optional[datetime] = None
+    last_error: Optional[str] = None
+    notes: list[str] = Field(default_factory=list)
+
+
+class CloudSyncManifestResponse(BaseModel):
+    provider: str = "github"
+    family_manifest_path: str
+    pieces_count: int = 0
+    score_versions_count: int = 0
+    assignments_count: int = 0
+    notes_count: int = 0
+    annotations_count: int = 0
+    synced_at: datetime
+
+
+class NoteSyncItem(BaseModel):
+    id: str = Field(..., min_length=1, max_length=100)
+    profile_id: str = Field(..., min_length=1, max_length=100)
+    piece_id: str = Field(..., min_length=1, max_length=100)
+    score_version_id: Optional[str] = Field(default=None, max_length=100)
+    page_number: Optional[int] = Field(default=None, ge=1)
+    payload: dict = Field(default_factory=dict)
+    updated_at: Optional[datetime] = None
+    deleted: bool = False
+
+
+class NoteSyncRequest(BaseModel):
+    client_id: str = Field(..., min_length=1, max_length=100)
+    profile_id: str = Field(..., min_length=1, max_length=100)
+    notes: list[NoteSyncItem] = Field(default_factory=list)
+
+
+class NoteSyncResponse(BaseModel):
+    client_id: str
+    profile_id: str
+    accepted_count: int = 0
+    notes: list[NoteSyncItem] = Field(default_factory=list)
+    synced_at: datetime
+
+
+class AnnotationSyncItem(BaseModel):
+    id: str = Field(..., min_length=1, max_length=100)
+    profile_id: str = Field(..., min_length=1, max_length=100)
+    piece_id: str = Field(..., min_length=1, max_length=100)
+    score_version_id: Optional[str] = Field(default=None, max_length=100)
+    page_number: int = Field(..., ge=1)
+    payload: dict = Field(default_factory=dict)
+    updated_at: Optional[datetime] = None
+    deleted: bool = False
+
+
+class AnnotationSyncRequest(BaseModel):
+    client_id: str = Field(..., min_length=1, max_length=100)
+    profile_id: str = Field(..., min_length=1, max_length=100)
+    annotations: list[AnnotationSyncItem] = Field(default_factory=list)
+
+
+class AnnotationSyncResponse(BaseModel):
+    client_id: str
+    profile_id: str
+    accepted_count: int = 0
+    annotations: list[AnnotationSyncItem] = Field(default_factory=list)
+    synced_at: datetime
 
 
 class MediaAssetResponse(BaseModel):

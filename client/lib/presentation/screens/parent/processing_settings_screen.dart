@@ -22,6 +22,9 @@ class _ProcessingSettingsScreenState
   final TextEditingController _audiverisPathController =
       TextEditingController();
   final TextEditingController _homrPathController = TextEditingController();
+  final TextEditingController _legatoPathController = TextEditingController();
+  final TextEditingController _legatoModelPathController =
+      TextEditingController();
   final TextEditingController _musescorePathController =
       TextEditingController();
   final TextEditingController _musescoreStylePathController =
@@ -33,6 +36,8 @@ class _ProcessingSettingsScreenState
   final TextEditingController _localLlmProviderController =
       TextEditingController();
   final TextEditingController _localLlmModelController =
+      TextEditingController();
+  final TextEditingController _localLlmBaseUrlController =
       TextEditingController();
   final TextEditingController _cloudProviderController =
       TextEditingController();
@@ -53,6 +58,8 @@ class _ProcessingSettingsScreenState
   void dispose() {
     _audiverisPathController.dispose();
     _homrPathController.dispose();
+    _legatoPathController.dispose();
+    _legatoModelPathController.dispose();
     _musescorePathController.dispose();
     _musescoreStylePathController.dispose();
     _ocrPathController.dispose();
@@ -60,6 +67,7 @@ class _ProcessingSettingsScreenState
     _maxConcurrentJobsController.dispose();
     _localLlmProviderController.dispose();
     _localLlmModelController.dispose();
+    _localLlmBaseUrlController.dispose();
     _cloudProviderController.dispose();
     _cloudModelController.dispose();
     _cloudBaseUrlController.dispose();
@@ -98,6 +106,8 @@ class _ProcessingSettingsScreenState
                 return _SettingsForm(
                   audiverisPathController: _audiverisPathController,
                   homrPathController: _homrPathController,
+                  legatoPathController: _legatoPathController,
+                  legatoModelPathController: _legatoModelPathController,
                   musescorePathController: _musescorePathController,
                   musescoreStylePathController: _musescoreStylePathController,
                   ocrPathController: _ocrPathController,
@@ -105,6 +115,7 @@ class _ProcessingSettingsScreenState
                   maxConcurrentJobsController: _maxConcurrentJobsController,
                   localLlmProviderController: _localLlmProviderController,
                   localLlmModelController: _localLlmModelController,
+                  localLlmBaseUrlController: _localLlmBaseUrlController,
                   cloudProviderController: _cloudProviderController,
                   cloudModelController: _cloudModelController,
                   cloudBaseUrlController: _cloudBaseUrlController,
@@ -204,6 +215,8 @@ class _ProcessingSettingsScreenState
     }
     _audiverisPathController.text = settings.audiverisCliPath ?? '';
     _homrPathController.text = settings.homrCliPath ?? '';
+    _legatoPathController.text = settings.legatoCliPath ?? '';
+    _legatoModelPathController.text = settings.legatoModelPath ?? '';
     _musescorePathController.text = settings.musescoreCliPath ?? '';
     _musescoreStylePathController.text = settings.musescoreStylePath ?? '';
     _ocrPathController.text = settings.ocrCliPath ?? '';
@@ -211,6 +224,7 @@ class _ProcessingSettingsScreenState
     _maxConcurrentJobsController.text = settings.maxConcurrentJobs.toString();
     _localLlmProviderController.text = settings.localLlmProvider ?? '';
     _localLlmModelController.text = settings.localLlmModel ?? '';
+    _localLlmBaseUrlController.text = settings.localLlmBaseUrl ?? '';
     _cloudProviderController.text = settings.cloudProvider ?? '';
     _cloudModelController.text = settings.cloudModel ?? '';
     _cloudBaseUrlController.text = settings.cloudBaseUrl ?? '';
@@ -231,28 +245,29 @@ class _ProcessingSettingsScreenState
     const productionStrategies = {
       'audiveris_default',
       'audiveris_quality_sweep',
-      'omr_bakeoff',
     };
     const experimentalStrategies = {
       'audiveris_default',
       'audiveris_quality_sweep',
-      'homr_experimental',
-      'omr_bakeoff',
-      'experimental_engine_bakeoff',
+      'legato_experimental',
     };
     const validStrategies = AppConfig.showExperimentalFeatures
         ? experimentalStrategies
         : productionStrategies;
-    if (!validStrategies.contains(value) &&
-        value == 'experimental_engine_bakeoff') {
-      return 'omr_bakeoff';
-    }
     return validStrategies.contains(value) ? value : 'audiveris_quality_sweep';
   }
 
   ProcessingSettings _editedSettings(ProcessingSettings base) {
     final audiverisPath = _audiverisPathController.text.trim();
-    final homrPath = _homrPathController.text.trim();
+    final homrPath = AppConfig.showExperimentalFeatures
+        ? _homrPathController.text.trim()
+        : base.homrCliPath?.trim() ?? '';
+    final legatoPath = AppConfig.showExperimentalFeatures
+        ? _legatoPathController.text.trim()
+        : base.legatoCliPath?.trim() ?? '';
+    final legatoModelPath = AppConfig.showExperimentalFeatures
+        ? _legatoModelPathController.text.trim()
+        : base.legatoModelPath?.trim() ?? '';
     final musescorePath = _musescorePathController.text.trim();
     final musescoreStylePath = _musescoreStylePathController.text.trim();
     final ocrPath = _ocrPathController.text.trim();
@@ -264,16 +279,36 @@ class _ProcessingSettingsScreenState
         : maxConcurrentJobs > 4
             ? 4
             : maxConcurrentJobs;
-    final localLlmProvider = _localLlmProviderController.text.trim();
-    final localLlmModel = _localLlmModelController.text.trim();
-    final cloudProvider = _cloudProviderController.text.trim();
-    final cloudModel = _cloudModelController.text.trim();
-    final cloudBaseUrl = _cloudBaseUrlController.text.trim();
-    final cloudApiKey = _cloudApiKeyController.text.trim();
+    final localLlmProvider = AppConfig.showExperimentalFeatures
+        ? _localLlmProviderController.text.trim()
+        : base.localLlmProvider?.trim() ?? '';
+    final localLlmModel = AppConfig.showExperimentalFeatures
+        ? _localLlmModelController.text.trim()
+        : base.localLlmModel?.trim() ?? '';
+    final localLlmBaseUrl = AppConfig.showExperimentalFeatures
+        ? _localLlmBaseUrlController.text.trim()
+        : base.localLlmBaseUrl?.trim() ?? '';
+    final cloudProvider = AppConfig.showExperimentalFeatures
+        ? _cloudProviderController.text.trim()
+        : base.cloudProvider?.trim() ?? '';
+    final cloudModel = AppConfig.showExperimentalFeatures
+        ? _cloudModelController.text.trim()
+        : base.cloudModel?.trim() ?? '';
+    final cloudBaseUrl = AppConfig.showExperimentalFeatures
+        ? _cloudBaseUrlController.text.trim()
+        : base.cloudBaseUrl?.trim() ?? '';
+    final cloudApiKey = AppConfig.showExperimentalFeatures
+        ? _cloudApiKeyController.text.trim()
+        : '';
     const showExperimental = AppConfig.showExperimentalFeatures;
     return base.copyWith(
       audiverisCliPath: audiverisPath.isEmpty ? null : audiverisPath,
-      homrCliPath: homrPath.isEmpty ? null : homrPath,
+      homrCliPath: showExperimental && homrPath.isNotEmpty ? homrPath : null,
+      legatoCliPath:
+          showExperimental && legatoPath.isNotEmpty ? legatoPath : null,
+      legatoModelPath: showExperimental && legatoModelPath.isNotEmpty
+          ? legatoModelPath
+          : null,
       musescoreCliPath: musescorePath.isEmpty ? null : musescorePath,
       musescoreStylePath:
           musescoreStylePath.isEmpty ? null : musescoreStylePath,
@@ -287,7 +322,10 @@ class _ProcessingSettingsScreenState
           : null,
       localLlmModel:
           showExperimental && localLlmModel.isNotEmpty ? localLlmModel : null,
-      cloudEnabled: showExperimental && _cloudEnabled,
+      localLlmBaseUrl: showExperimental && localLlmBaseUrl.isNotEmpty
+          ? localLlmBaseUrl
+          : null,
+      cloudEnabled: showExperimental ? _cloudEnabled : base.cloudEnabled,
       cloudProvider:
           showExperimental && cloudProvider.isNotEmpty ? cloudProvider : null,
       cloudModel: showExperimental && cloudModel.isNotEmpty ? cloudModel : null,
@@ -296,17 +334,21 @@ class _ProcessingSettingsScreenState
       cloudApiKey:
           showExperimental && cloudApiKey.isNotEmpty ? cloudApiKey : null,
       clearAudiverisPath: audiverisPath.isEmpty,
-      clearHomrPath: homrPath.isEmpty,
+      clearHomrPath: showExperimental && homrPath.isEmpty,
+      clearLegatoPath: showExperimental && legatoPath.isEmpty,
+      clearLegatoModelPath: showExperimental && legatoModelPath.isEmpty,
       clearMuseScorePath: musescorePath.isEmpty,
       clearMuseScoreStylePath: musescoreStylePath.isEmpty,
       clearOcrPath: ocrPath.isEmpty,
-      clearLocalLlmProvider: !showExperimental || localLlmProvider.isEmpty,
-      clearLocalLlmModel: !showExperimental || localLlmModel.isEmpty,
-      clearCloudProvider: !showExperimental || cloudProvider.isEmpty,
-      clearCloudModel: !showExperimental || cloudModel.isEmpty,
-      clearCloudBaseUrl: !showExperimental || cloudBaseUrl.isEmpty,
-      clearCloudApiKey: !showExperimental ||
-          (cloudApiKey.isEmpty && !base.cloudApiKeyConfigured),
+      clearLocalLlmProvider: showExperimental && localLlmProvider.isEmpty,
+      clearLocalLlmModel: showExperimental && localLlmModel.isEmpty,
+      clearLocalLlmBaseUrl: showExperimental && localLlmBaseUrl.isEmpty,
+      clearCloudProvider: showExperimental && cloudProvider.isEmpty,
+      clearCloudModel: showExperimental && cloudModel.isEmpty,
+      clearCloudBaseUrl: showExperimental && cloudBaseUrl.isEmpty,
+      clearCloudApiKey: showExperimental &&
+          cloudApiKey.isEmpty &&
+          !base.cloudApiKeyConfigured,
       processingMode: showExperimental ? _processingMode : 'server_only',
       allowStubMusicXml: base.productionMode ? false : _allowStubMusicXml,
     );
@@ -350,6 +392,8 @@ class _SettingsForm extends StatelessWidget {
   const _SettingsForm({
     required this.audiverisPathController,
     required this.homrPathController,
+    required this.legatoPathController,
+    required this.legatoModelPathController,
     required this.musescorePathController,
     required this.musescoreStylePathController,
     required this.ocrPathController,
@@ -357,6 +401,7 @@ class _SettingsForm extends StatelessWidget {
     required this.maxConcurrentJobsController,
     required this.localLlmProviderController,
     required this.localLlmModelController,
+    required this.localLlmBaseUrlController,
     required this.cloudProviderController,
     required this.cloudModelController,
     required this.cloudBaseUrlController,
@@ -380,6 +425,8 @@ class _SettingsForm extends StatelessWidget {
 
   final TextEditingController audiverisPathController;
   final TextEditingController homrPathController;
+  final TextEditingController legatoPathController;
+  final TextEditingController legatoModelPathController;
   final TextEditingController musescorePathController;
   final TextEditingController musescoreStylePathController;
   final TextEditingController ocrPathController;
@@ -387,6 +434,7 @@ class _SettingsForm extends StatelessWidget {
   final TextEditingController maxConcurrentJobsController;
   final TextEditingController localLlmProviderController;
   final TextEditingController localLlmModelController;
+  final TextEditingController localLlmBaseUrlController;
   final TextEditingController cloudProviderController;
   final TextEditingController cloudModelController;
   final TextEditingController cloudBaseUrlController;
@@ -478,15 +526,37 @@ class _SettingsForm extends StatelessWidget {
                 ),
               ),
               const SizedBox(height: 12),
-              TextField(
-                controller: homrPathController,
-                decoration: const InputDecoration(
-                  labelText: 'HOMR CLI path',
-                  helperText:
-                      'Experimental: optional MusicXML OMR engine installed in a Python virtual environment.',
-                  border: OutlineInputBorder(),
+              if (AppConfig.showExperimentalFeatures) ...[
+                TextField(
+                  controller: homrPathController,
+                  decoration: const InputDecoration(
+                    labelText: 'HOMR CLI path',
+                    helperText:
+                        'Experimental: optional MusicXML OMR engine installed in a Python virtual environment.',
+                    border: OutlineInputBorder(),
+                  ),
                 ),
-              ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: legatoPathController,
+                  decoration: const InputDecoration(
+                    labelText: 'LEGATO runner path',
+                    helperText:
+                        'Experimental: converts rendered score pages to ABC before MusicXML conversion.',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                TextField(
+                  controller: legatoModelPathController,
+                  decoration: const InputDecoration(
+                    labelText: 'LEGATO model path or id',
+                    helperText:
+                        'Experimental: local model directory or Hugging Face id. The official guangyangmusic/legato model requires Hugging Face access.',
+                    border: OutlineInputBorder(),
+                  ),
+                ),
+              ],
               const SizedBox(height: 12),
               TextField(
                 controller: musescorePathController,
@@ -541,7 +611,7 @@ class _SettingsForm extends StatelessWidget {
               decoration: const InputDecoration(
                 labelText: 'OMR strategy',
                 helperText:
-                    'Use compare mode to create multiple score candidates for parent review.',
+                    'Audiveris remains the default OMR path. LEGATO is experimental evidence.',
                 border: OutlineInputBorder(),
               ),
               items: const [
@@ -553,20 +623,11 @@ class _SettingsForm extends StatelessWidget {
                   value: 'audiveris_quality_sweep',
                   child: Text('Audiveris quality sweep'),
                 ),
-                DropdownMenuItem(
-                  value: 'omr_bakeoff',
-                  child: Text('Compare Audiveris + HOMR candidates'),
-                ),
-                if (AppConfig.showExperimentalFeatures) ...[
+                if (AppConfig.showExperimentalFeatures)
                   DropdownMenuItem(
-                    value: 'homr_experimental',
-                    child: Text('HOMR only'),
+                    value: 'legato_experimental',
+                    child: Text('LEGATO experimental'),
                   ),
-                  DropdownMenuItem(
-                    value: 'experimental_engine_bakeoff',
-                    child: Text('Experimental engine bakeoff'),
-                  ),
-                ],
               ],
               onChanged: (value) {
                 if (value != null) {
@@ -622,8 +683,67 @@ class _SettingsForm extends StatelessWidget {
                     : 'Keeps prototyping unblocked when Audiveris is not installed.',
               ),
             ),
-            const SizedBox(height: 12),
             if (AppConfig.showExperimentalFeatures) ...[
+              const SizedBox(height: 12),
+              Text(
+                'Local inference',
+                style: theme.textTheme.titleSmall?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              Text(
+                'Experimental local inference is reserved for future notation assistance. Metadata LLM review is not part of the active workflow.',
+                style: theme.textTheme.bodySmall?.copyWith(
+                  color: theme.colorScheme.onSurfaceVariant,
+                ),
+              ),
+              const SizedBox(height: 12),
+              Wrap(
+                spacing: 8,
+                runSpacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: () {
+                      localLlmProviderController.text = 'lmstudio';
+                      localLlmBaseUrlController.text =
+                          'http://127.0.0.1:1234/v1';
+                    },
+                    icon: const Icon(Icons.memory_outlined),
+                    label: const Text('Use LM Studio defaults'),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: localLlmProviderController,
+                decoration: const InputDecoration(
+                  labelText: 'Local inference provider',
+                  helperText: 'Use lmstudio for LM Studio Developer Server.',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: localLlmBaseUrlController,
+                decoration: const InputDecoration(
+                  labelText: 'Local inference base URL',
+                  helperText:
+                      'LM Studio OpenAI-compatible default: http://127.0.0.1:1234/v1. Use a LAN IP if LM Studio runs on another machine.',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
+              TextField(
+                controller: localLlmModelController,
+                decoration: const InputDecoration(
+                  labelText: 'Local inference model',
+                  helperText:
+                      'Optional. If blank, AZMusic uses the first model reported by LM Studio /models.',
+                  border: OutlineInputBorder(),
+                ),
+              ),
+              const SizedBox(height: 12),
               Text(
                 'Experimental processing providers',
                 style: theme.textTheme.titleSmall?.copyWith(
@@ -652,7 +772,8 @@ class _SettingsForm extends StatelessWidget {
                 controller: cloudProviderController,
                 decoration: const InputDecoration(
                   labelText: 'Cloud provider',
-                  helperText: 'Examples: openai, gemini, anthropic, custom.',
+                  helperText:
+                      'Examples: openai, openrouter, anthropic, custom.',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -683,39 +804,6 @@ class _SettingsForm extends StatelessWidget {
                   labelText: 'Cloud API key',
                   helperText:
                       'Saved server-side. Leave blank to keep the existing key.',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 16),
-              Text(
-                'Experimental local LLM review',
-                style: theme.textTheme.titleSmall?.copyWith(
-                  fontWeight: FontWeight.w700,
-                ),
-              ),
-              const SizedBox(height: 8),
-              Text(
-                'This config is reserved for metadata validation and send-back review. The adapter boundary is present; runtime integrations such as Ollama or LM Studio still need to be implemented.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.onSurfaceVariant,
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: localLlmProviderController,
-                decoration: const InputDecoration(
-                  labelText: 'Local LLM provider',
-                  helperText: 'Examples for future adapters: ollama, lmstudio.',
-                  border: OutlineInputBorder(),
-                ),
-              ),
-              const SizedBox(height: 12),
-              TextField(
-                controller: localLlmModelController,
-                decoration: const InputDecoration(
-                  labelText: 'Local LLM model',
-                  helperText:
-                      'Optional model name used by the configured provider.',
                   border: OutlineInputBorder(),
                 ),
               ),
@@ -871,8 +959,12 @@ class _CapabilitiesPanel extends StatelessWidget {
             ),
             const SizedBox(height: 12),
             _ExecutableStatusTile(status: capabilities.audiveris),
-            const SizedBox(height: 8),
-            _ExecutableStatusTile(status: capabilities.homr),
+            if (AppConfig.showExperimentalFeatures) ...[
+              const SizedBox(height: 8),
+              _ExecutableStatusTile(status: capabilities.homr),
+              const SizedBox(height: 8),
+              _ExecutableStatusTile(status: capabilities.legato),
+            ],
             const SizedBox(height: 8),
             _ExecutableStatusTile(status: capabilities.musescore),
             const SizedBox(height: 8),
@@ -1087,6 +1179,12 @@ class _ValidationPanel extends StatelessWidget {
               value: validation.homr.available
                   ? 'Available'
                   : validation.homr.error ?? 'Not configured',
+            ),
+            _InfoRow(
+              label: 'LEGATO',
+              value: validation.legato.available
+                  ? 'Available'
+                  : validation.legato.error ?? 'Not configured',
             ),
             _InfoRow(
               label: 'MuseScore',

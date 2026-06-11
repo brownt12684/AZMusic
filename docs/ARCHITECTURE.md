@@ -9,7 +9,7 @@ This document records the current implementation shape of AZMusic for the presen
 AZMusic is a two-part private monorepo:
 
 - `client/`: Flutter app for local score import, reading, and later review/sync workflows.
-- `server/`: FastAPI service for LAN-only processing, review coordination, and sync state.
+- `server/`: FastAPI service for LAN processing, review coordination, and parent-owned sync state.
 
 Current high-level state:
 
@@ -39,9 +39,9 @@ The active client surface is organized under `client/lib/`:
 - The repository stores library metadata in `azmusic.sqlite` and migrates the previous `library/library_index.json` file on first load.
 - Piece detail shows every stored score version for a piece and launches the reader from any stored version.
 - The reader opens PDFs with `syncfusion_flutter_pdfviewer` and images with `InteractiveViewer`, keeps utility modules in-route, supports explicit read versus write mode, and enables PDF-only spread layout in wide landscape.
-- Parent review surfaces load the server review queue and allow approve or reject actions against candidate items.
-- Parent processing settings load `/api/v1/processing` capability data and let the parent configure Audiveris, MuseScore, development stub fallback, and experimental device-worker mode.
-- Piece loading performs opportunistic sync: pending uploads bind a `serverPieceId`, assigned pieces are fetched for the active student, and approved PDF versions can download as additional local score versions without removing the raw fallback.
+- Parent review surfaces load the server review queue and allow approve or reject actions against metadata/student-PDF items. The V1 review path approves metadata and a cleaned student PDF first; notation output is queued separately for human editing and retraining capture.
+- Parent Advanced settings load `/api/v1/processing` capability data and let the parent configure Audiveris, MuseScore, development stub fallback, parent-owned sync status, and experimental device-worker mode.
+- Piece loading performs opportunistic sync: pending uploads bind a `serverPieceId`, assigned pieces are fetched for the active student, and approved student PDF versions can download as additional local score versions without removing the raw fallback.
 
 ### Current persistence boundary
 
@@ -62,6 +62,7 @@ This boundary is important for later workers: keep UI code behind repository con
 - A server-host override no longer counts as pairing. Release builds start unpaired and must claim a real server QR token.
 - `ApiClient` and `NetworkInfo` are active today; `NetworkInfo` probes the currently configured server host for reachability.
 - `SyncManager.sync()` is still a TODO, but `PieceListNotifier` already runs opportunistic sync on app load, refresh, post-import, parent push, and connectivity return.
+- Parent-owned cloud sync scaffolding is server-side today. `/api/v1/cloud/sync` exports a restorable local family manifest with piece state, score-version workflow metadata, notes, and annotations. GitHub is the interim provider shape; remote push/pull is not implemented yet.
 - `LibrarySyncBannerState`, `syncStatusProvider`, and `connectionStatusProvider` expose real `offline-ready`, `syncing`, `synced`, and `failed-usable` states for the library banner.
 - The current banner state is still client-derived; it is not yet a direct rendering of the server `/api/v1/sync` response.
 
@@ -117,6 +118,9 @@ Current route groups:
 - `/api/v1/jobs`
 - `/api/v1/sync`
 - `/api/v1/processing`
+- `/api/v1/cloud`
+- `/api/v1/notes`
+- `/api/v1/annotations`
 - `/api/v1/pairing`
 - `/setup`
 
@@ -127,6 +131,7 @@ Important notes about the current API shape:
 - Piece detail responses now include per-score-version download metadata: `file_url`, `content_type`, `file_size_bytes`, and `content_sha256`.
 - The sync router now supports `GET`, `PATCH`, and upload/download counter updates, with retry and error metadata persisted under `server/storage/sync_state/`.
 - The processing router supports durable server settings, executable validation, server capability reporting, and experimental device-worker registration.
+- The cloud, notes, and annotations routers support the first restorable parent-owned sync contract. Notes and annotation layers are merged per profile under `server/storage/cloud_sync/`; cloud sync exports a manifest from those files plus SQLite piece and score-version state.
 - The pairing router creates short-lived parent/admin and student-device QR payloads. Android clients scan with `mobile_scanner`; Windows clients scan by capturing camera snapshots through `camera_windows` and decoding them with the Dart QR decoder. Manual payload/code entry remains available on all platforms.
 - Piece history draft routes currently use `history_drafts` with an underscore in the path.
 
@@ -134,14 +139,15 @@ Important notes about the current API shape:
 
 Server processing is now separated into orchestration and engine adapters:
 
-- `ScoreProcessingService` owns raw import preservation, job state, score-version rows, review item creation, and failure recording.
-- `MusicXmlEngine` chooses the configured OMR strategy: Audiveris default/sweep, HOMR experimental, or experimental bakeoff. The deterministic stub is only allowed when development fallback is explicitly enabled.
+- `ScoreProcessingService` owns raw import preservation, cleaned student PDF creation, optional notation job state, score-version rows, review item creation, and failure recording.
+- `MusicXmlEngine` chooses the configured OMR strategy. Audiveris default/sweep is the parent-facing path; HOMR and LEGATO remain backend-only experimental evidence for diagnostics and future AI review. The deterministic stub is only allowed when development fallback is explicitly enabled.
 - `MuseScoreRenderEngine` renders MusicXML to PDF when configured, or copies the raw PDF as a development review fallback when no renderer is configured.
-- `PRODUCTION_MODE=true` disables stub MusicXML and requires Audiveris, MuseScore, and Tesseract OCR to be available. HOMR remains optional and experimental.
+- PDF-first import does not require Audiveris or MuseScore. `PRODUCTION_MODE=true` disables stub MusicXML and requires Audiveris, MuseScore, and Tesseract OCR only before Advanced Notation Lab jobs can produce notation candidates. HOMR and LEGATO remain optional and experimental unless explicitly selected.
 - `ProcessingSettingsStore` persists parent-managed settings under `server/storage/processing_settings.json`.
 - `DeviceWorkerRegistry` persists experimental device-worker registrations under `server/storage/device_workers.json`.
+- Score-level LLM correction is dormant/experimental. The active notation path preserves the Audiveris/MuseScore output as an OMR baseline, queues it as a notation edit item, lets the parent upload externally edited MusicXML, rerenders through MuseScore, and catalogs the final human-ready pair for retraining.
 
-HOMR is integrated as a server-side experimental OMR engine. It is installed separately into a Python 3.10-3.12 virtual environment and produces MusicXML from rendered page images. Approved MusicXML remains the canonical future playback artifact, while the MuseScore-rendered PDF remains the student-readable display artifact.
+HOMR is integrated as a server-side experimental OMR engine. LEGATO is integrated as an experimental ABC-to-MusicXML OMR lane behind the same server adapter boundary. Both are installed separately from the main AZMusic package and should not appear as student-facing comparison workflows. The LEGATO adapter is runnable when the official source checkout, isolated Python environment, and an accessible model id or local model directory are configured. Cleaned PDFs are the V1 student-readable display artifact; human-approved MusicXML plus its OMR baseline is the future playback/training artifact.
 
 The frontend should treat these as server-owned concerns. Client code may import, read, show status, configure settings, and approve review candidates, but it should not embed OMR or rendering decisions in end-user UI code.
 
@@ -152,8 +158,9 @@ The frontend should treat these as server-owned concerns. Client code may import
 1. A parent imports music from the parent tools surface.
 2. The client copies the source file into app-managed local storage and writes intake metadata into `azmusic.sqlite`.
 3. If the import is a PDF and the server is reachable, the client best-effort uploads it to `/api/v1/pieces/import`.
-4. The parent review queue loads candidate review items from `/api/v1/review`.
-5. Once a piece is ready, the parent pushes it to one or more student profiles. The local library updates immediately, and the server push retries opportunistically if it fails.
+4. The server stores the raw score, prepares `student_cleaned.pdf`, and creates a metadata/student-PDF review item.
+5. Parent approval makes the cleaned PDF the default student artifact. Advanced Notation Lab can be started later for MusicXML/MuseScore work.
+6. Once a piece is ready, the parent pushes it to one or more student profiles. The local library updates immediately, and the server push retries opportunistically if it fails.
 
 ### Student library and reading
 
@@ -171,7 +178,7 @@ The server already persists pieces, score versions, media assets, review items, 
 
 - Windows Surface Book is the primary client target.
 - Android tablets are the secondary client target.
-- v1 is LAN-only and private; do not add cloud assumptions to the core workflow.
+- v1 core reading remains LAN/offline capable. Optional parent-owned cloud sync may exist as a restore layer, but student reading must not depend on it.
 - The client must remain useful with no network connection.
 - Raw imported scores should stay available even after later review or processing steps create derived versions.
 - Run repo automation from the repo root through `scripts/dev.ps1`.

@@ -6,6 +6,7 @@ import json
 import os
 import shutil
 import subprocess
+import sys
 from datetime import datetime
 from pathlib import Path
 from typing import Any
@@ -69,12 +70,14 @@ class ProcessingSettingsStore:
             elif key in {
                 "local_llm_provider",
                 "local_llm_model",
+                "local_llm_base_url",
                 "ocr_language",
                 "ocr_effort",
                 "cloud_provider",
                 "cloud_model",
                 "cloud_base_url",
                 "cloud_api_key",
+                "cloud_auth_mode",
             } and isinstance(value, str):
                 payload[key] = value.strip() or None
             elif isinstance(value, OmrStrategy):
@@ -128,6 +131,7 @@ class ProcessingSettingsStore:
             fallback_names=("audiveris",),
         )
         homr = homr_status(payload)
+        legato = legato_status(payload)
         musescore = executable_status(
             name="MuseScore Studio",
             configured_path=payload.get("musescore_cli_path"),
@@ -179,17 +183,41 @@ class ProcessingSettingsStore:
                 f"{payload.get('ocr_language') or 'eng'} was not reported."
             )
         omr_strategy = str(payload.get("omr_strategy") or "")
-        if omr_strategy in {
-            OmrStrategy.homr_experimental.value,
-            OmrStrategy.omr_bakeoff.value,
-            OmrStrategy.experimental_engine_bakeoff.value,
-        } and not homr.available:
+        if (
+            omr_strategy
+            in {
+                OmrStrategy.homr_experimental.value,
+                OmrStrategy.omr_bakeoff.value,
+                OmrStrategy.experimental_engine_bakeoff.value,
+            }
+            and not homr.available
+        ):
             warnings.append(
                 "HOMR is selected for experimental OMR, but the HOMR CLI is not available."
             )
-        if payload.get("cloud_enabled") and not payload.get("cloud_provider"):
+        if (
+            omr_strategy
+            in {
+                OmrStrategy.legato_experimental.value,
+                OmrStrategy.omr_bakeoff.value,
+                OmrStrategy.experimental_engine_bakeoff.value,
+            }
+            and not legato.available
+        ):
+            warnings.append(
+                "LEGATO is selected for experimental OMR, but the LEGATO runner or "
+                "model is not available."
+            )
+        cloud_provider = payload.get("cloud_provider") or "gemini"
+        cloud_auth_mode = payload.get("cloud_auth_mode") or "oauth"
+        if payload.get("cloud_enabled") and not cloud_provider:
             warnings.append("Cloud processing is enabled but no cloud provider is configured.")
-        if payload.get("cloud_provider") and not payload.get("cloud_api_key"):
+        if (
+            payload.get("cloud_enabled")
+            and cloud_provider != "gemini"
+            and cloud_auth_mode != "oauth"
+            and not payload.get("cloud_api_key")
+        ):
             warnings.append("Cloud provider is configured but no API key has been saved.")
 
         configured_executables_are_valid = True
@@ -198,6 +226,13 @@ class ProcessingSettingsStore:
         if homr.configured and not homr.available:
             configured_executables_are_valid = False
         if omr_strategy == OmrStrategy.homr_experimental.value and not homr.available:
+            configured_executables_are_valid = False
+        if legato.configured and not legato.available:
+            configured_executables_are_valid = False
+        if (
+            omr_strategy == OmrStrategy.legato_experimental.value
+            and not legato.available
+        ):
             configured_executables_are_valid = False
         if musescore.configured and not musescore.available:
             configured_executables_are_valid = False
@@ -212,6 +247,7 @@ class ProcessingSettingsStore:
             valid=configured_executables_are_valid,
             audiveris=audiveris,
             homr=homr,
+            legato=legato,
             musescore=musescore,
             ocr=ocr,
             warnings=warnings,
@@ -222,6 +258,9 @@ class ProcessingSettingsStore:
             "audiveris_cli_path": settings.audiveris_cli_path
             or discover_executable_path(("audiveris",)),
             "homr_cli_path": settings.homr_cli_path or discover_executable_path(("homr",)),
+            "legato_cli_path": settings.legato_cli_path
+            or discover_executable_path(("legato-runner", "legato")),
+            "legato_model_path": settings.legato_model_path,
             "musescore_cli_path": settings.musescore_cli_path
             or discover_executable_path(("musescore", "mscore", "MuseScore4")),
             "musescore_style_path": None,
@@ -238,12 +277,14 @@ class ProcessingSettingsStore:
             "last_processing_error": None,
             "local_llm_provider": None,
             "local_llm_model": None,
+            "local_llm_base_url": None,
             "last_llm_processing_error": None,
             "cloud_enabled": False,
-            "cloud_provider": None,
-            "cloud_model": None,
+            "cloud_provider": "gemini",
+            "cloud_model": settings.gemini_default_model,
             "cloud_base_url": None,
             "cloud_api_key": None,
+            "cloud_auth_mode": "oauth",
             "last_cloud_processing_error": None,
             "updated_at": _utc_now_iso(),
         }
@@ -261,6 +302,17 @@ class ProcessingSettingsStore:
         )
         response_payload["cloud_api_key_configured"] = bool(response_payload.get("cloud_api_key"))
         response_payload.pop("cloud_api_key", None)
+        if not response_payload.get("cloud_provider"):
+            response_payload["cloud_provider"] = "gemini"
+        if not response_payload.get("cloud_model"):
+            response_payload["cloud_model"] = settings.gemini_default_model
+        response_payload["cloud_auth_mode"] = response_payload.get("cloud_auth_mode") or "oauth"
+        if response_payload["cloud_provider"] == "gemini":
+            from server.services.gemini_oauth import GeminiOAuthManager
+
+            gemini_status = GeminiOAuthManager().status()
+            response_payload["cloud_oauth_connected"] = gemini_status.connected
+            response_payload["cloud_oauth_account"] = gemini_status.account_email
         return response_payload
 
     def _write(self, payload: dict[str, Any]) -> None:
@@ -347,6 +399,65 @@ def homr_status(payload: dict[str, Any]) -> ProcessingExecutableStatus:
     return status
 
 
+def legato_status(payload: dict[str, Any]) -> ProcessingExecutableStatus:
+    """Return LEGATO runner status, including the required model artifact."""
+
+    configured_path = payload.get("legato_cli_path")
+    configured = bool(configured_path)
+    resolved_path = _resolve_executable(
+        configured_path if isinstance(configured_path, str) else None,
+        ("legato-runner", "legato"),
+    )
+    model_path = payload.get("legato_model_path")
+    model_configured = isinstance(model_path, str) and bool(model_path.strip())
+    model_ready = model_configured and _legato_model_reference_is_available(str(model_path))
+    model_needs_huggingface_auth = (
+        model_configured
+        and str(model_path).strip().lower() == "guangyangmusic/legato"
+        and not _huggingface_token_available()
+    )
+    status = ProcessingExecutableStatus(
+        name="LEGATO",
+        configured_path=configured_path if isinstance(configured_path, str) else None,
+        discovered_path=resolved_path,
+        configured=configured or model_configured,
+        available=resolved_path is not None and bool(model_ready),
+    )
+    if configured and resolved_path is None:
+        status.error = "Configured LEGATO runner was not found."
+        return status
+    if resolved_path is None:
+        status.error = (
+            "LEGATO runner was not found. Install an experimental LEGATO runner "
+            "before selecting LEGATO OMR modes."
+        )
+        return status
+    if not model_configured:
+        status.error = "LEGATO runner is available, but no model path is configured."
+        return status
+    if not model_ready:
+        status.error = (
+            "Configured LEGATO model was not found. Use a local model path or a "
+            "Hugging Face model id such as guangyangmusic/legato."
+        )
+        return status
+    if model_needs_huggingface_auth:
+        status.available = False
+        status.error = (
+            "The official guangyangmusic/legato model requires Hugging Face login "
+            "and approved model access, or configure a local LEGATO model directory."
+        )
+        return status
+
+    version = _read_legato_version(resolved_path)
+    if version.startswith("ERROR:"):
+        status.error = version.removeprefix("ERROR:").strip()
+        status.available = False
+    else:
+        status.version = version or "LEGATO runner available"
+    return status
+
+
 def discover_executable_path(fallback_names: tuple[str, ...]) -> str | None:
     for fallback_name in fallback_names:
         discovered = shutil.which(fallback_name)
@@ -380,6 +491,7 @@ def _apply_discovered_tool_paths(payload: dict[str, Any]) -> None:
     for key, fallback_names in (
         ("audiveris_cli_path", ("audiveris",)),
         ("homr_cli_path", ("homr",)),
+        ("legato_cli_path", ("legato-runner", "legato")),
         ("musescore_cli_path", ("musescore", "mscore", "MuseScore4")),
         ("ocr_cli_path", ("tesseract",)),
     ):
@@ -460,6 +572,45 @@ def _common_executable_candidates(fallback_names: tuple[str, ...]) -> list[Path]
                     / "homr.exe",
                 ]
             )
+
+    if normalized_names.intersection({"legato-runner", "legato"}):
+        local_app_data = os.environ.get("LOCALAPPDATA")
+        if local_app_data:
+            candidates.extend(
+                [
+                    Path(local_app_data)
+                    / "AZMusic"
+                    / "Server"
+                    / "tools"
+                    / "legato"
+                    / ".venv"
+                    / "Scripts"
+                    / "legato-runner.exe",
+                    Path(local_app_data)
+                    / "AZMusic"
+                    / "Server"
+                    / "tools"
+                    / "legato"
+                    / "legato-runner.py",
+                    Path(local_app_data)
+                    / "AZMusic"
+                    / "Server"
+                    / "tools"
+                    / "legato"
+                    / "legato-runner.cmd",
+                    Path(local_app_data)
+                    / "AZMusic"
+                    / "Server"
+                    / "tools"
+                    / "legato"
+                    / "venv"
+                    / "Scripts"
+                    / "legato-runner.exe",
+                ]
+            )
+        candidates.append(
+            Path(__file__).resolve().parents[1] / "tools" / "legato_runner.py"
+        )
 
     seen: set[Path] = set()
     unique_candidates: list[Path] = []
@@ -568,6 +719,39 @@ def _read_homr_version(executable_path: str) -> str:
         except (OSError, subprocess.TimeoutExpired) as exc:
             return f"ERROR: {exc}"
         output = (result.stdout or result.stderr).strip()
+        if result.returncode != 0:
+            return f"ERROR: {output or f'LEGATO runner exited with {result.returncode}.'}"
+        if output:
+            lowered_output = output.lower()
+            if command[-1] == "--version" and (
+                "unrecognized arguments" in lowered_output or "not a valid option" in lowered_output
+            ):
+                continue
+            first_line = output.splitlines()[0][:200]
+            return first_line if command[-1] == "--version" else "HOMR CLI available"
+        if result.returncode == 0:
+            return "HOMR CLI available"
+    return "ERROR: HOMR CLI did not return help or version information."
+
+
+def _read_legato_version(executable_path: str) -> str:
+    for command in (
+        [*_script_command_prefix(executable_path), "--version"],
+        [*_script_command_prefix(executable_path), "--help"],
+    ):
+        try:
+            result = subprocess.run(
+                command,
+                check=False,
+                capture_output=True,
+                text=True,
+                encoding="utf-8",
+                errors="replace",
+                timeout=12,
+            )
+        except (OSError, subprocess.TimeoutExpired) as exc:
+            return f"ERROR: {exc}"
+        output = (result.stdout or result.stderr).strip()
         if output:
             lowered_output = output.lower()
             if command[-1] == "--version" and (
@@ -576,10 +760,49 @@ def _read_homr_version(executable_path: str) -> str:
             ):
                 continue
             first_line = output.splitlines()[0][:200]
-            return first_line if command[-1] == "--version" else "HOMR CLI available"
+            return first_line if command[-1] == "--version" else "LEGATO runner available"
         if result.returncode == 0:
-            return "HOMR CLI available"
-    return "ERROR: HOMR CLI did not return help or version information."
+            return "LEGATO runner available"
+    return "ERROR: LEGATO runner did not return help or version information."
+
+
+def _script_command_prefix(executable_path: str) -> list[str]:
+    path = Path(executable_path).expanduser()
+    if not path.is_absolute():
+        path = path.resolve()
+    if path.suffix.lower() == ".py":
+        return [sys.executable, str(path)]
+    return [str(path)]
+
+
+def _legato_model_reference_is_available(model_reference: str) -> bool:
+    raw = model_reference.strip()
+    if not raw:
+        return False
+    if Path(raw).expanduser().exists():
+        return True
+    return _looks_like_huggingface_model_id(raw)
+
+
+def _looks_like_huggingface_model_id(model_reference: str) -> bool:
+    if "\\" in model_reference or ":" in model_reference:
+        return False
+    parts = model_reference.split("/")
+    if len(parts) != 2 or not all(parts):
+        return False
+    allowed = set("abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789._-")
+    return all(set(part) <= allowed for part in parts)
+
+
+def _huggingface_token_available() -> bool:
+    for key in ("HF_TOKEN", "HUGGING_FACE_HUB_TOKEN", "HUGGINGFACE_HUB_TOKEN"):
+        if os.environ.get(key):
+            return True
+    token_path = Path.home() / ".cache" / "huggingface" / "token"
+    try:
+        return token_path.exists() and bool(token_path.read_text(encoding="utf-8").strip())
+    except OSError:
+        return False
 
 
 def _tesseract_language_available(executable_path: str | None, language: str) -> bool:

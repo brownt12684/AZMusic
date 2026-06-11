@@ -786,8 +786,10 @@ String _readerVersionLabel(ScoreVersion version) {
   if (title.contains('original')) {
     return 'Original PDF';
   }
-  if (title.contains('processed') || version.versionType == 'approved') {
-    return 'Processed score';
+  if (title.contains('student') ||
+      title.contains('processed') ||
+      version.versionType == 'approved') {
+    return 'Student PDF';
   }
   return version.title;
 }

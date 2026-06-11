@@ -29,6 +29,10 @@ from server.models.schemas import (
     ReviewItemResponse,
     ReviewReprocessRequest,
 )
+from server.services.gemini_vision import (
+    GeminiVisionReviewAdapter,
+    GeminiVisionReviewError,
+)
 from server.services.local_llm import LocalLlmProvider, LocalLlmUnavailableError
 from server.services.piece_identity import (
     is_duplicate_metadata,
@@ -42,11 +46,41 @@ from server.services.processing_engines import (
     _validate_musicxml,
 )
 from server.services.processing_settings import ProcessingSettingsStore
+from server.services.score_mcp_tools import (
+    ScoreMcpToolController,
+    ScoreMcpToolError,
+    ScoreMcpToolResult,
+)
+from server.services.score_quality_loop import (
+    build_hybrid_fallback_candidate,
+    build_quality_loop_summary,
+)
+from server.services.score_visual_diff import ScoreVisualDiffError, compare_score_pdfs
+from server.services.training_catalog import (
+    TrainingCatalogError,
+    catalog_notation_training_sample,
+)
 
 router = APIRouter()
 _piece_state_service = PieceStateService()
 _processing_settings_store = ProcessingSettingsStore()
-_BULK_APPROVAL_STAGES = {"split_review_needed", "candidate_review_needed"}
+_gemini_vision_adapter = GeminiVisionReviewAdapter()
+_BULK_APPROVAL_STAGES = {
+    "metadata_review_needed",
+    "split_review_needed",
+    "candidate_review_needed",
+    "notation_edit_queued",
+}
+_LOCAL_LLM_ALLOWED_SMALL_SCORE_TOOLS = {
+    "update_note_pitch",
+    "update_note_duration",
+    "update_rest",
+    "update_measure_time",
+    "update_measure_key",
+    "upsert_direction_words",
+}
+_LOCAL_LLM_EDIT_VERIFICATION_CONFIDENCE = 0.65
+_LOCAL_LLM_MAX_ATTEMPTS_PER_TOOL = 2
 
 
 def _file_url(request: Request, piece_id: str, score_version_id: str) -> str:
@@ -171,7 +205,11 @@ async def bulk_approve_reviews(
     if body.processing_stage not in _BULK_APPROVAL_STAGES:
         raise HTTPException(
             status_code=400,
-            detail="processing_stage must be split_review_needed or candidate_review_needed.",
+            detail=(
+                "processing_stage must be metadata_review_needed, "
+                "split_review_needed, candidate_review_needed, "
+                "or notation_edit_queued."
+            ),
         )
 
     source_book_id = body.source_book_id
@@ -292,40 +330,15 @@ async def _apply_review_decision(
     canonical_score_id = candidate_data.get("canonical_score_version_id")
 
     if action_value == ReviewAction.approve.value:
-        if candidate_data.get("processing_stage") == "split_review_needed":
-            item.status = "approved"
-            candidate_data = _apply_review_correction(candidate_data, correction)
-            item.candidate_data = candidate_data
-            piece = await db.get(Piece, item.piece_id)
-            if piece:
-                _apply_catalog_metadata_to_piece(piece, candidate_data)
-                piece.status = PieceStatus.processing
-                piece.updated_at = datetime.utcnow()
-            db.add(
-                BackgroundJob(
-                    id=str(uuid.uuid4()),
-                    piece_id=item.piece_id,
-                    job_type="score_processing",
-                    status=JobStatus.queued,
-                    progress=0.0,
-                    result_data={
-                        "source_review_item_id": item.id,
-                        "raw_score_version_id": raw_score_id,
-                        "processing_stage": "queued_after_split_review",
-                        "source_book_id": candidate_data.get("source_book_id"),
-                        "source_page_start": candidate_data.get("source_page_start"),
-                        "source_page_end": candidate_data.get("source_page_end"),
-                        "primary_instrument": (
-                            (candidate_data.get("catalog_metadata") or {}).get("primary_instrument")
-                            if isinstance(candidate_data.get("catalog_metadata"), dict)
-                            else None
-                        ),
-                        "contained_piece_titles": candidate_data.get("contained_piece_titles"),
-                        "multi_piece_page": candidate_data.get("multi_piece_page"),
-                    },
-                    created_at=datetime.utcnow(),
-                    updated_at=datetime.utcnow(),
-                )
+        if candidate_data.get("processing_stage") in {
+            "metadata_review_needed",
+            "split_review_needed",
+        }:
+            await _approve_student_pdf_review(
+                db,
+                item=item,
+                candidate_data=candidate_data,
+                correction=correction,
             )
             return
 
@@ -377,6 +390,10 @@ async def _apply_review_decision(
         if piece:
             _apply_catalog_metadata_to_piece(piece, candidate_data)
 
+        rendered_version = None
+        raw_version = None
+        canonical_version = None
+
         if item.item_type == ReviewItemType.score_candidate and rendered_score_id:
             result = await db.execute(
                 select(ScoreVersion).where(ScoreVersion.id == rendered_score_id)
@@ -390,12 +407,28 @@ async def _apply_review_decision(
                 )
                 rendered_version.is_default = True
                 rendered_version.version_type = ScoreVersionType.approved
+                _piece_state_service.set_score_version_metadata(
+                    item.piece_id,
+                    rendered_version.id,
+                    artifact_role="human_approved_render_pdf",
+                    student_default=True,
+                    approved_by_parent=True,
+                    display_rank=5,
+                )
         elif item.item_type == ReviewItemType.score_candidate and raw_score_id:
             result = await db.execute(select(ScoreVersion).where(ScoreVersion.id == raw_score_id))
             raw_version = result.scalar_one_or_none()
             if raw_version:
                 raw_version.is_default = True
                 raw_version.version_type = ScoreVersionType.approved
+                _piece_state_service.set_score_version_metadata(
+                    item.piece_id,
+                    raw_version.id,
+                    artifact_role="original_import",
+                    student_default=True,
+                    approved_by_parent=True,
+                    display_rank=10,
+                )
 
         if canonical_score_id:
             result = await db.execute(
@@ -404,6 +437,52 @@ async def _apply_review_decision(
             canonical_version = result.scalar_one_or_none()
             if canonical_version:
                 canonical_version.version_type = ScoreVersionType.approved
+                _piece_state_service.set_score_version_metadata(
+                    item.piece_id,
+                    canonical_version.id,
+                    artifact_role="human_approved_musicxml",
+                    student_default=False,
+                    approved_by_parent=True,
+                    display_rank=50,
+                )
+
+        if item.item_type == ReviewItemType.score_candidate and rendered_version:
+            if not piece or not canonical_version or not raw_score_id:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Notation approval requires original, baseline, and rendered files.",
+                )
+            raw_result = await db.execute(
+                select(ScoreVersion).where(
+                    ScoreVersion.id == raw_score_id,
+                    ScoreVersion.piece_id == item.piece_id,
+                )
+            )
+            raw_version = raw_result.scalar_one_or_none()
+            if not raw_version:
+                raise HTTPException(
+                    status_code=409,
+                    detail="Notation approval requires the original source file.",
+                )
+            try:
+                training_sample = catalog_notation_training_sample(
+                    piece=piece,
+                    review_item=item,
+                    candidate_data=candidate_data,
+                    raw_score_version=raw_version,
+                    canonical_score_version=canonical_version,
+                    rendered_score_version=rendered_version,
+                    piece_state_service=_piece_state_service,
+                )
+            except TrainingCatalogError as exc:
+                raise HTTPException(status_code=409, detail=str(exc)) from exc
+            candidate_data = {
+                **candidate_data,
+                "training_sample_id": training_sample["sample_id"],
+                "training_cataloged_at": training_sample["created_at"],
+                "human_approved_for_training": True,
+            }
+            item.candidate_data = candidate_data
 
         pending_result = await db.execute(
             select(ReviewItem).where(
@@ -454,6 +533,78 @@ async def _apply_review_decision(
         raise HTTPException(status_code=400, detail="Unsupported review action.")
 
 
+async def _approve_student_pdf_review(
+    db: AsyncSession,
+    *,
+    item: ReviewItem,
+    candidate_data: dict,
+    correction: dict | None,
+) -> None:
+    """Approve the PDF-first metadata review and make the cleaned score student-ready."""
+    candidate_data = _apply_review_correction(candidate_data, correction)
+    candidate_data["student_artifact_approved"] = True
+    candidate_data["approved_student_artifact"] = (
+        candidate_data.get("student_artifact") or "cleaned_pdf"
+    )
+    item.status = "approved"
+    item.candidate_data = candidate_data
+
+    piece = await db.get(Piece, item.piece_id)
+    if piece:
+        _apply_catalog_metadata_to_piece(piece, candidate_data)
+        piece.status = PieceStatus.approved
+        piece.updated_at = datetime.utcnow()
+
+    raw_score_id = candidate_data.get("raw_score_version_id")
+    cleaned_score_id = (
+        candidate_data.get("cleaned_score_version_id")
+        or candidate_data.get("student_default_score_version_id")
+        or candidate_data.get("score_version_id")
+        or raw_score_id
+    )
+    if isinstance(raw_score_id, str) and raw_score_id.strip():
+        _piece_state_service.set_score_version_metadata(
+            item.piece_id,
+            raw_score_id.strip(),
+            artifact_role="original_import",
+            student_default=False,
+            approved_by_parent=True,
+            display_rank=100,
+        )
+    if isinstance(cleaned_score_id, str) and cleaned_score_id.strip():
+        result = await db.execute(
+            select(ScoreVersion).where(
+                ScoreVersion.id == cleaned_score_id.strip(),
+                ScoreVersion.piece_id == item.piece_id,
+            )
+        )
+        cleaned_version = result.scalar_one_or_none()
+        if cleaned_version:
+            await db.execute(
+                update(ScoreVersion)
+                .where(ScoreVersion.piece_id == item.piece_id)
+                .values(is_default=False)
+            )
+            cleaned_version.is_default = True
+            cleaned_version.version_type = ScoreVersionType.approved
+            _piece_state_service.set_score_version_metadata(
+                item.piece_id,
+                cleaned_version.id,
+                artifact_role="cleaned_pdf",
+                replaces_score_version_id=raw_score_id if isinstance(raw_score_id, str) else None,
+                student_default=True,
+                approved_by_parent=True,
+                display_rank=10,
+            )
+
+    if piece:
+        await supersede_duplicate_pending_reviews(
+            db,
+            canonical_piece_id=piece.id,
+            resolved_review_item_id=item.id,
+        )
+
+
 @router.post("/{item_id}/reprocess", response_model=JobResponse)
 async def request_review_reprocess(
     item_id: str,
@@ -464,6 +615,14 @@ async def request_review_reprocess(
     item = await db.get(ReviewItem, item_id)
     if not item:
         raise HTTPException(status_code=404, detail="Review item not found")
+    if body.reprocess_type.value != "score":
+        raise HTTPException(
+            status_code=410,
+            detail=(
+                "Metadata LLM review has been removed. Edit metadata directly "
+                "in the parent review workflow."
+            ),
+        )
 
     now = datetime.utcnow()
     job = BackgroundJob(
@@ -484,27 +643,44 @@ async def request_review_reprocess(
 
     candidate_data = dict(item.candidate_data or {})
     if body.reprocess_type.value == "score":
-        message = (
-            "AI score review is coming soon. It will compare the original PDF, "
-            "metadata, and MuseScore candidate, apply corrections, rerender, "
-            "and return the candidate for parent review."
-        )
-        job.status = JobStatus.failed
-        job.progress = 100.0
-        job.error_message = message
-        job.result_data = {
-            **(job.result_data or {}),
-            "coming_soon": True,
-            "warnings": [message],
-        }
-        job.updated_at = datetime.utcnow()
-        candidate_data = _append_reprocess_warning(
-            candidate_data,
-            reprocess_type=body.reprocess_type.value,
-            warning=message,
-            parent_notes=body.parent_notes,
-        )
-        item.candidate_data = candidate_data
+        try:
+            candidate_data = await _run_local_llm_score_reprocess(
+                db,
+                item=item,
+                job=job,
+                candidate_data=candidate_data,
+                parent_notes=body.parent_notes,
+            )
+            item.candidate_data = candidate_data
+            job.status = JobStatus.succeeded
+            job.progress = 100.0
+            job.updated_at = datetime.utcnow()
+            _processing_settings_store.record_last_llm_error(None)
+        except (
+            LocalLlmUnavailableError,
+            ScoreMcpToolError,
+            ScoreVisualDiffError,
+            ProcessingEngineError,
+            OSError,
+        ) as exc:
+            message = str(exc)
+            job.status = JobStatus.failed
+            job.progress = 100.0
+            job.error_message = message
+            job.result_data = {
+                **(job.result_data or {}),
+                "local_llm_available": False,
+                "warnings": [message],
+            }
+            job.updated_at = datetime.utcnow()
+            _processing_settings_store.record_last_llm_error(message)
+            candidate_data = _append_reprocess_warning(
+                candidate_data,
+                reprocess_type=body.reprocess_type.value,
+                warning=message,
+                parent_notes=body.parent_notes,
+            )
+            item.candidate_data = candidate_data
         await db.commit()
         await db.refresh(job)
         return JobResponse(
@@ -519,50 +695,98 @@ async def request_review_reprocess(
             updated_at=job.updated_at,
         )
 
-    provider = LocalLlmProvider(_processing_settings_store.load())
+@router.post("/{item_id}/llm-correction-json", response_model=JobResponse)
+async def request_llm_correction_json(
+    item_id: str,
+    body: ReviewReprocessRequest,
+    db: AsyncSession = Depends(get_db),
+):
+    """Run the structured Correction JSON path for a notation candidate."""
+    item = await db.get(ReviewItem, item_id)
+    if not item:
+        raise HTTPException(status_code=404, detail="Review item not found")
+    if body.reprocess_type.value != "score":
+        raise HTTPException(
+            status_code=400,
+            detail="Correction JSON is only available for score review.",
+        )
+
+    now = datetime.utcnow()
+    job = BackgroundJob(
+        id=str(uuid.uuid4()),
+        piece_id=item.piece_id,
+        job_type="llm_correction_json",
+        status=JobStatus.running,
+        progress=10.0,
+        created_at=now,
+        updated_at=now,
+        result_data={
+            "review_item_id": item.id,
+            "target_output": "correction_json",
+            "reprocess_type": "score",
+        },
+    )
+    db.add(job)
+    await db.flush()
+
+    candidate_data = dict(item.candidate_data or {})
     try:
-        llm_result = provider.reprocess_review_item(
-            reprocess_type=body.reprocess_type.value,
+        candidate_data = await _run_local_llm_score_reprocess(
+            db,
+            item=item,
+            job=job,
             candidate_data=candidate_data,
             parent_notes=body.parent_notes,
         )
-    except LocalLlmUnavailableError as exc:
-        job.status = JobStatus.failed
-        job.progress = 100.0
-        job.error_message = str(exc)
-        job.result_data = {
-            **(job.result_data or {}),
-            "local_llm_available": False,
-            "warnings": [str(exc)],
+        session = {
+            "id": job.id,
+            "created_at": datetime.utcnow().isoformat(),
+            "target_output": "correction_json",
+            "parent_notes": body.parent_notes,
+            "status": "candidate_created",
+            "applied_tool_results": candidate_data.get("local_llm_tool_results", []),
+            "findings": candidate_data.get("local_llm_findings", []),
+            "corrected_score_version_id": candidate_data.get("score_version_id"),
+            "corrected_canonical_score_version_id": candidate_data.get(
+                "canonical_score_version_id"
+            ),
         }
-        job.updated_at = datetime.utcnow()
-        _processing_settings_store.record_last_llm_error(str(exc))
-        candidate_data = _append_reprocess_warning(
-            candidate_data,
-            reprocess_type=body.reprocess_type.value,
-            warning=str(exc),
-            parent_notes=body.parent_notes,
-        )
+        sessions = list(candidate_data.get("correction_json_sessions") or [])
+        sessions.append(session)
+        candidate_data["correction_json_sessions"] = sessions
         item.candidate_data = candidate_data
-    else:
         job.status = JobStatus.succeeded
         job.progress = 100.0
         job.result_data = {
             **(job.result_data or {}),
-            "local_llm_available": True,
-            "provider": llm_result.provider,
-            "model": llm_result.model,
-            "suggestions": llm_result.suggestions,
-            "warnings": llm_result.warnings,
+            "correction_json_session": session,
         }
         job.updated_at = datetime.utcnow()
         _processing_settings_store.record_last_llm_error(None)
-        candidate_data = _append_catalog_suggestions(
+    except (
+        LocalLlmUnavailableError,
+        ScoreMcpToolError,
+        ScoreVisualDiffError,
+        ProcessingEngineError,
+        OSError,
+    ) as exc:
+        message = str(exc)
+        job.status = JobStatus.failed
+        job.progress = 100.0
+        job.error_message = message
+        job.result_data = {
+            **(job.result_data or {}),
+            "target_output": "correction_json",
+            "warnings": [message],
+        }
+        job.updated_at = datetime.utcnow()
+        _processing_settings_store.record_last_llm_error(message)
+        item.candidate_data = _append_reprocess_warning(
             candidate_data,
-            suggestions=llm_result.suggestions,
-            warnings=llm_result.warnings,
+            reprocess_type="score",
+            warning=message,
+            parent_notes=body.parent_notes,
         )
-        item.candidate_data = candidate_data
 
     await db.commit()
     await db.refresh(job)
@@ -577,6 +801,1256 @@ async def request_review_reprocess(
         created_at=job.created_at,
         updated_at=job.updated_at,
     )
+
+
+async def _run_local_llm_score_reprocess(
+    db: AsyncSession,
+    *,
+    item: ReviewItem,
+    job: BackgroundJob,
+    candidate_data: dict,
+    parent_notes: str | None,
+) -> dict:
+    settings_payload = _processing_settings_store.load()
+    provider = LocalLlmProvider(settings_payload)
+    status = provider.status()
+    if not status.configured:
+        raise LocalLlmUnavailableError("Local LLM provider is not configured.")
+    if not status.available:
+        raise LocalLlmUnavailableError(
+            status.error
+            or "Local LLM is configured but is not reachable. Start the local LLM server."
+        )
+    raw_version, rendered_version, canonical_version = await _score_versions_for_review(
+        db,
+        candidate_data,
+        provider_label="Local LLM check",
+        error_factory=LocalLlmUnavailableError,
+    )
+    raw_path = Path(raw_version.file_path)
+    rendered_path = Path(rendered_version.file_path)
+    canonical_path = Path(canonical_version.file_path)
+    for label, path in (
+        ("original score", raw_path),
+        ("rendered candidate PDF", rendered_path),
+        ("MusicXML candidate", canonical_path),
+    ):
+        if not path.exists():
+            raise LocalLlmUnavailableError(f"Local LLM check cannot find the {label}: {path}")
+
+    job.progress = 25.0
+    job.updated_at = datetime.utcnow()
+    await db.flush()
+
+    llm_result = provider.review_score(
+        raw_pdf_path=raw_path,
+        rendered_pdf_path=rendered_path,
+        canonical_musicxml_path=canonical_path,
+        candidate_data=candidate_data,
+        parent_notes=parent_notes,
+    )
+
+    job.progress = 55.0
+    job.updated_at = datetime.utcnow()
+    await db.flush()
+
+    workspace = canonical_path.parent / "local-llm-review" / job.id
+    verification = _run_verified_local_llm_score_edits(
+        provider=provider,
+        settings_payload=settings_payload,
+        raw_path=raw_path,
+        rendered_path=rendered_path,
+        canonical_path=canonical_path,
+        candidate_data=candidate_data,
+        parent_notes=parent_notes,
+        llm_result=llm_result,
+        workspace=workspace,
+    )
+    tool_results = verification["tool_results"]
+    measure_reviews = verification["measure_reviews"]
+    retry_attempted = bool(verification["retry_attempted"])
+    if not verification["accepted_tool_results"]:
+        status_value = _local_llm_no_candidate_status(
+            tool_results=tool_results,
+            llm_result=llm_result,
+        )
+        quality_loop = build_quality_loop_summary(
+            outcome=(
+                "metadata_or_layout_only"
+                if status_value == "metadata_or_layout_only"
+                else "hybrid_fallback"
+            ),
+            measure_reviews=measure_reviews,
+            visual_diff=verification.get("visual_diff"),
+        )
+        if status_value != "metadata_or_layout_only":
+            candidate_data = _attach_local_llm_hybrid_fallback_candidate(
+                candidate_data,
+                raw_score_version_id=raw_version.id,
+                rendered_score_version_id=rendered_version.id,
+                canonical_score_version_id=canonical_version.id,
+                llm_result=llm_result,
+                measure_reviews=measure_reviews,
+                visual_diff=verification.get("visual_diff"),
+                job_id=job.id,
+            )
+        return _record_local_llm_score_status(
+            candidate_data,
+            job=job,
+            llm_result=llm_result,
+            status=status_value,
+            parent_notes=parent_notes,
+            tool_results=tool_results,
+            visual_diff=verification.get("visual_diff"),
+            measure_reviews=measure_reviews,
+            quality_loop=quality_loop,
+            retry_attempted=retry_attempted,
+        )
+
+    job.progress = 72.0
+    job.updated_at = datetime.utcnow()
+    await db.flush()
+
+    corrected_canonical_path = verification["canonical_path"]
+    _validate_musicxml(corrected_canonical_path)
+    corrected_rendered_path = verification["rendered_path"]
+    render_result = verification["render_result"]
+    visual_diff = compare_score_pdfs(
+        before_pdf_path=rendered_path,
+        after_pdf_path=corrected_rendered_path,
+        original_pdf_path=raw_path,
+    )
+    if not visual_diff.get("passed"):
+        quality_loop = build_quality_loop_summary(
+            outcome="hybrid_fallback",
+            measure_reviews=measure_reviews,
+            visual_diff=visual_diff,
+        )
+        candidate_data = _attach_local_llm_hybrid_fallback_candidate(
+            candidate_data,
+            raw_score_version_id=raw_version.id,
+            rendered_score_version_id=rendered_version.id,
+            canonical_score_version_id=canonical_version.id,
+            llm_result=llm_result,
+            measure_reviews=measure_reviews,
+            visual_diff=visual_diff,
+            job_id=job.id,
+        )
+        return _record_local_llm_score_status(
+            candidate_data,
+            job=job,
+            llm_result=llm_result,
+            status="no_visible_notation_change",
+            parent_notes=parent_notes,
+            tool_results=tool_results,
+            visual_diff=visual_diff,
+            render_warnings=render_result.warnings,
+            measure_reviews=measure_reviews,
+            quality_loop=quality_loop,
+            retry_attempted=retry_attempted,
+        )
+
+    corrected_canonical_version = ScoreVersion(
+        id=str(uuid.uuid4()),
+        piece_id=item.piece_id,
+        version_type=ScoreVersionType.reconstructed_candidate,
+        file_path=str(corrected_canonical_path),
+        is_default=False,
+        created_at=datetime.utcnow(),
+    )
+    corrected_rendered_version = ScoreVersion(
+        id=str(uuid.uuid4()),
+        piece_id=item.piece_id,
+        version_type=ScoreVersionType.reconstructed_candidate,
+        file_path=str(corrected_rendered_path),
+        is_default=False,
+        created_at=datetime.utcnow(),
+    )
+    db.add(corrected_canonical_version)
+    db.add(corrected_rendered_version)
+    await db.flush()
+
+    candidate_id = f"local_llm_{job.id[:8]}"
+    tool_result_payload = _score_tool_results_payload(tool_results)
+    llm_candidate = {
+        "candidate_id": candidate_id,
+        "label": "Local LLM notation correction",
+        "engine_name": "local_llm",
+        "engine_version": llm_result.model,
+        "provenance": "local_llm_vision_mcp",
+        "confidence": llm_result.confidence,
+        "raw_score_version_id": raw_version.id,
+        "canonical_score_version_id": corrected_canonical_version.id,
+        "score_version_id": corrected_rendered_version.id,
+        "renderer_name": render_result.renderer_name,
+        "renderer_version": render_result.renderer_version,
+        "renderer_provenance": render_result.provenance,
+        "render_validation_status": render_result.validation_status,
+        "render_validation_error": render_result.validation_error,
+        "rendered_file_size_bytes": render_result.file_size_bytes,
+        "rendered_page_count": render_result.page_count,
+        "render_diagnostics": render_result.diagnostics,
+        "llm_notation_review_status": "notation_corrected",
+        "llm_notation_findings": list(llm_result.notation_findings or []),
+        "llm_tool_results": tool_result_payload,
+        "llm_measure_reviews": measure_reviews,
+        "llm_verification_status": "verified_correction",
+        "llm_visual_diff": visual_diff,
+        "llm_correction_scope": "notation",
+        "llm_vision_model_hint": llm_result.vision_model_hint,
+        "llm_model_auto_selected": llm_result.model_auto_selected,
+        "warnings": list(llm_result.warnings or []) + render_result.warnings,
+        "selected": True,
+    }
+
+    previous_candidates = [
+        {**candidate, "selected": False}
+        for candidate in candidate_data.get("omr_candidates") or []
+        if isinstance(candidate, dict)
+    ]
+    candidate_data["omr_candidates"] = [llm_candidate, *previous_candidates]
+    for key, value in llm_candidate.items():
+        if key not in {"candidate_id", "label", "warnings", "selected"}:
+            candidate_data[key] = value
+    candidate_data["selected_omr_candidate_id"] = candidate_id
+    candidate_data["selected_omr_candidate_label"] = llm_candidate["label"]
+    quality_loop = build_quality_loop_summary(
+        outcome="verified_musicxml",
+        measure_reviews=measure_reviews,
+        visual_diff=visual_diff,
+    )
+    return _record_local_llm_score_status(
+        candidate_data,
+        job=job,
+        llm_result=llm_result,
+        status="notation_corrected",
+        parent_notes=parent_notes,
+        tool_results=tool_results,
+        visual_diff=visual_diff,
+        render_warnings=render_result.warnings,
+        measure_reviews=measure_reviews,
+        quality_loop=quality_loop,
+        selected_candidate_id=candidate_id,
+        corrected_canonical_score_version_id=corrected_canonical_version.id,
+        corrected_rendered_score_version_id=corrected_rendered_version.id,
+        retry_attempted=retry_attempted,
+    )
+
+
+def _run_verified_local_llm_score_edits(
+    *,
+    provider,
+    settings_payload: dict,
+    raw_path: Path,
+    rendered_path: Path,
+    canonical_path: Path,
+    candidate_data: dict,
+    parent_notes: str | None,
+    llm_result,
+    workspace: Path,
+) -> dict:
+    workspace.mkdir(parents=True, exist_ok=True)
+    current_canonical_path = canonical_path
+    current_rendered_path = rendered_path
+    current_render_result = None
+    final_visual_diff = None
+    tool_results: list[ScoreMcpToolResult] = []
+    accepted_tool_results: list[ScoreMcpToolResult] = []
+    measure_reviews: list[dict] = []
+    retry_attempted = False
+
+    for tool_index, proposed_tool_call in enumerate(llm_result.tool_calls or [], start=1):
+        if not isinstance(proposed_tool_call, dict):
+            result = ScoreMcpToolResult(
+                name="<malformed>",
+                status="failed",
+                message="The LLM returned a malformed tool call.",
+                structured_content={"affects_notation": False},
+                affects_notation=False,
+            )
+            tool_results.append(result)
+            measure_reviews.append(
+                _local_llm_measure_review_entry(
+                    tool_index=tool_index,
+                    attempt_index=1,
+                    status="rejected",
+                    reason=result.message,
+                    tool_call={},
+                    tool_result=result,
+                    target_finding=None,
+                )
+            )
+            continue
+
+        target_finding = _matching_local_llm_notation_finding(
+            proposed_tool_call,
+            llm_result.notation_findings or [],
+        )
+        tool_call = proposed_tool_call
+        attempt_index = 1
+        while attempt_index <= _LOCAL_LLM_MAX_ATTEMPTS_PER_TOOL:
+            attempt_workspace = workspace / f"tool-{tool_index:02d}-attempt-{attempt_index:02d}"
+            name = _score_tool_call_name(tool_call)
+
+            if name == "replace_musicxml_text":
+                result, _ = _apply_local_llm_score_tool(
+                    source_musicxml_path=current_canonical_path,
+                    workspace_path=attempt_workspace,
+                    tool_call=tool_call,
+                )
+                tool_results.append(result)
+                if result.status == "succeeded" and not result.affects_notation:
+                    measure_reviews.append(
+                        _local_llm_measure_review_entry(
+                            tool_index=tool_index,
+                            attempt_index=attempt_index,
+                            status="metadata_or_layout_only",
+                            reason=(
+                                "The edit did not affect notation and was recorded "
+                                "only as review output."
+                            ),
+                            tool_call=tool_call,
+                            tool_result=result,
+                            target_finding=target_finding,
+                        )
+                    )
+                    break
+
+                rejection_reason = (
+                    "replace_musicxml_text is not allowed to publish notation changes; "
+                    "use a bounded structured notation tool instead."
+                )
+                measure_reviews.append(
+                    _local_llm_measure_review_entry(
+                        tool_index=tool_index,
+                        attempt_index=attempt_index,
+                        status="rejected",
+                        reason=rejection_reason,
+                        tool_call=tool_call,
+                        tool_result=result,
+                        target_finding=target_finding,
+                    )
+                )
+                retry_tool_call = _retry_local_llm_score_tool_call(
+                    provider=provider,
+                    raw_path=raw_path,
+                    rendered_path=current_rendered_path,
+                    canonical_path=current_canonical_path,
+                    candidate_data=candidate_data,
+                    parent_notes=parent_notes,
+                    llm_result=llm_result,
+                    target_finding=target_finding,
+                    failed_tool_call=tool_call,
+                    failed_tool_result=result,
+                    rejection_reason=rejection_reason,
+                    attempt_index=attempt_index,
+                    measure_reviews=measure_reviews,
+                )
+                if retry_tool_call is None:
+                    break
+                retry_attempted = True
+                tool_call = retry_tool_call
+                attempt_index += 1
+                continue
+
+            safety_error = _local_llm_small_score_tool_safety_error(tool_call)
+            if safety_error:
+                result = ScoreMcpToolResult(
+                    name=name or "<unknown>",
+                    status="failed",
+                    message=safety_error,
+                    structured_content={
+                        "arguments": _score_tool_call_arguments(tool_call),
+                        "affects_notation": False,
+                    },
+                    affects_notation=False,
+                )
+                tool_results.append(result)
+                measure_reviews.append(
+                    _local_llm_measure_review_entry(
+                        tool_index=tool_index,
+                        attempt_index=attempt_index,
+                        status="rejected",
+                        reason=safety_error,
+                        tool_call=tool_call,
+                        tool_result=result,
+                        target_finding=target_finding,
+                    )
+                )
+                retry_tool_call = _retry_local_llm_score_tool_call(
+                    provider=provider,
+                    raw_path=raw_path,
+                    rendered_path=current_rendered_path,
+                    canonical_path=current_canonical_path,
+                    candidate_data=candidate_data,
+                    parent_notes=parent_notes,
+                    llm_result=llm_result,
+                    target_finding=target_finding,
+                    failed_tool_call=tool_call,
+                    failed_tool_result=result,
+                    rejection_reason=safety_error,
+                    attempt_index=attempt_index,
+                    measure_reviews=measure_reviews,
+                )
+                if retry_tool_call is None:
+                    break
+                retry_attempted = True
+                tool_call = retry_tool_call
+                attempt_index += 1
+                continue
+
+            result, edited_musicxml_path = _apply_local_llm_score_tool(
+                source_musicxml_path=current_canonical_path,
+                workspace_path=attempt_workspace,
+                tool_call=tool_call,
+            )
+            tool_results.append(result)
+            if result.status != "succeeded" or not result.affects_notation:
+                reason = result.message or "The tool did not produce a notation edit."
+                measure_reviews.append(
+                    _local_llm_measure_review_entry(
+                        tool_index=tool_index,
+                        attempt_index=attempt_index,
+                        status="rejected",
+                        reason=reason,
+                        tool_call=tool_call,
+                        tool_result=result,
+                        target_finding=target_finding,
+                    )
+                )
+                retry_tool_call = _retry_local_llm_score_tool_call(
+                    provider=provider,
+                    raw_path=raw_path,
+                    rendered_path=current_rendered_path,
+                    canonical_path=current_canonical_path,
+                    candidate_data=candidate_data,
+                    parent_notes=parent_notes,
+                    llm_result=llm_result,
+                    target_finding=target_finding,
+                    failed_tool_call=tool_call,
+                    failed_tool_result=result,
+                    rejection_reason=reason,
+                    attempt_index=attempt_index,
+                    measure_reviews=measure_reviews,
+                )
+                if retry_tool_call is None:
+                    break
+                retry_attempted = True
+                tool_call = retry_tool_call
+                attempt_index += 1
+                continue
+
+            attempt_rendered_path = attempt_workspace / "candidate.pdf"
+            try:
+                render_result = MuseScoreRenderEngine().render(
+                    canonical_path=edited_musicxml_path,
+                    raw_pdf_path=raw_path,
+                    output_pdf_path=attempt_rendered_path,
+                    processing_settings=settings_payload,
+                )
+                visual_diff = compare_score_pdfs(
+                    before_pdf_path=current_rendered_path,
+                    after_pdf_path=attempt_rendered_path,
+                    original_pdf_path=raw_path,
+                )
+            except (ProcessingEngineError, ScoreVisualDiffError) as exc:
+                reason = f"The edited candidate could not be rendered or compared: {exc}"
+                measure_reviews.append(
+                    _local_llm_measure_review_entry(
+                        tool_index=tool_index,
+                        attempt_index=attempt_index,
+                        status="rejected",
+                        reason=reason,
+                        tool_call=tool_call,
+                        tool_result=result,
+                        target_finding=target_finding,
+                    )
+                )
+                retry_tool_call = _retry_local_llm_score_tool_call(
+                    provider=provider,
+                    raw_path=raw_path,
+                    rendered_path=current_rendered_path,
+                    canonical_path=current_canonical_path,
+                    candidate_data=candidate_data,
+                    parent_notes=parent_notes,
+                    llm_result=llm_result,
+                    target_finding=target_finding,
+                    failed_tool_call=tool_call,
+                    failed_tool_result=result,
+                    rejection_reason=reason,
+                    attempt_index=attempt_index,
+                    measure_reviews=measure_reviews,
+                )
+                if retry_tool_call is None:
+                    break
+                retry_attempted = True
+                tool_call = retry_tool_call
+                attempt_index += 1
+                continue
+
+            final_visual_diff = visual_diff
+            verification = _verify_local_llm_score_edit(
+                provider=provider,
+                raw_path=raw_path,
+                before_rendered_path=current_rendered_path,
+                after_rendered_path=attempt_rendered_path,
+                candidate_data=candidate_data,
+                parent_notes=parent_notes,
+                target_finding=target_finding,
+                tool_call=tool_call,
+                tool_result=result,
+                visual_diff=visual_diff,
+            )
+            accepted, reason = _local_llm_score_edit_is_accepted(
+                visual_diff=visual_diff,
+                verification=verification,
+            )
+            measure_reviews.append(
+                _local_llm_measure_review_entry(
+                    tool_index=tool_index,
+                    attempt_index=attempt_index,
+                    status="accepted" if accepted else "rejected",
+                    reason=reason,
+                    tool_call=tool_call,
+                    tool_result=result,
+                    target_finding=target_finding,
+                    visual_diff=visual_diff,
+                    verification=verification,
+                )
+            )
+            if accepted:
+                accepted_tool_results.append(result)
+                current_canonical_path = edited_musicxml_path
+                current_rendered_path = attempt_rendered_path
+                current_render_result = render_result
+                break
+
+            retry_tool_call = _retry_local_llm_score_tool_call(
+                provider=provider,
+                raw_path=raw_path,
+                rendered_path=current_rendered_path,
+                canonical_path=current_canonical_path,
+                candidate_data=candidate_data,
+                parent_notes=parent_notes,
+                llm_result=llm_result,
+                target_finding=target_finding,
+                failed_tool_call=tool_call,
+                failed_tool_result=result,
+                rejection_reason=reason,
+                attempt_index=attempt_index,
+                measure_reviews=measure_reviews,
+                visual_diff=visual_diff,
+                verification=verification,
+            )
+            if retry_tool_call is None:
+                break
+            retry_attempted = True
+            tool_call = retry_tool_call
+            attempt_index += 1
+
+    return {
+        "tool_results": tool_results,
+        "accepted_tool_results": accepted_tool_results,
+        "measure_reviews": measure_reviews,
+        "retry_attempted": retry_attempted,
+        "canonical_path": current_canonical_path,
+        "rendered_path": current_rendered_path,
+        "render_result": current_render_result,
+        "visual_diff": final_visual_diff,
+    }
+
+
+def _apply_local_llm_score_tool(
+    *,
+    source_musicxml_path: Path,
+    workspace_path: Path,
+    tool_call: dict,
+) -> tuple[ScoreMcpToolResult, Path]:
+    name = _score_tool_call_name(tool_call)
+    try:
+        controller = ScoreMcpToolController(
+            source_musicxml_path=source_musicxml_path,
+            workspace_path=workspace_path,
+        )
+        result = controller.apply_tool_calls([tool_call])[0]
+        return result, controller.working_musicxml_path
+    except ScoreMcpToolError as exc:
+        return (
+            ScoreMcpToolResult(
+                name=name or "<unknown>",
+                status="failed",
+                message=str(exc),
+                structured_content={
+                    "arguments": _score_tool_call_arguments(tool_call),
+                    "affects_notation": False,
+                },
+                affects_notation=False,
+            ),
+            workspace_path / "candidate.musicxml",
+        )
+
+
+def _retry_local_llm_score_tool_call(
+    *,
+    provider,
+    raw_path: Path,
+    rendered_path: Path,
+    canonical_path: Path,
+    candidate_data: dict,
+    parent_notes: str | None,
+    llm_result,
+    target_finding: dict | None,
+    failed_tool_call: dict,
+    failed_tool_result: ScoreMcpToolResult,
+    rejection_reason: str,
+    attempt_index: int,
+    measure_reviews: list[dict],
+    visual_diff: dict | None = None,
+    verification: dict | None = None,
+) -> dict | None:
+    if attempt_index >= _LOCAL_LLM_MAX_ATTEMPTS_PER_TOOL:
+        return None
+    retry_count = sum(1 for review in measure_reviews if review.get("retry_generated"))
+    if retry_count >= _LOCAL_LLM_MAX_ATTEMPTS_PER_TOOL:
+        return None
+    try:
+        retry_result = provider.retry_score_correction(
+            raw_pdf_path=raw_path,
+            rendered_pdf_path=rendered_path,
+            canonical_musicxml_path=canonical_path,
+            candidate_data=candidate_data,
+            parent_notes=parent_notes,
+            audit_result={
+                "summary": llm_result.audit_summary or llm_result.summary,
+                "confidence": llm_result.confidence,
+                "notation_findings": list(llm_result.notation_findings or []),
+                "warnings": list(llm_result.warnings or []),
+            },
+            retry_context={
+                "target_finding": target_finding or {},
+                "rejected_tool_call": failed_tool_call,
+                "rejected_tool_result": _score_tool_results_payload([failed_tool_result])[0],
+                "rejection_reason": rejection_reason,
+                "visual_diff": visual_diff,
+                "verification": verification,
+                "instruction": (
+                    "Return one safer bounded structured notation tool call for the "
+                    "same target, or return no tool calls if the target is uncertain."
+                ),
+            },
+        )
+    except LocalLlmUnavailableError as exc:
+        if measure_reviews:
+            measure_reviews[-1]["retry_error"] = str(exc)
+        return None
+
+    for tool_call in retry_result.tool_calls or []:
+        if not isinstance(tool_call, dict):
+            continue
+        if measure_reviews:
+            measure_reviews[-1]["retry_generated"] = True
+            measure_reviews[-1]["retry_summary"] = retry_result.summary
+        return tool_call
+    if measure_reviews:
+        measure_reviews[-1]["retry_summary"] = retry_result.summary
+    return None
+
+
+def _verify_local_llm_score_edit(
+    *,
+    provider,
+    raw_path: Path,
+    before_rendered_path: Path,
+    after_rendered_path: Path,
+    candidate_data: dict,
+    parent_notes: str | None,
+    target_finding: dict | None,
+    tool_call: dict,
+    tool_result: ScoreMcpToolResult,
+    visual_diff: dict,
+) -> dict:
+    try:
+        verification = provider.verify_score_edit(
+            raw_pdf_path=raw_path,
+            before_rendered_pdf_path=before_rendered_path,
+            after_rendered_pdf_path=after_rendered_path,
+            candidate_data=candidate_data,
+            parent_notes=parent_notes,
+            target_finding=target_finding,
+            tool_call=tool_call,
+            tool_result=_score_tool_results_payload([tool_result])[0],
+            visual_diff=visual_diff,
+        )
+    except LocalLlmUnavailableError as exc:
+        return {
+            "accepted": False,
+            "confidence": None,
+            "summary": "Verification could not run.",
+            "evidence": str(exc),
+            "warnings": [str(exc)],
+        }
+    return {
+        "accepted": bool(verification.accepted),
+        "confidence": verification.confidence,
+        "summary": verification.summary,
+        "evidence": verification.evidence,
+        "warnings": list(verification.warnings or []),
+    }
+
+
+def _local_llm_score_edit_is_accepted(
+    *,
+    visual_diff: dict,
+    verification: dict,
+) -> tuple[bool, str]:
+    if not visual_diff.get("passed"):
+        return False, "The rendered candidate did not visibly change."
+    if verification.get("accepted") is not True:
+        return False, verification.get("summary") or "The verifier rejected the edit."
+    confidence = verification.get("confidence")
+    try:
+        confidence_value = float(confidence)
+    except (TypeError, ValueError):
+        return False, "The verifier did not provide a usable confidence score."
+    if confidence_value < _LOCAL_LLM_EDIT_VERIFICATION_CONFIDENCE:
+        return (
+            False,
+            (
+                "The verifier confidence was below "
+                f"{_LOCAL_LLM_EDIT_VERIFICATION_CONFIDENCE:.2f}."
+            ),
+        )
+    return True, verification.get("summary") or "The verifier accepted the edit."
+
+
+def _local_llm_no_candidate_status(*, tool_results: list, llm_result) -> str:
+    if any(
+        result.status == "succeeded" and not bool(getattr(result, "affects_notation", False))
+        for result in tool_results
+    ):
+        return "metadata_or_layout_only"
+    if llm_result.notation_findings:
+        return "finding_only"
+    return "no_safe_notation_edit"
+
+
+def _local_llm_small_score_tool_safety_error(tool_call: dict) -> str | None:
+    name = _score_tool_call_name(tool_call)
+    arguments = _score_tool_call_arguments(tool_call)
+    if name not in _LOCAL_LLM_ALLOWED_SMALL_SCORE_TOOLS:
+        return (
+            f"Tool {name or '<unknown>'} is not allowed to publish notation changes. "
+            "Use a bounded note, rest, measure, or direction tool."
+        )
+    if not isinstance(arguments, dict):
+        return f"Tool {name} arguments were malformed."
+    part_id = str(arguments.get("part_id") or "").strip()
+    if not part_id:
+        return f"Tool {name} requires part_id."
+    physical_measure_index = _optional_positive_int(arguments.get("physical_measure_index"))
+    measure_number = _optional_nonnegative_int(arguments.get("measure_number"))
+    if physical_measure_index is None and measure_number is None:
+        return f"Tool {name} requires physical_measure_index or measure_number."
+    if name in {"update_note_pitch", "update_note_duration", "update_rest"}:
+        if _optional_positive_int(arguments.get("note_index")) is None:
+            return f"Tool {name} requires a positive note_index."
+    if name == "update_note_pitch":
+        step = str(arguments.get("step") or "").strip().upper()
+        if step and step not in {"A", "B", "C", "D", "E", "F", "G"}:
+            return "update_note_pitch step must be A through G."
+        octave = _optional_int_value(arguments.get("octave"))
+        if octave is not None and not 0 <= octave <= 8:
+            return "update_note_pitch octave must be between 0 and 8."
+        alter = _optional_int_value(arguments.get("alter"))
+        if alter is not None and not -2 <= alter <= 2:
+            return "update_note_pitch alter must be between -2 and 2."
+    if name == "update_rest":
+        display_step = str(arguments.get("display_step") or "").strip().upper()
+        if display_step and display_step not in {"A", "B", "C", "D", "E", "F", "G"}:
+            return "update_rest display_step must be A through G."
+        display_octave = _optional_int_value(arguments.get("display_octave"))
+        if display_octave is not None and not 0 <= display_octave <= 8:
+            return "update_rest display_octave must be between 0 and 8."
+    if name == "update_note_duration":
+        duration = _optional_int_value(arguments.get("duration"))
+        if duration is not None and duration <= 0:
+            return "update_note_duration duration must be positive."
+        dots = _optional_int_value(arguments.get("dots"))
+        if dots is not None and not 0 <= dots <= 4:
+            return "update_note_duration dots must be between 0 and 4."
+    if name == "update_measure_time":
+        if _optional_positive_int(arguments.get("beats")) is None:
+            return "update_measure_time requires positive beats."
+        if _optional_positive_int(arguments.get("beat_type")) is None:
+            return "update_measure_time requires positive beat_type."
+    if name == "update_measure_key":
+        fifths = _optional_int_value(arguments.get("fifths"))
+        if fifths is None:
+            return "update_measure_key requires fifths."
+        if not -7 <= fifths <= 7:
+            return "update_measure_key fifths must be between -7 and 7."
+    if name == "upsert_direction_words":
+        text = str(arguments.get("text") or "").strip()
+        if not text:
+            return "upsert_direction_words requires text."
+        if len(text) > 300:
+            return "upsert_direction_words text is too long."
+    return None
+
+
+def _matching_local_llm_notation_finding(
+    tool_call: dict,
+    notation_findings: list[dict],
+) -> dict | None:
+    target = _score_tool_target_payload(tool_call)
+    if not target:
+        return None
+    for finding in notation_findings:
+        if not isinstance(finding, dict):
+            continue
+        if target.get("part_id") and finding.get("part_id") != target.get("part_id"):
+            continue
+        if target.get("staff") and finding.get("staff") not in (None, "", target.get("staff")):
+            continue
+        if target.get("voice") and finding.get("voice") not in (None, "", target.get("voice")):
+            continue
+        physical_index = target.get("physical_measure_index")
+        if physical_index and finding.get("physical_measure_index") == physical_index:
+            return finding
+        measure_number = target.get("measure_number")
+        if measure_number and finding.get("measure_number") == measure_number:
+            note_index = target.get("note_index")
+            if note_index in (None, 0) or finding.get("note_index") in (None, 0, note_index):
+                return finding
+    return None
+
+
+def _local_llm_measure_review_entry(
+    *,
+    tool_index: int,
+    attempt_index: int,
+    status: str,
+    reason: str,
+    tool_call: dict,
+    tool_result: ScoreMcpToolResult,
+    target_finding: dict | None,
+    visual_diff: dict | None = None,
+    verification: dict | None = None,
+) -> dict:
+    return {
+        "tool_index": tool_index,
+        "attempt_index": attempt_index,
+        "status": status,
+        "reason": reason,
+        "target": _score_tool_target_payload(tool_call),
+        "target_finding": target_finding,
+        "tool_call": {
+            "name": _score_tool_call_name(tool_call),
+            "arguments": _score_tool_call_arguments(tool_call),
+        },
+        "tool_result": _score_tool_results_payload([tool_result])[0],
+        "visual_diff": visual_diff,
+        "verification": verification,
+    }
+
+
+def _score_tool_call_name(tool_call: dict) -> str:
+    return str(tool_call.get("name") or tool_call.get("tool") or "").strip()
+
+
+def _score_tool_call_arguments(tool_call: dict) -> dict:
+    arguments = tool_call.get("arguments") or {}
+    return arguments if isinstance(arguments, dict) else {}
+
+
+def _score_tool_target_payload(tool_call: dict) -> dict:
+    arguments = _score_tool_call_arguments(tool_call)
+    target = {
+        "part_id": str(arguments.get("part_id") or "").strip(),
+        "staff": str(arguments.get("staff") or "").strip(),
+        "voice": str(arguments.get("voice") or "").strip(),
+        "physical_measure_index": _optional_positive_int(
+            arguments.get("physical_measure_index")
+        ),
+        "measure_number": _optional_nonnegative_int(arguments.get("measure_number")),
+        "note_index": _optional_positive_int(arguments.get("note_index")),
+    }
+    return {key: value for key, value in target.items() if value not in (None, "")}
+
+
+def _optional_int_value(value: object) -> int | None:
+    if value in (None, ""):
+        return None
+    try:
+        return int(value)
+    except (TypeError, ValueError):
+        return None
+
+
+def _optional_positive_int(value: object) -> int | None:
+    parsed = _optional_int_value(value)
+    if parsed is None or parsed <= 0:
+        return None
+    return parsed
+
+
+def _optional_nonnegative_int(value: object) -> int | None:
+    parsed = _optional_int_value(value)
+    if parsed is None or parsed < 0:
+        return None
+    return parsed
+
+
+def _attach_local_llm_hybrid_fallback_candidate(
+    candidate_data: dict,
+    *,
+    raw_score_version_id: str,
+    rendered_score_version_id: str,
+    canonical_score_version_id: str,
+    llm_result,
+    measure_reviews: list[dict],
+    visual_diff: dict | None,
+    job_id: str,
+) -> dict:
+    hybrid_candidate = build_hybrid_fallback_candidate(
+        candidate_id=f"hybrid_fallback_{job_id[:8]}",
+        raw_score_version_id=raw_score_version_id,
+        rendered_score_version_id=rendered_score_version_id,
+        canonical_score_version_id=canonical_score_version_id,
+        notation_findings=list(llm_result.notation_findings or []),
+        measure_reviews=measure_reviews,
+        visual_diff=visual_diff,
+        reason="No verified MusicXML correction was accepted by the quality loop.",
+    )
+    existing_candidates = [
+        candidate
+        for candidate in candidate_data.get("omr_candidates") or []
+        if isinstance(candidate, dict)
+        and candidate.get("candidate_id") != hybrid_candidate["candidate_id"]
+    ]
+    candidate_data["omr_candidates"] = [hybrid_candidate, *existing_candidates]
+    candidate_data["hybrid_fallback_candidate_id"] = hybrid_candidate["candidate_id"]
+    candidate_data["hybrid_fallback_available"] = True
+    candidate_data["hybrid_fallback_reason"] = hybrid_candidate["hybrid_fallback_reason"]
+    return candidate_data
+
+def _record_local_llm_score_status(
+    candidate_data: dict,
+    *,
+    job: BackgroundJob,
+    llm_result,
+    status: str,
+    parent_notes: str | None,
+    tool_results: list,
+    visual_diff: dict | None = None,
+    render_warnings: list[str] | None = None,
+    selected_candidate_id: str | None = None,
+    corrected_canonical_score_version_id: str | None = None,
+    corrected_rendered_score_version_id: str | None = None,
+    measure_reviews: list[dict] | None = None,
+    quality_loop: dict | None = None,
+    retry_attempted: bool = False,
+) -> dict:
+    warnings = list(llm_result.warnings or []) + list(render_warnings or [])
+    tool_result_payload = _score_tool_results_payload(tool_results)
+    measure_review_payload = list(measure_reviews or [])
+    candidate_data["llm_review_status"] = status
+    candidate_data["llm_notation_review_status"] = status
+    candidate_data["llm_review_provider"] = llm_result.provider
+    candidate_data["llm_review_job_id"] = job.id
+    candidate_data["llm_review_summary"] = llm_result.summary
+    candidate_data["llm_audit_summary"] = llm_result.audit_summary
+    candidate_data["llm_notation_findings"] = list(llm_result.notation_findings or [])
+    candidate_data["llm_tool_results"] = tool_result_payload
+    candidate_data["llm_measure_reviews"] = measure_review_payload
+    candidate_data["llm_model"] = llm_result.model
+    candidate_data["llm_vision_model_hint"] = llm_result.vision_model_hint
+    candidate_data["llm_model_auto_selected"] = llm_result.model_auto_selected
+    candidate_data["llm_retry_attempted"] = retry_attempted
+    if quality_loop is not None:
+        candidate_data["score_quality_loop"] = quality_loop
+    candidate_data["llm_correction_scope"] = (
+        "notation"
+        if status == "notation_corrected"
+        else "metadata_or_layout"
+        if status == "metadata_or_layout_only"
+        else "finding_only"
+        if status == "finding_only"
+        else "audit_only"
+    )
+    if visual_diff is not None:
+        candidate_data["llm_visual_diff"] = visual_diff
+    if warnings:
+        candidate_data["validation_warnings"] = sorted(
+            set(list(candidate_data.get("validation_warnings") or []) + warnings)
+        )
+
+    history = list(candidate_data.get("reprocess_history") or [])
+    history.append(
+        {
+            "reprocess_type": "score",
+            "status": "succeeded",
+            "outcome": status,
+            "provider": llm_result.provider,
+            "summary": llm_result.summary,
+            "audit_summary": llm_result.audit_summary,
+            "parent_notes": parent_notes,
+            "notation_findings": list(llm_result.notation_findings or []),
+            "tool_results": tool_result_payload,
+            "measure_reviews": measure_review_payload,
+            "score_quality_loop": quality_loop,
+            "visual_diff": visual_diff,
+            "model": llm_result.model,
+            "vision_model_hint": llm_result.vision_model_hint,
+            "model_auto_selected": llm_result.model_auto_selected,
+            "retry_attempted": retry_attempted,
+            "created_at": datetime.utcnow().isoformat(),
+        }
+    )
+    candidate_data["reprocess_history"] = history
+
+    result_data = {
+        **(job.result_data or {}),
+        "local_llm_available": True,
+        "provider": llm_result.provider,
+        "model": llm_result.model,
+        "review_item_id": job.result_data.get("review_item_id") if job.result_data else None,
+        "llm_notation_review_status": status,
+        "summary": llm_result.summary,
+        "audit_summary": llm_result.audit_summary,
+        "notation_findings": list(llm_result.notation_findings or []),
+        "tool_results": tool_result_payload,
+        "measure_reviews": measure_review_payload,
+        "score_quality_loop": quality_loop,
+        "visual_diff": visual_diff,
+        "vision_model_hint": llm_result.vision_model_hint,
+        "model_auto_selected": llm_result.model_auto_selected,
+        "retry_attempted": retry_attempted,
+        "warnings": warnings,
+    }
+    if selected_candidate_id:
+        result_data["selected_omr_candidate_id"] = selected_candidate_id
+    if corrected_canonical_score_version_id:
+        result_data["canonical_score_version_id"] = corrected_canonical_score_version_id
+    if corrected_rendered_score_version_id:
+        result_data["rendered_score_version_id"] = corrected_rendered_score_version_id
+    job.result_data = result_data
+    return candidate_data
+
+
+def _score_tool_results_payload(tool_results: list) -> list[dict]:
+    return [
+        {
+            "name": result.name,
+            "status": result.status,
+            "message": result.message,
+            "affects_notation": bool(getattr(result, "affects_notation", False)),
+            "structured_content": result.structured_content,
+        }
+        for result in tool_results
+    ]
+
+
+async def _run_gemini_score_reprocess(
+    db: AsyncSession,
+    *,
+    item: ReviewItem,
+    job: BackgroundJob,
+    candidate_data: dict,
+    parent_notes: str | None,
+) -> dict:
+    settings_payload = _processing_settings_store.load()
+    if (settings_payload.get("cloud_provider") or "gemini") != "gemini":
+        raise GeminiVisionReviewError("Gemini vision review requires cloud provider gemini.")
+    if (settings_payload.get("cloud_auth_mode") or "oauth") != "oauth":
+        raise GeminiVisionReviewError("Gemini vision review requires Google OAuth.")
+
+    raw_version, rendered_version, canonical_version = await _score_versions_for_review(
+        db,
+        candidate_data,
+        provider_label="Gemini review",
+        error_factory=GeminiVisionReviewError,
+    )
+    raw_path = Path(raw_version.file_path)
+    rendered_path = Path(rendered_version.file_path)
+    canonical_path = Path(canonical_version.file_path)
+    for label, path in (
+        ("original PDF", raw_path),
+        ("rendered candidate PDF", rendered_path),
+        ("MusicXML candidate", canonical_path),
+    ):
+        if not path.exists():
+            raise GeminiVisionReviewError(f"Gemini review cannot find the {label}: {path}")
+
+    job.progress = 25.0
+    job.updated_at = datetime.utcnow()
+    await db.flush()
+
+    gemini_result = _gemini_vision_adapter.review_score(
+        raw_pdf_path=raw_path,
+        rendered_pdf_path=rendered_path,
+        canonical_musicxml_path=canonical_path,
+        candidate_data=candidate_data,
+        parent_notes=parent_notes,
+    )
+    if not gemini_result.tool_calls:
+        raise GeminiVisionReviewError(
+            "Gemini completed review but did not return any safe MusicXML edits."
+        )
+
+    job.progress = 55.0
+    job.updated_at = datetime.utcnow()
+    await db.flush()
+
+    workspace = canonical_path.parent / "gemini-review" / job.id
+    tool_controller = ScoreMcpToolController(
+        source_musicxml_path=canonical_path,
+        workspace_path=workspace,
+    )
+    tool_results = tool_controller.apply_tool_calls(gemini_result.tool_calls)
+    if not any(result.name == "replace_musicxml_text" for result in tool_results):
+        raise GeminiVisionReviewError("Gemini did not request a safe MusicXML replacement.")
+
+    job.progress = 72.0
+    job.updated_at = datetime.utcnow()
+    await db.flush()
+
+    corrected_canonical_path = tool_controller.working_musicxml_path
+    _validate_musicxml(corrected_canonical_path)
+    corrected_rendered_path = workspace / "candidate.pdf"
+    render_result = MuseScoreRenderEngine().render(
+        canonical_path=corrected_canonical_path,
+        raw_pdf_path=raw_path,
+        output_pdf_path=corrected_rendered_path,
+        processing_settings=settings_payload,
+    )
+    if render_result.validation_status != "valid":
+        raise ProcessingEngineError(
+            render_result.validation_error or "Gemini MusicXML correction rendered an invalid PDF."
+        )
+
+    corrected_canonical_version = ScoreVersion(
+        id=str(uuid.uuid4()),
+        piece_id=item.piece_id,
+        version_type=ScoreVersionType.reconstructed_candidate,
+        file_path=str(corrected_canonical_path),
+        is_default=False,
+        created_at=datetime.utcnow(),
+    )
+    corrected_rendered_version = ScoreVersion(
+        id=str(uuid.uuid4()),
+        piece_id=item.piece_id,
+        version_type=ScoreVersionType.reconstructed_candidate,
+        file_path=str(corrected_rendered_path),
+        is_default=False,
+        created_at=datetime.utcnow(),
+    )
+    db.add(corrected_canonical_version)
+    db.add(corrected_rendered_version)
+    await db.flush()
+
+    candidate_id = f"gemini_{job.id[:8]}"
+    gemini_candidate = {
+        "candidate_id": candidate_id,
+        "label": "Gemini vision correction",
+        "engine_name": "gemini",
+        "engine_version": settings_payload.get("cloud_model") or "gemini-2.5-flash",
+        "provenance": "gemini_vision_mcp",
+        "confidence": gemini_result.confidence,
+        "raw_score_version_id": raw_version.id,
+        "canonical_score_version_id": corrected_canonical_version.id,
+        "score_version_id": corrected_rendered_version.id,
+        "renderer_name": render_result.renderer_name,
+        "renderer_version": render_result.renderer_version,
+        "renderer_provenance": render_result.provenance,
+        "render_validation_status": render_result.validation_status,
+        "render_validation_error": render_result.validation_error,
+        "rendered_file_size_bytes": render_result.file_size_bytes,
+        "rendered_page_count": render_result.page_count,
+        "render_diagnostics": render_result.diagnostics,
+        "warnings": gemini_result.warnings + render_result.warnings,
+        "selected": True,
+    }
+
+    previous_candidates = [
+        {**candidate, "selected": False}
+        for candidate in candidate_data.get("omr_candidates") or []
+        if isinstance(candidate, dict)
+    ]
+    candidate_data["omr_candidates"] = [gemini_candidate, *previous_candidates]
+    for key, value in gemini_candidate.items():
+        if key not in {"candidate_id", "label", "warnings", "selected"}:
+            candidate_data[key] = value
+    candidate_data["selected_omr_candidate_id"] = candidate_id
+    candidate_data["selected_omr_candidate_label"] = gemini_candidate["label"]
+    candidate_data["gemini_review_status"] = "completed"
+    candidate_data["gemini_review_job_id"] = job.id
+    candidate_data["gemini_review_summary"] = gemini_result.summary
+    candidate_data["validation_warnings"] = sorted(
+        set(
+            list(candidate_data.get("validation_warnings") or [])
+            + gemini_result.warnings
+            + render_result.warnings
+        )
+    )
+    history = list(candidate_data.get("reprocess_history") or [])
+    history.append(
+        {
+            "reprocess_type": "score",
+            "status": "succeeded",
+            "provider": "gemini",
+            "summary": gemini_result.summary,
+            "parent_notes": parent_notes,
+            "tool_results": [
+                {
+                    "name": result.name,
+                    "status": result.status,
+                    "message": result.message,
+                    "structured_content": result.structured_content,
+                }
+                for result in tool_results
+            ],
+            "created_at": datetime.utcnow().isoformat(),
+        }
+    )
+    candidate_data["reprocess_history"] = history
+    job.result_data = {
+        **(job.result_data or {}),
+        "gemini_available": True,
+        "provider": "gemini",
+        "model": settings_payload.get("cloud_model") or "gemini-2.5-flash",
+        "review_item_id": item.id,
+        "selected_omr_candidate_id": candidate_id,
+        "canonical_score_version_id": corrected_canonical_version.id,
+        "rendered_score_version_id": corrected_rendered_version.id,
+        "summary": gemini_result.summary,
+        "warnings": gemini_result.warnings + render_result.warnings,
+    }
+    return candidate_data
+
+
+async def _score_versions_for_review(
+    db: AsyncSession,
+    candidate_data: dict,
+    *,
+    provider_label: str,
+    error_factory: type[Exception],
+) -> tuple[ScoreVersion, ScoreVersion, ScoreVersion]:
+    raw_id = candidate_data.get("raw_score_version_id")
+    rendered_id = candidate_data.get("score_version_id")
+    canonical_id = candidate_data.get("canonical_score_version_id")
+    required_ids = (raw_id, rendered_id, canonical_id)
+    if not all(isinstance(value, str) and value.strip() for value in required_ids):
+        raise error_factory(
+            f"{provider_label} requires original score, rendered PDF, "
+            "and MusicXML candidate artifacts."
+        )
+    raw_version = await db.get(ScoreVersion, raw_id)
+    rendered_version = await db.get(ScoreVersion, rendered_id)
+    canonical_version = await db.get(ScoreVersion, canonical_id)
+    if not raw_version or not rendered_version or not canonical_version:
+        raise error_factory(f"{provider_label} could not load all required score artifacts.")
+    return raw_version, rendered_version, canonical_version
 
 
 def _apply_review_correction(
@@ -597,9 +2071,7 @@ def _apply_review_correction(
         elif fallback_metadata:
             candidate_data["catalog_metadata"] = fallback_metadata
         else:
-            candidate_data["catalog_metadata"] = _first_catalog_suggestion_fields(
-                candidate_data
-            )
+            candidate_data["catalog_metadata"] = _first_catalog_suggestion_fields(candidate_data)
         return candidate_data
     catalog_metadata = dict(candidate_data.get("catalog_metadata") or fallback_metadata)
     catalog_metadata.update(
@@ -703,9 +2175,7 @@ def _with_omr_candidate_urls(
         if not isinstance(candidate, dict):
             continue
         enriched = dict(candidate)
-        raw_id = enriched.get("raw_score_version_id") or candidate_data.get(
-            "raw_score_version_id"
-        )
+        raw_id = enriched.get("raw_score_version_id") or candidate_data.get("raw_score_version_id")
         rendered_id = enriched.get("score_version_id")
         canonical_id = enriched.get("canonical_score_version_id")
         if raw_id:
@@ -738,7 +2208,7 @@ def _select_omr_candidate(
     if not candidates:
         return candidate_data
 
-    selected_id = (selected_candidate_id or candidate_data.get("selected_omr_candidate_id") or "")
+    selected_id = selected_candidate_id or candidate_data.get("selected_omr_candidate_id") or ""
     selected_id = str(selected_id).strip() or str(candidates[0].get("candidate_id") or "")
     selected_candidate = next(
         (
@@ -935,20 +2405,4 @@ def _append_reprocess_warning(
     )
     candidate_data["validation_warnings"] = warnings
     candidate_data["reprocess_history"] = history
-    return candidate_data
-
-
-def _append_catalog_suggestions(
-    candidate_data: dict,
-    *,
-    suggestions: list[dict],
-    warnings: list[str],
-) -> dict:
-    candidate_data["catalog_suggestions"] = (
-        list(candidate_data.get("catalog_suggestions") or []) + suggestions
-    )
-    if warnings:
-        candidate_data["validation_warnings"] = (
-            list(candidate_data.get("validation_warnings") or []) + warnings
-        )
     return candidate_data

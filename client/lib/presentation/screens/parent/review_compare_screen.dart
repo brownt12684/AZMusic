@@ -15,7 +15,6 @@ import '../../../domain/entities/review_candidate_package.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/parent_workflow_refresh.dart';
 import '../../providers/piece_providers.dart';
-import '../../providers/processing_settings_providers.dart';
 import '../../providers/review_providers.dart';
 
 @visibleForTesting
@@ -26,7 +25,6 @@ enum _CompareMode {
   overlay,
   sideBySide,
   processed,
-  omrCompare,
 }
 
 class ReviewCompareScreen extends ConsumerStatefulWidget {
@@ -45,8 +43,6 @@ class ReviewCompareScreen extends ConsumerStatefulWidget {
 class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
   final PdfViewerController _rawController = PdfViewerController();
   final PdfViewerController _candidateController = PdfViewerController();
-  final PdfViewerController _omrCompareLeftController = PdfViewerController();
-  final PdfViewerController _omrCompareRightController = PdfViewerController();
 
   _CompareMode _compareMode = _CompareMode.sideBySide;
   int _currentPage = 1;
@@ -59,8 +55,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
   void dispose() {
     _rawController.dispose();
     _candidateController.dispose();
-    _omrCompareLeftController.dispose();
-    _omrCompareRightController.dispose();
     super.dispose();
   }
 
@@ -77,7 +71,7 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
     return Scaffold(
       key: AppKeys.reviewCompareScreen,
       appBar: AppBar(
-        title: const Text('Score candidate review'),
+        title: const Text('Metadata and student PDF review'),
       ),
       body: reviewItem.when(
         data: (item) => _buildLoadedState(context, item),
@@ -101,7 +95,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
     );
     final candidateData =
         _activeCandidateData(baseCandidateData, selectedCandidate);
-    final selectedCandidateId = selectedCandidate?.id;
     final rawUrl = candidateData['raw_file_url'] as String? ?? '';
     final rawContentType = candidateData['raw_content_type'] as String? ?? '';
     final renderedUrl = candidateData['rendered_file_url'] as String? ?? '';
@@ -139,6 +132,9 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
       ..._stringListFrom(candidateData['warnings']),
       ..._stringListFrom(candidateData['validation_warnings']),
     }.toList(growable: false);
+    final processingStage = _metadataText(candidateData['processing_stage']);
+    final isMetadataReviewItem = processingStage == 'metadata_review_needed' ||
+        processingStage == 'split_review_needed';
 
     if (rawUrl.isEmpty) {
       return _ReviewFallbackScaffold(
@@ -147,7 +143,7 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
       );
     }
 
-    if (renderedUrl.isEmpty) {
+    if (isMetadataReviewItem || renderedUrl.isEmpty) {
       return _buildMetadataOnlyState(
         context: context,
         item: item,
@@ -167,8 +163,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
         renderedScoreVersionId: renderedScoreVersionId,
         isRenderBlocked: isRenderBlocked,
         renderValidationError: renderValidationError,
-        candidateOptions: candidateOptions,
-        selectedCandidateId: selectedCandidateId,
       );
     }
 
@@ -218,8 +212,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                         pieceTitle: pieceTitle,
                         isRenderBlocked: isRenderBlocked,
                         renderValidationError: renderValidationError,
-                        candidateOptions: candidateOptions,
-                        selectedCandidateId: selectedCandidateId,
                       ),
                       if (processedMetadata.isNotEmpty) ...[
                         const SizedBox(height: 16),
@@ -273,8 +265,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                                     'Side-by-side compare',
                                   _CompareMode.processed =>
                                     'Processed candidate',
-                                  _CompareMode.omrCompare =>
-                                    'OMR candidate compare',
                                 },
                                 maxLines: 1,
                                 overflow: TextOverflow.ellipsis,
@@ -318,7 +308,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                               child: _buildCompareCanvas(
                                 rawUrl: rawUrl,
                                 renderedUrl: displayedRenderedUrl,
-                                candidateOptions: candidateOptions,
                               ),
                             ),
                           ),
@@ -354,8 +343,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
     required String renderedScoreVersionId,
     required bool isRenderBlocked,
     required String? renderValidationError,
-    required List<_OmrCandidateOption> candidateOptions,
-    required String? selectedCandidateId,
   }) {
     final theme = Theme.of(context);
     return Row(
@@ -406,8 +393,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                     isRenderBlocked: true,
                     renderValidationError: renderValidationError,
                     showCompareControls: false,
-                    candidateOptions: candidateOptions,
-                    selectedCandidateId: selectedCandidateId,
                   ),
                 ] else
                   ..._buildMetadataReviewActionWidgets(item),
@@ -482,30 +467,9 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
     bool isRenderBlocked = false,
     String? renderValidationError,
     bool showCompareControls = true,
-    List<_OmrCandidateOption> candidateOptions = const <_OmrCandidateOption>[],
-    String? selectedCandidateId,
   }) {
     final theme = Theme.of(context);
-    final bulkButton = isRenderBlocked
-        ? null
-        : _bookBulkApprovalButton(
-            item,
-            processingStage: 'candidate_review_needed',
-          );
     final actions = <Widget>[
-      if (candidateOptions.length > 1)
-        _OmrCandidateSelector(
-          options: candidateOptions,
-          selectedCandidateId: selectedCandidateId,
-          onSelected: (candidateId) {
-            setState(() {
-              _selectedCandidateId = candidateId;
-              _currentPage = 1;
-              _renderRefreshToken += 1;
-            });
-          },
-        ),
-      if (bulkButton != null) bulkButton,
       if (_isBookReviewItem(item))
         OutlinedButton.icon(
           key: AppKeys.reviewNextButton,
@@ -530,7 +494,7 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                     pieceTitle,
                   ),
           icon: const Icon(Icons.library_music_outlined),
-          label: const Text('Edit MusicXML in MuseScore'),
+          label: const Text('Edit in MuseScore'),
         ),
       if (canonicalScoreVersionId.isNotEmpty)
         OutlinedButton.icon(
@@ -557,9 +521,7 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                   ),
           icon: const Icon(Icons.refresh_outlined),
           label: Text(
-            isRenderBlocked
-                ? 'Retry MuseScore render'
-                : 'Rerender PDF from MusicXML',
+            isRenderBlocked ? 'Retry notation render' : 'Rerender edited PDF',
           ),
         ),
       if (showCompareControls)
@@ -584,11 +546,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
               value: _CompareMode.processed,
               icon: Icon(Icons.auto_fix_high_outlined),
               label: Text('Processed'),
-            ),
-            ButtonSegment(
-              value: _CompareMode.omrCompare,
-              icon: Icon(Icons.rule_folder_outlined),
-              label: Text('OMR compare'),
             ),
           ],
           selected: <_CompareMode>{_compareMode},
@@ -620,24 +577,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
                 : 'Show overlay',
           ),
         ),
-      if (AppConfig.showExperimentalFeatures)
-        OutlinedButton.icon(
-          onPressed: _submitting ? null : () => _requestReprocess(item),
-          icon: const Icon(Icons.manage_search_outlined),
-          label: const Text('Send back for metadata review'),
-        ),
-      if (AppConfig.showExperimentalFeatures)
-        OutlinedButton.icon(
-          key: AppKeys.reviewAiScoreReviewButton,
-          onPressed: _showAiScoreReviewComingSoon,
-          icon: const Icon(Icons.auto_fix_high_outlined),
-          label: const Text('Send back for AI score review'),
-        ),
-      OutlinedButton.icon(
-        onPressed: _submitting ? null : () => _submitDecision(false),
-        icon: const Icon(Icons.close_outlined),
-        label: const Text('Reject candidate'),
-      ),
       if (isRenderBlocked && renderValidationError != null)
         Text(
           renderValidationError,
@@ -651,8 +590,8 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
         icon: const Icon(Icons.verified_outlined),
         label: Text(
           isRenderBlocked
-              ? 'Render required before approval'
-              : (_submitting ? 'Saving...' : 'Approve as default'),
+              ? 'Render required before marking ready'
+              : (_submitting ? 'Saving...' : 'Mark edit ready'),
         ),
       ),
     ];
@@ -662,7 +601,7 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
   List<Widget> _buildMetadataReviewActionWidgets(ReviewQueueEntry item) {
     final bulkButton = _bookBulkApprovalButton(
       item,
-      processingStage: 'split_review_needed',
+      processingStage: _metadataReviewStageFor(item),
     );
     final actions = <Widget>[
       if (bulkButton != null) bulkButton,
@@ -678,12 +617,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
         icon: const Icon(Icons.edit_note_outlined),
         label: const Text('Edit metadata'),
       ),
-      if (AppConfig.showExperimentalFeatures)
-        OutlinedButton.icon(
-          onPressed: _submitting ? null : () => _requestReprocess(item),
-          icon: const Icon(Icons.manage_search_outlined),
-          label: const Text('Send back for metadata review'),
-        ),
       OutlinedButton.icon(
         onPressed: _submitting ? null : () => _submitDecision(false),
         icon: const Icon(Icons.close_outlined),
@@ -692,7 +625,7 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
       FilledButton.icon(
         onPressed: _submitting ? null : () => _submitDecision(true),
         icon: const Icon(Icons.check_outlined),
-        label: const Text('Approve metadata'),
+        label: const Text('Approve student PDF'),
       ),
     ];
     return _spacedReviewActions(actions);
@@ -711,11 +644,9 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
       return null;
     }
 
-    final isMetadataStage = processingStage == 'split_review_needed';
+    final isMetadataStage = _isMetadataReviewStage(processingStage);
     return FilledButton.tonalIcon(
-      key: isMetadataStage
-          ? AppKeys.reviewBulkApproveMetadataButton
-          : AppKeys.reviewBulkApproveMuseScoreButton,
+      key: isMetadataStage ? AppKeys.reviewBulkApproveMetadataButton : null,
       onPressed: _submitting
           ? null
           : () => _bulkApproveBookStage(
@@ -730,7 +661,7 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
       label: Text(
         isMetadataStage
             ? 'Approve all metadata for this book'
-            : 'Approve all MuseScore for this book',
+            : 'Mark all notation edits ready for this book',
       ),
     );
   }
@@ -752,7 +683,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
   Widget _buildCompareCanvas({
     required String rawUrl,
     required String renderedUrl,
-    required List<_OmrCandidateOption> candidateOptions,
   }) {
     switch (_compareMode) {
       case _CompareMode.original:
@@ -822,52 +752,7 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
             ),
           ],
         );
-      case _CompareMode.omrCompare:
-        return _buildOmrCandidateCompareCanvas(candidateOptions);
     }
-  }
-
-  Widget _buildOmrCandidateCompareCanvas(
-    List<_OmrCandidateOption> candidateOptions,
-  ) {
-    final renderedCandidates =
-        _renderedOmrCompareCandidates(candidateOptions);
-    if (renderedCandidates.length < 2) {
-      return _OmrCompareUnavailablePanel(
-        candidateCount: candidateOptions.length,
-        renderedCandidateCount: renderedCandidates.length,
-      );
-    }
-
-    final left = renderedCandidates[0];
-    final right = renderedCandidates[1];
-    return Row(
-      children: [
-        Expanded(
-          child: _LabeledPdfPane(
-            label: left.label,
-            child: _RemotePdfViewer(
-              url: _cacheBustedUrl(left.renderedUrl, _renderRefreshToken),
-              controller: _omrCompareLeftController,
-              onLoaded: _handleDocumentLoaded,
-              onPageChanged: _handlePageChanged,
-            ),
-          ),
-        ),
-        const VerticalDivider(width: 1),
-        Expanded(
-          child: _LabeledPdfPane(
-            label: right.label,
-            child: _RemotePdfViewer(
-              url: _cacheBustedUrl(right.renderedUrl, _renderRefreshToken),
-              controller: _omrCompareRightController,
-              onLoaded: _handleDocumentLoaded,
-              onPageChanged: _handlePageChanged,
-            ),
-          ),
-        ),
-      ],
-    );
   }
 
   void _handleDocumentLoaded(int pages) {
@@ -889,10 +774,7 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
     setState(() {
       _currentPage = pageNumber;
     });
-    if (_compareMode == _CompareMode.omrCompare) {
-      _omrCompareLeftController.jumpToPage(pageNumber);
-      _omrCompareRightController.jumpToPage(pageNumber);
-    } else if (_compareMode == _CompareMode.overlay ||
+    if (_compareMode == _CompareMode.overlay ||
         _compareMode == _CompareMode.sideBySide) {
       _rawController.jumpToPage(pageNumber);
       _candidateController.jumpToPage(pageNumber);
@@ -902,8 +784,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
   void _jumpToPage(int pageNumber) {
     _rawController.jumpToPage(pageNumber);
     _candidateController.jumpToPage(pageNumber);
-    _omrCompareLeftController.jumpToPage(pageNumber);
-    _omrCompareRightController.jumpToPage(pageNumber);
     setState(() {
       _currentPage = pageNumber;
     });
@@ -1078,7 +958,7 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
         _renderRefreshToken += 1;
       });
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('MuseScore render refreshed.')),
+        const SnackBar(content: Text('Notation render refreshed.')),
       );
     } catch (error) {
       if (!mounted) {
@@ -1094,26 +974,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
         });
       }
     }
-  }
-
-  Future<void> _showAiScoreReviewComingSoon() async {
-    await showDialog<void>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('AI score review is coming soon'),
-          content: const Text(
-            'Coming soon: AI will compare the original PDF, metadata, and MuseScore candidate, apply corrections, rerender, and return it for parent review.',
-          ),
-          actions: [
-            FilledButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('OK'),
-            ),
-          ],
-        );
-      },
-    );
   }
 
   void _skipToNextReviewItem() {
@@ -1188,7 +1048,7 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
         SnackBar(
           content: Text(
             approve
-                ? 'Processed score approved as the default version.'
+                ? 'Notation candidate accepted and cataloged for retraining.'
                 : 'Review item rejected.',
           ),
         ),
@@ -1262,9 +1122,9 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
       if (!mounted) {
         return;
       }
-      final approvedLabel = processingStage == 'split_review_needed'
+      final approvedLabel = _isMetadataReviewStage(processingStage)
           ? 'metadata reviews'
-          : 'MuseScore reviews';
+          : 'notation edit items';
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
           content: Text(
@@ -1352,142 +1212,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
     }
   }
 
-  Future<void> _requestReprocess(ReviewQueueEntry item) async {
-    if (_submitting || widget.itemId == null) {
-      return;
-    }
-
-    final notesController = TextEditingController();
-    final notes = await showDialog<String>(
-      context: context,
-      builder: (context) {
-        return AlertDialog(
-          title: const Text('Send back for metadata review'),
-          content: TextField(
-            controller: notesController,
-            autofocus: true,
-            maxLines: 4,
-            decoration: const InputDecoration(
-              labelText: 'What should be checked?',
-              hintText: 'Example: split this book into separate pieces.',
-              border: OutlineInputBorder(),
-            ),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: const Text('Cancel'),
-            ),
-            FilledButton(
-              onPressed: () =>
-                  Navigator.of(context).pop(notesController.text.trim()),
-              child: const Text('Send back'),
-            ),
-          ],
-        );
-      },
-    );
-    notesController.dispose();
-
-    if (notes == null) {
-      return;
-    }
-    if (!mounted) {
-      return;
-    }
-
-    setState(() {
-      _submitting = true;
-    });
-
-    try {
-      final repository = ref.read(serverPieceSyncRepositoryProvider);
-      final job = await repository.requestReviewReprocess(
-        item.id,
-        reprocessType: 'metadata',
-        parentNotes: notes,
-      );
-      ref.invalidate(parentReviewQueueProvider);
-      ref.invalidate(reviewItemDetailProvider(widget.itemId!));
-      ref.invalidate(processingCapabilitiesProvider);
-
-      if (!mounted) {
-        return;
-      }
-      final status = job['status'] as String? ?? 'queued';
-      final errorMessage = job['error_message'] as String?;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            errorMessage == null || errorMessage.isEmpty
-                ? 'Metadata review job $status.'
-                : 'Metadata review could not run: $errorMessage',
-          ),
-        ),
-      );
-    } catch (error) {
-      if (!mounted) {
-        return;
-      }
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Unable to request metadata review: $error')),
-      );
-    } finally {
-      if (mounted) {
-        setState(() {
-          _submitting = false;
-        });
-      }
-    }
-  }
-}
-
-List<_OmrCandidateOption> _renderedOmrCompareCandidates(
-  List<_OmrCandidateOption> candidateOptions,
-) {
-  final renderedCandidates = candidateOptions
-      .where((option) => option.renderedUrl.isNotEmpty)
-      .toList(growable: false);
-  if (renderedCandidates.length <= 2) {
-    return renderedCandidates;
-  }
-
-  final primary = _primaryRenderedOmrCandidate(renderedCandidates);
-  final primaryEngineKey = _omrCandidateEngineKey(primary);
-  for (final candidate in renderedCandidates) {
-    if (candidate.id == primary.id) {
-      continue;
-    }
-    if (_omrCandidateEngineKey(candidate) != primaryEngineKey) {
-      return [primary, candidate];
-    }
-  }
-
-  for (final candidate in renderedCandidates) {
-    if (candidate.id != primary.id) {
-      return [primary, candidate];
-    }
-  }
-  return [primary];
-}
-
-_OmrCandidateOption _primaryRenderedOmrCandidate(
-  List<_OmrCandidateOption> renderedCandidates,
-) {
-  for (final candidate in renderedCandidates) {
-    if (candidate.selected) {
-      return candidate;
-    }
-  }
-  return renderedCandidates.first;
-}
-
-String _omrCandidateEngineKey(_OmrCandidateOption candidate) {
-  final engineName = candidate.engineName?.trim().toLowerCase();
-  if (engineName != null && engineName.isNotEmpty) {
-    return engineName;
-  }
-  return candidate.label.trim().toLowerCase();
 }
 
 class _OmrCandidateOption {
@@ -1638,6 +1362,12 @@ Map<String, dynamic> _activeCandidateData(
   final output = Map<String, dynamic>.from(baseCandidateData)
     ..addAll(selectedCandidate.data);
 
+  for (final key in _latestLlmAttemptKeys) {
+    if (baseCandidateData.containsKey(key)) {
+      output[key] = baseCandidateData[key];
+    }
+  }
+
   for (final key in [
     'raw_file_url',
     'raw_content_type',
@@ -1664,88 +1394,22 @@ Map<String, dynamic> _activeCandidateData(
   return output;
 }
 
-class _OmrCandidateSelector extends StatelessWidget {
-  const _OmrCandidateSelector({
-    required this.options,
-    required this.selectedCandidateId,
-    required this.onSelected,
-  });
-
-  final List<_OmrCandidateOption> options;
-  final String? selectedCandidateId;
-  final ValueChanged<String> onSelected;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final value = options.any((option) => option.id == selectedCandidateId)
-        ? selectedCandidateId
-        : options.first.id;
-    final selected = options.firstWhere(
-      (option) => option.id == value,
-      orElse: () => options.first,
-    );
-
-    return Card(
-      elevation: 0,
-      color: theme.colorScheme.secondaryContainer.withValues(alpha: 0.32),
-      child: Padding(
-        padding: const EdgeInsets.all(12),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(
-              'OMR output to review',
-              style: theme.textTheme.titleSmall?.copyWith(
-                fontWeight: FontWeight.w700,
-              ),
-            ),
-            const SizedBox(height: 8),
-            DropdownButtonFormField<String>(
-              initialValue: value,
-              isExpanded: true,
-              decoration: const InputDecoration(
-                labelText: 'Generated candidate',
-                border: OutlineInputBorder(),
-              ),
-              items: [
-                for (final option in options)
-                  DropdownMenuItem<String>(
-                    value: option.id,
-                    child: Text(option.label, overflow: TextOverflow.ellipsis),
-                  ),
-              ],
-              onChanged: (candidateId) {
-                if (candidateId != null && candidateId.isNotEmpty) {
-                  onSelected(candidateId);
-                }
-              },
-            ),
-            const SizedBox(height: 8),
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                if (selected.engineName != null)
-                  Chip(label: Text('Engine: ${selected.engineName}')),
-                if (selected.profile != null)
-                  Chip(label: Text('Profile: ${selected.profile}')),
-                if (selected.renderStatus != null)
-                  Chip(label: Text('Render: ${selected.renderStatus}')),
-                if (selected.qualityScore != null)
-                  Chip(
-                    label: Text(
-                      'Quality ${selected.qualityScore!.toStringAsFixed(1)}',
-                    ),
-                  ),
-              ],
-            ),
-          ],
-        ),
-      ),
-    );
-  }
-}
+const _latestLlmAttemptKeys = [
+  'llm_review_status',
+  'llm_notation_review_status',
+  'llm_review_provider',
+  'llm_review_job_id',
+  'llm_review_summary',
+  'llm_audit_summary',
+  'llm_notation_findings',
+  'llm_tool_results',
+  'llm_model',
+  'llm_vision_model_hint',
+  'llm_model_auto_selected',
+  'llm_retry_attempted',
+  'llm_correction_scope',
+  'llm_visual_diff',
+];
 
 class _ReviewMetadataSeed {
   const _ReviewMetadataSeed({
@@ -2307,6 +1971,7 @@ class _RemotePdfViewer extends StatelessWidget {
 
     return SfPdfViewer.network(
       url,
+      key: ValueKey<String>(url),
       headers: _serverRequestHeaders(),
       controller: controller,
       pageLayoutMode: PdfPageLayoutMode.single,
@@ -2373,7 +2038,7 @@ class _RenderBlockedPanel extends StatelessWidget {
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
-                    'MuseScore render needs attention',
+                    'Notation render needs attention',
                     style: theme.textTheme.titleSmall?.copyWith(
                       fontWeight: FontWeight.w700,
                       color: theme.colorScheme.error,
@@ -2390,66 +2055,6 @@ class _RenderBlockedPanel extends StatelessWidget {
               style: theme.textTheme.bodySmall,
             ),
           ],
-        ),
-      ),
-    );
-  }
-}
-
-class _OmrCompareUnavailablePanel extends StatelessWidget {
-  const _OmrCompareUnavailablePanel({
-    required this.candidateCount,
-    required this.renderedCandidateCount,
-  });
-
-  final int candidateCount;
-  final int renderedCandidateCount;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    return Center(
-      child: ConstrainedBox(
-        constraints: const BoxConstraints(maxWidth: 520),
-        child: DecoratedBox(
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerLow,
-            borderRadius: BorderRadius.circular(18),
-            border: Border.all(color: theme.colorScheme.outlineVariant),
-          ),
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                Icon(
-                  Icons.rule_folder_outlined,
-                  size: 42,
-                  color: theme.colorScheme.primary,
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'OMR compare needs two rendered candidates',
-                  style: theme.textTheme.titleMedium?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-                const SizedBox(height: 8),
-                Text(
-                  'This review item has $candidateCount OMR candidate(s), '
-                  'but only $renderedCandidateCount rendered PDF candidate(s). '
-                  'Use Compare Audiveris + HOMR candidates in server settings, '
-                  'confirm HOMR and MuseScore are configured, then reprocess '
-                  'or reimport the piece.',
-                  style: theme.textTheme.bodyMedium?.copyWith(
-                    color: theme.colorScheme.onSurfaceVariant,
-                  ),
-                  textAlign: TextAlign.center,
-                ),
-              ],
-            ),
-          ),
         ),
       ),
     );
@@ -2533,6 +2138,20 @@ bool _isBookReviewItem(ReviewQueueEntry item) {
                 candidateData['catalog_metadata'])['book_or_collection'],
           ) !=
           null;
+}
+
+String _metadataReviewStageFor(ReviewQueueEntry item) {
+  final stage = _metadataText(item.candidateData['processing_stage']);
+  if (stage == 'metadata_review_needed' || stage == 'split_review_needed') {
+    return stage!;
+  }
+  return _isBookReviewItem(item)
+      ? 'split_review_needed'
+      : 'metadata_review_needed';
+}
+
+bool _isMetadataReviewStage(String stage) {
+  return stage == 'metadata_review_needed' || stage == 'split_review_needed';
 }
 
 List<Map<String, dynamic>> _metadataListFrom(dynamic value) {

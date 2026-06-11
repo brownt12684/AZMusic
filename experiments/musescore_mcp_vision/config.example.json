@@ -1,0 +1,38 @@
+{
+  "input": {
+    "pdf_path": "C:/Users/Travis/Downloads/Position Pieces for Cello, Book 1.pdf",
+    "page_number": 38,
+    "measure_region": {
+      "x": 0.08,
+      "y": 0.18,
+      "width": 0.78,
+      "height": 0.12,
+      "units": "normalized"
+    }
+  },
+  "output": {
+    "run_dir": "experiments/musescore_mcp_vision/runs/latest",
+    "render_scale": 3.0
+  },
+  "lm_studio": {
+    "base_url": "http://127.0.0.1:1234/v1",
+    "model": "",
+    "temperature": 0.0,
+    "max_tokens": 1600
+  },
+  "mcp": {
+    "server_command": [
+      "python",
+      "C:/path/to/mcp-musescore/server.py"
+    ],
+    "tool_names": {
+      "ping": "ping_musescore",
+      "process_sequence": "processSequence"
+    },
+    "request_timeout_seconds": 30
+  },
+  "safety": {
+    "minimum_confidence": 0.65,
+    "stop_after_measures": 1
+  }
+}

@@ -78,13 +78,9 @@ class AppKeys {
       ValueKey<String>('reviewCompare.refreshRenderedPdf');
   static const reviewUploadEditedMusicXmlButton =
       ValueKey<String>('reviewCompare.uploadEditedMusicXml');
-  static const reviewAiScoreReviewButton =
-      ValueKey<String>('reviewCompare.aiScoreReview');
   static const reviewNextButton = ValueKey<String>('reviewCompare.next');
   static const reviewBulkApproveMetadataButton =
       ValueKey<String>('reviewCompare.bulkApproveMetadata');
-  static const reviewBulkApproveMuseScoreButton =
-      ValueKey<String>('reviewCompare.bulkApproveMuseScore');
   static const parentReviewCard = ValueKey<String>('parent.reviewCard');
 
   static ValueKey<String> pieceCard(String pieceId) {
@@ -130,5 +126,9 @@ class AppKeys {
 
   static ValueKey<String> parentDebugRetryJobButton(String jobId) {
     return ValueKey<String>('parent.debugTools.retryJob.$jobId');
+  }
+
+  static ValueKey<String> parentDebugClearPieceButton(String pieceId) {
+    return ValueKey<String>('parent.debugTools.clearPiece.$pieceId');
   }
 }

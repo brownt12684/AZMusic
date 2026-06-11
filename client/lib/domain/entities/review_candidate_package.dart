@@ -218,6 +218,11 @@ class RemoteScoreVersion {
     required this.fileUrl,
     required this.isDefault,
     this.scoreVersionRole,
+    this.artifactRole,
+    this.replacesScoreVersionId,
+    this.displayRank = 0,
+    this.studentDefault = false,
+    this.approvedByParent = false,
   });
 
   final String id;
@@ -226,6 +231,11 @@ class RemoteScoreVersion {
   final String fileUrl;
   final bool isDefault;
   final String? scoreVersionRole;
+  final String? artifactRole;
+  final String? replacesScoreVersionId;
+  final int displayRank;
+  final bool studentDefault;
+  final bool approvedByParent;
 
   String get fileExtension {
     final dotIndex = filePath.lastIndexOf('.');
@@ -262,6 +272,11 @@ class RemoteScoreVersion {
       fileUrl: json['file_url'] as String? ?? '',
       isDefault: json['is_default'] as bool? ?? false,
       scoreVersionRole: json['score_version_role'] as String?,
+      artifactRole: json['artifact_role'] as String?,
+      replacesScoreVersionId: json['replaces_score_version_id'] as String?,
+      displayRank: json['display_rank'] as int? ?? 0,
+      studentDefault: json['student_default'] as bool? ?? false,
+      approvedByParent: json['approved_by_parent'] as bool? ?? false,
     );
   }
 }

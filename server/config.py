@@ -81,6 +81,8 @@ class Settings(BaseSettings):
     max_concurrent_jobs: int = 2
     audiveris_cli_path: str | None = None
     homr_cli_path: str | None = None
+    legato_cli_path: str | None = None
+    legato_model_path: str | None = None
     musescore_cli_path: str | None = None
     ocr_cli_path: str | None = None
     ocr_language: str = "eng"
@@ -90,11 +92,19 @@ class Settings(BaseSettings):
     job_dispatcher_poll_interval_seconds: float = 2.0
     job_dispatcher_stale_after_seconds: int = 600
     job_dispatcher_max_retries: int = 2
+    gemini_oauth_client_secret_path: str | None = None
+    gemini_oauth_redirect_base_url: str = ""
+    gemini_default_model: str = "gemini-2.5-flash"
+    gemini_cloud_project: str | None = None
 
     @model_validator(mode="after")
     def normalize_paths(self) -> "Settings":
         self.database_url = _normalize_sqlite_url(self.database_url)
         self.storage_path = _resolve_server_path(self.storage_path)
+        if self.gemini_oauth_client_secret_path:
+            self.gemini_oauth_client_secret_path = str(
+                _resolve_server_path(Path(self.gemini_oauth_client_secret_path))
+            )
         return self
 
 

@@ -14,7 +14,7 @@ from pathlib import Path
 from typing import Any
 from xml.etree import ElementTree
 
-from server.services.processing_settings import executable_status, homr_status
+from server.services.processing_settings import executable_status, homr_status, legato_status
 
 OMR_SPACING_NORMALIZATION_PROFILE = "balanced_omr"
 DEFAULT_MUSESCORE_STYLE_PATH = (
@@ -70,9 +70,35 @@ class MusicXmlEngine:
     ) -> MusicXmlResult:
         audiveris_path = processing_settings.get("audiveris_cli_path")
         homr_path = processing_settings.get("homr_cli_path")
+        legato_path = processing_settings.get("legato_cli_path")
         omr_strategy = str(processing_settings.get("omr_strategy") or "audiveris_default")
         allow_stub = processing_settings.get("allow_stub_musicxml", True)
         production_mode = bool(processing_settings.get("production_mode"))
+
+        if omr_strategy == "legato_experimental":
+            if legato_path:
+                result = LegatoMusicXmlEngine().generate(
+                    raw_pdf_path=raw_pdf_path,
+                    output_path=output_path,
+                    title=title,
+                    composer=composer,
+                    primary_instrument=primary_instrument,
+                    contained_piece_titles=contained_piece_titles,
+                    multi_piece_page=multi_piece_page,
+                    processing_settings=processing_settings,
+                )
+                return _normalize_result_metadata(
+                    result,
+                    output_path=output_path,
+                    title=title,
+                    composer=composer,
+                    primary_instrument=primary_instrument,
+                    contained_piece_titles=contained_piece_titles,
+                    multi_piece_page=multi_piece_page,
+                )
+            raise ProcessingEngineError(
+                "LEGATO experimental OMR was selected, but LEGATO is not configured."
+            )
 
         if omr_strategy == "homr_experimental":
             if homr_path:
@@ -120,8 +146,8 @@ class MusicXmlEngine:
                 multi_piece_page=multi_piece_page,
             )
 
-        if omr_strategy in {"omr_bakeoff", "experimental_engine_bakeoff"} and homr_path:
-            result = HomrMusicXmlEngine().generate(
+        if omr_strategy in {"omr_bakeoff", "experimental_engine_bakeoff"}:
+            direct_attempts = _run_direct_experimental_omr_attempts(
                 raw_pdf_path=raw_pdf_path,
                 output_path=output_path,
                 title=title,
@@ -131,15 +157,34 @@ class MusicXmlEngine:
                 multi_piece_page=multi_piece_page,
                 processing_settings=processing_settings,
             )
-            return _normalize_result_metadata(
-                result,
-                output_path=output_path,
-                title=title,
-                composer=composer,
-                primary_instrument=primary_instrument,
-                contained_piece_titles=contained_piece_titles,
-                multi_piece_page=multi_piece_page,
-            )
+            best_attempt = _best_experimental_omr_attempt(direct_attempts)
+            if best_attempt is not None:
+                candidate_path = Path(str(best_attempt["candidate_path"]))
+                result = MusicXmlResult(
+                    file_path=candidate_path,
+                    engine_name=str(best_attempt.get("engine") or "experimental_omr"),
+                    engine_version=best_attempt.get("engine_version"),
+                    provenance=str(
+                        best_attempt.get("provenance") or "experimental_omr_bakeoff"
+                    ),
+                    confidence=float(best_attempt.get("confidence") or 0.72),
+                    warnings=_warnings_from_omr_attempts(direct_attempts),
+                    metadata={
+                        **_validate_musicxml(candidate_path),
+                        "omr_strategy": omr_strategy,
+                        "omr_quality_score": best_attempt.get("quality_score", 0.0),
+                        "omr_attempts": direct_attempts,
+                    },
+                )
+                return _normalize_result_metadata(
+                    result,
+                    output_path=output_path,
+                    title=title,
+                    composer=composer,
+                    primary_instrument=primary_instrument,
+                    contained_piece_titles=contained_piece_titles,
+                    multi_piece_page=multi_piece_page,
+                )
 
         if production_mode:
             raise ProcessingEngineError(
@@ -429,6 +474,28 @@ class AudiverisMusicXmlEngine:
                             best_candidate = (homr_path, homr_metadata, homr_score)
                     except Exception as exc:
                         homr_attempt["error"] = f"HOMR candidate validation failed: {exc}"
+                legato_attempt = _run_legato_bakeoff_attempt(
+                    raw_pdf_path=raw_pdf_path,
+                    output_path=output_path.with_name(f"{output_path.stem}_legato.musicxml"),
+                    title=title,
+                    composer=composer,
+                    primary_instrument=primary_instrument,
+                    contained_piece_titles=contained_piece_titles,
+                    multi_piece_page=multi_piece_page,
+                    processing_settings=processing_settings,
+                )
+                attempts.append(legato_attempt)
+                if legato_attempt.get("candidate_path"):
+                    legato_path = Path(str(legato_attempt["candidate_path"]))
+                    try:
+                        legato_metadata = _validate_musicxml(legato_path)
+                        legato_score = float(legato_attempt.get("quality_score") or 0.0)
+                        if best_candidate is None or legato_score > best_candidate[2]:
+                            best_candidate = (legato_path, legato_metadata, legato_score)
+                    except Exception as exc:
+                        legato_attempt["error"] = (
+                            f"LEGATO candidate validation failed: {exc}"
+                        )
                 attempts.extend(_alternative_omr_engine_placeholders(raw_pdf_path))
 
         if best_candidate is None:
@@ -548,6 +615,126 @@ class HomrMusicXmlEngine:
             engine_version=status.version,
             provenance="homr_omr",
             confidence=0.72,
+            warnings=warnings,
+            metadata=metadata,
+        )
+
+
+class LegatoMusicXmlEngine:
+    def generate(
+        self,
+        *,
+        raw_pdf_path: Path,
+        output_path: Path,
+        title: str,
+        composer: str | None,
+        primary_instrument: str | None = None,
+        contained_piece_titles: list[str] | None = None,
+        multi_piece_page: bool = False,
+        processing_settings: dict[str, Any],
+    ) -> MusicXmlResult:
+        status = legato_status(processing_settings)
+        if not status.discovered_path:
+            raise ProcessingEngineError("LEGATO runner path is not configured or discoverable.")
+        if not status.available:
+            raise ProcessingEngineError(
+                status.error or "LEGATO runner is not ready; configure a model path."
+            )
+
+        model_path = processing_settings.get("legato_model_path")
+        if not isinstance(model_path, str) or not model_path.strip():
+            raise ProcessingEngineError("LEGATO model path is not configured.")
+
+        output_path = output_path.expanduser().resolve()
+        output_dir = (output_path.parent / "legato-output" / output_path.stem).resolve()
+        output_dir.mkdir(parents=True, exist_ok=True)
+        image_path, input_warnings = _legato_input_image(raw_pdf_path, output_dir=output_dir)
+        abc_path = output_dir / f"{output_path.stem}.abc"
+        metadata_path = output_dir / f"{output_path.stem}.json"
+        command = _command_prefix(status.discovered_path) + [
+            "--input",
+            str(image_path.resolve()),
+            "--output-abc",
+            str(abc_path.resolve()),
+            "--metadata",
+            str(metadata_path.resolve()),
+            "--model",
+            _legato_model_argument(model_path),
+        ]
+        result = subprocess.run(
+            command,
+            check=False,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=900,
+            cwd=str(output_dir),
+        )
+        diagnostics = {
+            "engine": "legato",
+            "input_path": str(image_path.resolve()),
+            "output_dir": str(output_dir.resolve()),
+            "abc_path": str(abc_path.resolve()),
+            "metadata_path": str(metadata_path.resolve()),
+            "model_path": _legato_model_argument(model_path),
+            "command": command,
+            "exit_code": result.returncode,
+            "stdout_excerpt": (result.stdout or "")[-1000:],
+            "stderr_excerpt": (result.stderr or "")[-1000:],
+        }
+        if result.returncode != 0:
+            raise ProcessingEngineError(
+                _summarize_process_failure(
+                    "LEGATO",
+                    result.stderr or result.stdout,
+                    exit_code=result.returncode,
+                ),
+                diagnostics={"omr_attempts": [diagnostics]},
+            )
+        if not abc_path.exists() or abc_path.stat().st_size == 0:
+            raise ProcessingEngineError(
+                "LEGATO completed without producing non-empty ABC notation.",
+                diagnostics={"omr_attempts": [diagnostics]},
+            )
+
+        conversion_metadata = _convert_legato_abc_to_musicxml(
+            abc_path=abc_path,
+            output_path=output_path,
+            title=title,
+            composer=composer,
+            primary_instrument=primary_instrument,
+        )
+        metadata = _validate_musicxml(output_path)
+        metadata["omr_strategy"] = str(
+            processing_settings.get("omr_strategy") or "legato_experimental"
+        )
+        metadata["omr_quality_score"] = _musicxml_quality_score(metadata, output_path)
+        metadata["abc_path"] = str(abc_path)
+        metadata["legato_metadata_path"] = str(metadata_path)
+        metadata["abc_conversion"] = conversion_metadata
+        metadata["omr_attempts"] = _sanitize_omr_attempts(
+            [
+                {
+                    **diagnostics,
+                    "candidate_path": str(output_path),
+                    "quality_score": metadata["omr_quality_score"],
+                    "conversion": conversion_metadata,
+                }
+            ]
+        )
+        warnings = list(input_warnings)
+        if multi_piece_page and contained_piece_titles:
+            warnings.append(
+                "LEGATO processed a shared-page segment; verify each contained title "
+                "before approval."
+            )
+        return MusicXmlResult(
+            file_path=output_path,
+            engine_name="legato",
+            engine_version=status.version,
+            provenance="legato_abc_to_musicxml",
+            confidence=0.78,
             warnings=warnings,
             metadata=metadata,
         )
@@ -779,6 +966,118 @@ def _run_homr_bakeoff_attempt(
         return attempt
 
 
+def _run_legato_bakeoff_attempt(
+    *,
+    raw_pdf_path: Path,
+    output_path: Path,
+    title: str,
+    composer: str | None,
+    primary_instrument: str | None,
+    contained_piece_titles: list[str] | None,
+    multi_piece_page: bool,
+    processing_settings: dict[str, Any],
+) -> dict[str, Any]:
+    if not processing_settings.get("legato_cli_path"):
+        return {
+            "engine": "legato",
+            "profile": "abc_experimental",
+            "input_path": str(raw_pdf_path),
+            "skipped": True,
+            "error": "LEGATO runner is not configured.",
+        }
+    if not processing_settings.get("legato_model_path"):
+        return {
+            "engine": "legato",
+            "profile": "abc_experimental",
+            "input_path": str(raw_pdf_path),
+            "skipped": True,
+            "error": "LEGATO model path is not configured.",
+        }
+    try:
+        result = LegatoMusicXmlEngine().generate(
+            raw_pdf_path=raw_pdf_path,
+            output_path=output_path,
+            title=title,
+            composer=composer,
+            primary_instrument=primary_instrument,
+            contained_piece_titles=contained_piece_titles,
+            multi_piece_page=multi_piece_page,
+            processing_settings=processing_settings,
+        )
+        return {
+            "engine": "legato",
+            "profile": "abc_experimental",
+            "input_path": str(raw_pdf_path),
+            "candidate_path": str(result.file_path),
+            "engine_version": result.engine_version,
+            "provenance": result.provenance,
+            "confidence": result.confidence,
+            "metadata": result.metadata,
+            "quality_score": result.metadata.get("omr_quality_score", 0.0),
+            "abc_path": result.metadata.get("abc_path"),
+            "warnings": result.warnings,
+        }
+    except ProcessingEngineError as exc:
+        attempt = {
+            "engine": "legato",
+            "profile": "abc_experimental",
+            "input_path": str(raw_pdf_path),
+            "error": str(exc),
+        }
+        diagnostics_attempts = exc.diagnostics.get("omr_attempts") if exc.diagnostics else None
+        if isinstance(diagnostics_attempts, list) and diagnostics_attempts:
+            attempt["diagnostics"] = diagnostics_attempts[0]
+        return attempt
+
+
+def _run_direct_experimental_omr_attempts(
+    *,
+    raw_pdf_path: Path,
+    output_path: Path,
+    title: str,
+    composer: str | None,
+    primary_instrument: str | None,
+    contained_piece_titles: list[str] | None,
+    multi_piece_page: bool,
+    processing_settings: dict[str, Any],
+) -> list[dict[str, Any]]:
+    attempts = [
+        _run_homr_bakeoff_attempt(
+            raw_pdf_path=raw_pdf_path,
+            output_path=output_path.with_name(f"{output_path.stem}_homr.musicxml"),
+            title=title,
+            composer=composer,
+            primary_instrument=primary_instrument,
+            contained_piece_titles=contained_piece_titles,
+            multi_piece_page=multi_piece_page,
+            processing_settings=processing_settings,
+        ),
+        _run_legato_bakeoff_attempt(
+            raw_pdf_path=raw_pdf_path,
+            output_path=output_path.with_name(f"{output_path.stem}_legato.musicxml"),
+            title=title,
+            composer=composer,
+            primary_instrument=primary_instrument,
+            contained_piece_titles=contained_piece_titles,
+            multi_piece_page=multi_piece_page,
+            processing_settings=processing_settings,
+        ),
+    ]
+    attempts.extend(_alternative_omr_engine_placeholders(raw_pdf_path))
+    return attempts
+
+
+def _best_experimental_omr_attempt(attempts: list[dict[str, Any]]) -> dict[str, Any] | None:
+    candidates = [
+        attempt
+        for attempt in attempts
+        if attempt.get("candidate_path") and not attempt.get("error")
+    ]
+    if not candidates:
+        return None
+    return max(candidates, key=lambda attempt: float(attempt.get("quality_score") or 0.0))
+
+
 def _audiveris_input_for_profile(
     raw_pdf_path: Path,
     *,
@@ -803,6 +1102,44 @@ def _audiveris_input_for_profile(
             rendered_path = temp_path / f"{raw_pdf_path.stem}_{profile['name']}.png"
             image.save(rendered_path)
             return rendered_path
+        finally:
+            page.close()
+    finally:
+        document.close()
+
+
+def _legato_input_image(raw_path: Path, *, output_dir: Path) -> tuple[Path, list[str]]:
+    warnings: list[str] = []
+    suffix = raw_path.suffix.lower()
+    if suffix in {".png", ".jpg", ".jpeg", ".webp", ".tif", ".tiff"}:
+        destination = output_dir / raw_path.name
+        if raw_path != destination:
+            shutil.copy2(raw_path, destination)
+        return destination, warnings
+    if suffix != ".pdf":
+        raise ProcessingEngineError(f"LEGATO does not support {suffix or 'this file type'} input.")
+
+    try:
+        import pypdfium2 as pdfium
+    except ImportError as exc:
+        raise ProcessingEngineError(
+            "pypdfium2 is required to render PDF input for LEGATO."
+        ) from exc
+
+    document = pdfium.PdfDocument(str(raw_path))
+    try:
+        if len(document) > 1:
+            warnings.append(
+                "LEGATO currently processes the first rendered page of a PDF attempt; "
+                "book/multi-page imports should be split before LEGATO."
+            )
+        page = document[0]
+        try:
+            bitmap = page.render(scale=4)
+            image = bitmap.to_pil()
+            image_path = output_dir / f"{raw_path.stem}_legato.png"
+            image.save(image_path)
+            return image_path, warnings
         finally:
             page.close()
     finally:
@@ -864,6 +1201,18 @@ def _warnings_from_omr_attempts(attempts: list[dict[str, Any]]) -> list[str]:
     if len(attempts) <= 1:
         return []
     failed_count = sum(1 for attempt in attempts if attempt.get("error"))
+    engines = sorted(
+        {
+            str(attempt.get("engine"))
+            for attempt in attempts
+            if attempt.get("engine") and not attempt.get("skipped")
+        }
+    )
+    if engines and set(engines) != {"audiveris"}:
+        return [
+            f"Experimental OMR bakeoff tried {len(attempts)} candidates; "
+            f"{failed_count} failed."
+        ]
     return [
         f"Audiveris quality sweep tried {len(attempts)} profiles; {failed_count} failed."
     ]
@@ -912,10 +1261,69 @@ def _json_safe_metadata_value(value: Any, seen: set[int] | None = None) -> Any:
 
 
 def _command_prefix(executable_path: str) -> list[str]:
-    path = Path(executable_path)
+    path = Path(executable_path).expanduser()
+    if not path.is_absolute():
+        path = path.resolve()
     if path.suffix.lower() == ".py":
         return [sys.executable, str(path)]
     return [str(path)]
+
+
+def _legato_model_argument(model_path: str) -> str:
+    raw = model_path.strip()
+    expanded = Path(raw).expanduser()
+    if expanded.exists():
+        return str(expanded)
+    return raw
+
+
+def _convert_legato_abc_to_musicxml(
+    *,
+    abc_path: Path,
+    output_path: Path,
+    title: str,
+    composer: str | None,
+    primary_instrument: str | None,
+) -> dict[str, Any]:
+    """Convert LEGATO ABC output into MusicXML for the existing renderer path."""
+
+    try:
+        from music21 import converter, metadata
+    except ImportError as exc:
+        raise ProcessingEngineError(
+            "ABC to MusicXML conversion requires the music21 Python package."
+        ) from exc
+
+    try:
+        score = converter.parse(str(abc_path), format="abc")
+    except Exception as exc:  # pragma: no cover - music21 parser types vary
+        raise ProcessingEngineError(f"LEGATO ABC could not be parsed: {exc}") from exc
+
+    if getattr(score, "metadata", None) is None:
+        score.metadata = metadata.Metadata()
+    if title:
+        score.metadata.title = title
+    if composer:
+        score.metadata.composer = composer
+
+    try:
+        score.write("musicxml", fp=str(output_path))
+    except Exception as exc:  # pragma: no cover - music21 writer types vary
+        raise ProcessingEngineError(
+            f"LEGATO ABC could not be converted to MusicXML: {exc}"
+        ) from exc
+
+    if not output_path.exists() or output_path.stat().st_size == 0:
+        raise ProcessingEngineError("LEGATO ABC conversion did not produce MusicXML.")
+
+    conversion: dict[str, Any] = {
+        "converter": "music21",
+        "abc_path": str(abc_path),
+        "musicxml_path": str(output_path),
+    }
+    if primary_instrument:
+        conversion["primary_instrument"] = primary_instrument
+    return conversion
 
 
 def validate_rendered_pdf(path: Path, *, strict: bool = True) -> dict[str, Any]:
@@ -1044,6 +1452,9 @@ def _normalize_result_metadata(
         "omr_attempts",
         "omr_candidate_engine",
         "omr_candidate_profile",
+        "abc_path",
+        "abc_conversion",
+        "legato_metadata_path",
     ):
         if key not in result.metadata:
             continue
@@ -2005,6 +2416,15 @@ def _summarize_process_failure(
         if exit_code is not None:
             return f"{name} failed with exit code {exit_code} without returning diagnostic output."
         return f"{name} failed without returning diagnostic output."
+    lowered_details = details.lower()
+    if "gated repo" in lowered_details or (
+        "huggingface.co" in lowered_details and "401 client error" in lowered_details
+    ):
+        return (
+            f"{name} failed because the configured Hugging Face model is gated or "
+            "private. Log in with an account that has model access, or configure a "
+            "local LEGATO model directory."
+        )
     if exit_code is not None:
         return f"{name} failed with exit code {exit_code}: {details[-1000:]}"
     return f"{name} failed: {details[-1000:]}"

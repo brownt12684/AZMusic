@@ -138,7 +138,6 @@ class ScoreProcessingService:
     ) -> ImportedPieceArtifacts:
         processing_settings_store = ProcessingSettingsStore()
         processing_settings = processing_settings_store.load()
-        _ensure_production_processing_ready(processing_settings)
         ocr_result = OcrMetadataExtractor(processing_settings).extract(
             file_name=file_name,
             file_bytes=file_bytes,
@@ -162,13 +161,15 @@ class ScoreProcessingService:
         raw_ext = Path(file_name).suffix or ".pdf"
         raw_path = piece_dir / f"raw_source{raw_ext.lower()}"
         raw_path.write_bytes(file_bytes)
+        cleaned_path = piece_dir / "student_cleaned.pdf"
+        _write_cleaned_student_score(raw_path=raw_path, output_path=cleaned_path)
 
         piece = Piece(
             id=piece_id,
             title=title,
             composer=composer,
             file_name=file_name,
-            status=PieceStatus.processing,
+            status=PieceStatus.review_pending,
             created_at=now,
             updated_at=now,
         )
@@ -177,23 +178,105 @@ class ScoreProcessingService:
             piece_id=piece_id,
             version_type=ScoreVersionType.raw,
             file_path=str(raw_path),
+            is_default=False,
+            created_at=now,
+        )
+        cleaned_score_version = ScoreVersion(
+            id=str(uuid.uuid4()),
+            piece_id=piece_id,
+            version_type=ScoreVersionType.reconstructed_candidate,
+            file_path=str(cleaned_path),
             is_default=True,
             created_at=now,
         )
         job = BackgroundJob(
             id=str(uuid.uuid4()),
             piece_id=piece_id,
-            job_type="score_processing",
-            status=JobStatus.running,
-            progress=10.0,
+            job_type="pdf_cleaning",
+            status=JobStatus.succeeded,
+            progress=100.0,
+            result_data={
+                "raw_score_version_id": raw_score_version.id,
+                "cleaned_score_version_id": cleaned_score_version.id,
+                "processed_metadata": ocr_metadata,
+                "ocr_metadata": ocr_metadata,
+                "ocr_engine": ocr_result.engine_name,
+                "ocr_confidence": ocr_result.confidence,
+                "catalog_suggestions": ocr_result.catalog_suggestions,
+                "warnings": ocr_result.warnings,
+                "processing_stage": "metadata_review_needed",
+                "student_artifact": "cleaned_pdf",
+            },
             created_at=now,
             updated_at=now,
+        )
+        review_item = ReviewItem(
+            id=str(uuid.uuid4()),
+            piece_id=piece_id,
+            item_type=ReviewItemType.score_candidate,
+            title=f"Review metadata for {title}",
+            description=(
+                "Approve the catalog metadata and cleaned student PDF. "
+                "Notation conversion can be run later from the Advanced Notation Lab."
+            ),
+            status="pending",
+            candidate_data={
+                "piece_title": title,
+                "summary": "Cleaned PDF is ready for student delivery after metadata review.",
+                "confidence": ocr_result.confidence,
+                "provenance": "pdf_first_metadata",
+                "engine_name": ocr_result.engine_name,
+                "processed_metadata": ocr_metadata,
+                "catalog_metadata": {
+                    "title": title,
+                    "composer": composer,
+                    "primary_instrument": primary_instrument,
+                },
+                "ocr_metadata": ocr_metadata,
+                "ocr_engine": ocr_result.engine_name,
+                "ocr_confidence": ocr_result.confidence,
+                "catalog_suggestions": ocr_result.catalog_suggestions,
+                "warnings": ocr_result.warnings,
+                "raw_score_version_id": raw_score_version.id,
+                "score_version_id": cleaned_score_version.id,
+                "cleaned_score_version_id": cleaned_score_version.id,
+                "student_default_score_version_id": cleaned_score_version.id,
+                "student_artifact": "cleaned_pdf",
+                "conversion_review_required": False,
+                "advanced_notation_available": True,
+                "processing_stage": "metadata_review_needed",
+            },
+            created_at=now,
         )
 
         db.add(piece)
         db.add(raw_score_version)
+        db.add(cleaned_score_version)
         db.add(job)
-        await db.flush()
+        db.add(review_item)
+        await db.commit()
+        await db.refresh(piece)
+        await db.refresh(raw_score_version)
+        await db.refresh(cleaned_score_version)
+        await db.refresh(job)
+        await db.refresh(review_item)
+        _record_pdf_first_score_versions(
+            piece_id=piece_id,
+            raw_score_version_id=raw_score_version.id,
+            cleaned_score_version_id=cleaned_score_version.id,
+        )
+        processing_settings_store.record_last_error(None)
+        return ImportedPieceArtifacts(
+            piece=piece,
+            raw_score_version=raw_score_version,
+            canonical_score_version=None,
+            rendered_score_version=cleaned_score_version,
+            review_item=review_item,
+            job=job,
+            ocr_metadata=ocr_metadata,
+            ocr_catalog_suggestions=ocr_result.catalog_suggestions,
+            musicxml_metadata={},
+        )
 
         warnings: list[str] = list(ocr_result.warnings)
         processed_metadata: dict[str, object] = {}
@@ -348,15 +431,16 @@ class ScoreProcessingService:
                 id=str(uuid.uuid4()),
                 piece_id=piece_id,
                 item_type=ReviewItemType.score_candidate,
-                title=f"Review reconstructed score for {title}",
+                title=f"Edit notation baseline for {title}",
                 description=(
-                    "Compare the rendered reconstruction against the original PDF "
-                    "and approve it only if the default score is ready for students."
+                    "Audiveris/MuseScore output is queued for human editing and "
+                    "training-data capture. It is not part of student PDF "
+                    "metadata approval."
                 ),
                 status="pending",
                 candidate_data={
                     "piece_title": title,
-                    "summary": ("Server processing candidate prepared for parent review."),
+                    "summary": "Notation baseline queued for human edit workflow.",
                     "confidence": musicxml_result.confidence,
                     "provenance": musicxml_result.provenance,
                     "engine_name": musicxml_result.engine_name,
@@ -382,6 +466,8 @@ class ScoreProcessingService:
                     "canonical_score_version_id": canonical_score_version.id,
                     "selected_omr_candidate_id": "selected_best",
                     "omr_candidates": omr_candidates,
+                    "workflow_lane": "notation_edit",
+                    "processing_stage": "notation_edit_queued",
                 },
                 created_at=now,
             )
@@ -420,6 +506,8 @@ class ScoreProcessingService:
                 "raw_page_count": raw_page_count,
                 "conversion_review_required": True,
                 "warnings": warnings,
+                "workflow_lane": "notation_edit",
+                "processing_stage": "notation_edit_queued",
             }
             job.updated_at = datetime.utcnow()
             processing_settings_store.record_last_error(str(render_error) if render_error else None)
@@ -484,7 +572,6 @@ class ScoreProcessingService:
         allow_composer_override: bool = False,
     ) -> ImportedPieceArtifacts:
         processing_settings = ProcessingSettingsStore().load()
-        _ensure_production_processing_ready(processing_settings)
         ocr_result = OcrMetadataExtractor(processing_settings).extract(
             file_name=file_name,
             file_bytes=file_bytes,
@@ -536,6 +623,9 @@ class ScoreProcessingService:
             progress=100.0,
             result_data={
                 "raw_score_version_id": raw_score_version.id,
+                "cleaned_score_version_id": raw_score_version.id,
+                "student_default_score_version_id": raw_score_version.id,
+                "student_artifact": "cleaned_pdf",
                 "processed_metadata": ocr_metadata,
                 "ocr_metadata": ocr_metadata,
                 "ocr_engine": ocr_result.engine_name,
@@ -569,6 +659,13 @@ class ScoreProcessingService:
                 "catalog_suggestions": ocr_result.catalog_suggestions,
                 "warnings": ocr_result.warnings,
                 "raw_score_version_id": raw_score_version.id,
+                "score_version_id": raw_score_version.id,
+                "cleaned_score_version_id": raw_score_version.id,
+                "student_default_score_version_id": raw_score_version.id,
+                "student_artifact": "cleaned_pdf",
+                "conversion_review_required": False,
+                "advanced_notation_available": False,
+                "processing_stage": "metadata_review_needed",
             },
             created_at=now,
         )
@@ -582,6 +679,14 @@ class ScoreProcessingService:
         await db.refresh(raw_score_version)
         await db.refresh(review_item)
         await db.refresh(job)
+        PieceStateService().set_score_version_metadata(
+            piece_id,
+            raw_score_version.id,
+            artifact_role="cleaned_pdf",
+            display_rank=10,
+            student_default=True,
+            approved_by_parent=False,
+        )
 
         return ImportedPieceArtifacts(
             piece=piece,
@@ -780,6 +885,8 @@ class ScoreProcessingService:
         piece_dir.mkdir(parents=True, exist_ok=True)
         raw_path = piece_dir / f"raw_source{(Path(file_name).suffix or '.pdf').lower()}"
         raw_path.write_bytes(file_bytes)
+        cleaned_path = piece_dir / "student_cleaned.pdf"
+        _write_cleaned_student_score(raw_path=raw_path, output_path=cleaned_path)
 
         piece = Piece(
             id=piece_id,
@@ -795,6 +902,14 @@ class ScoreProcessingService:
             piece_id=piece_id,
             version_type=ScoreVersionType.raw,
             file_path=str(raw_path),
+            is_default=False,
+            created_at=now,
+        )
+        cleaned_score_version = ScoreVersion(
+            id=str(uuid.uuid4()),
+            piece_id=piece_id,
+            version_type=ScoreVersionType.reconstructed_candidate,
+            file_path=str(cleaned_path),
             is_default=True,
             created_at=now,
         )
@@ -806,6 +921,9 @@ class ScoreProcessingService:
             progress=100.0,
             result_data={
                 "raw_score_version_id": raw_score_version.id,
+                "cleaned_score_version_id": cleaned_score_version.id,
+                "student_default_score_version_id": cleaned_score_version.id,
+                "student_artifact": "cleaned_pdf",
                 "source_book_id": source_book_id,
                 "source_page_start": source_page_start,
                 "source_page_end": source_page_end,
@@ -825,8 +943,8 @@ class ScoreProcessingService:
             item_type=ReviewItemType.score_candidate,
             title=f"Review book split for {title}",
             description=(
-                "Review this proposed piece split before sending the page range "
-                "to score reconstruction."
+                "Review this proposed piece split and metadata before making "
+                "the cleaned student PDF ready to push."
             ),
             status="pending",
             candidate_data={
@@ -834,7 +952,7 @@ class ScoreProcessingService:
                 "summary": (
                     "Book preprocessing proposed this child piece from the "
                     "Tesseract page-fact baseline. Approve or edit metadata "
-                    "before OMR processing."
+                    "before the student PDF is pushed."
                 ),
                 "confidence": split_confidence,
                 "provenance": "book_preprocessing_tesseract",
@@ -853,6 +971,10 @@ class ScoreProcessingService:
                 "warnings": validation_warnings,
                 "validation_warnings": validation_warnings,
                 "raw_score_version_id": raw_score_version.id,
+                "score_version_id": cleaned_score_version.id,
+                "cleaned_score_version_id": cleaned_score_version.id,
+                "student_default_score_version_id": cleaned_score_version.id,
+                "student_artifact": "cleaned_pdf",
                 "raw_content_type": "application/pdf",
                 "source_book_id": source_book_id,
                 "source_page_start": source_page_start,
@@ -861,19 +983,27 @@ class ScoreProcessingService:
                 "contained_piece_titles": contained_piece_titles,
                 "multi_piece_page": multi_piece_page,
                 "processing_stage": "split_review_needed",
+                "conversion_review_required": False,
+                "advanced_notation_available": True,
             },
             created_at=now,
         )
         db.add(piece)
         db.add(raw_score_version)
+        db.add(cleaned_score_version)
         db.add(job)
         db.add(review_item)
         await db.flush()
+        _record_pdf_first_score_versions(
+            piece_id=piece_id,
+            raw_score_version_id=raw_score_version.id,
+            cleaned_score_version_id=cleaned_score_version.id,
+        )
         return ImportedPieceArtifacts(
             piece=piece,
             raw_score_version=raw_score_version,
             canonical_score_version=None,
-            rendered_score_version=None,
+            rendered_score_version=cleaned_score_version,
             review_item=review_item,
             job=job,
             ocr_metadata={},
@@ -1167,15 +1297,16 @@ class ScoreProcessingService:
             id=str(uuid.uuid4()),
             piece_id=piece.id,
             item_type=ReviewItemType.score_candidate,
-            title=f"Review reconstructed score for {piece.title}",
+            title=f"Edit notation baseline for {piece.title}",
             description=(
-                "Compare the rendered reconstruction against the original PDF "
-                "and approve it only if the default score is ready for students."
+                "Audiveris/MuseScore output is queued for human editing and "
+                "training-data capture. It is not part of student PDF "
+                "metadata approval."
             ),
             status="pending",
             candidate_data={
                 "piece_title": piece.title,
-                "summary": "Async server processing candidate prepared for parent review.",
+                "summary": "Notation baseline queued for human edit workflow.",
                 "confidence": musicxml_result.confidence,
                 "provenance": musicxml_result.provenance,
                 "engine_name": musicxml_result.engine_name,
@@ -1214,7 +1345,8 @@ class ScoreProcessingService:
                 or catalog_metadata.get("contained_piece_titles"),
                 "multi_piece_page": result_data.get("multi_piece_page")
                 or catalog_metadata.get("multi_piece_page"),
-                "processing_stage": "candidate_review_needed",
+                "workflow_lane": "notation_edit",
+                "processing_stage": "notation_edit_queued",
             },
             created_at=now,
         )
@@ -1265,7 +1397,8 @@ class ScoreProcessingService:
             or catalog_metadata.get("contained_piece_titles"),
             "multi_piece_page": result_data.get("multi_piece_page")
             or catalog_metadata.get("multi_piece_page"),
-            "processing_stage": "candidate_review_needed",
+            "workflow_lane": "notation_edit",
+            "processing_stage": "notation_edit_queued",
         }
         job.updated_at = datetime.utcnow()
         processing_settings_store.record_last_error(str(render_error) if render_error else None)
@@ -1412,7 +1545,8 @@ class ScoreProcessingService:
             "rendered_page_count": render_result.page_count,
             "render_diagnostics": render_result.diagnostics,
             "warnings": list(render_result.warnings),
-            "processing_stage": "candidate_review_needed",
+            "workflow_lane": "notation_edit",
+            "processing_stage": "notation_edit_queued",
         }
         job.updated_at = datetime.utcnow()
         piece.status = PieceStatus.review_pending
@@ -1851,6 +1985,38 @@ async def _load_raw_score_version(
         .limit(1)
     )
     return result.scalar_one_or_none()
+
+
+def _write_cleaned_student_score(*, raw_path: Path, output_path: Path) -> None:
+    """Create the v1 student-display artifact without altering the original import."""
+    output_path.parent.mkdir(parents=True, exist_ok=True)
+    output_path.write_bytes(raw_path.read_bytes())
+
+
+def _record_pdf_first_score_versions(
+    *,
+    piece_id: str,
+    raw_score_version_id: str,
+    cleaned_score_version_id: str,
+) -> None:
+    piece_state = PieceStateService()
+    piece_state.set_score_version_metadata(
+        piece_id,
+        raw_score_version_id,
+        artifact_role="original_import",
+        display_rank=100,
+        student_default=False,
+        approved_by_parent=True,
+    )
+    piece_state.set_score_version_metadata(
+        piece_id,
+        cleaned_score_version_id,
+        artifact_role="cleaned_pdf",
+        replaces_score_version_id=raw_score_version_id,
+        display_rank=10,
+        student_default=True,
+        approved_by_parent=False,
+    )
 
 
 def _blocked_render_result(rendered_path: Path, exc: Exception) -> RenderResult:

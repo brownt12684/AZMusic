@@ -12,13 +12,15 @@ from pathlib import Path
 from fastapi import APIRouter, Depends, File, Form, HTTPException, Request, UploadFile
 from fastapi.responses import FileResponse
 from pydantic import ValidationError
-from sqlalchemy import select
+from sqlalchemy import select, update
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy.orm import selectinload
 
 from server.config import settings
 from server.database import get_db
 from server.models.orm import (
+    BackgroundJob,
+    JobStatus,
     MediaAsset,
     Piece,
     PieceHistoryDraft,
@@ -29,6 +31,7 @@ from server.models.orm import (
 )
 from server.models.schemas import (
     MediaAssetResponse,
+    JobResponse,
     PieceCreate,
     PieceDetailResponse,
     PieceHistoryDraftCreate,
@@ -64,6 +67,7 @@ from server.services.score_processing import (
     _extract_pdf_page_range,
     _repair_multi_piece_review_pdf_titles,
 )
+from server.services.training_catalog import TrainingCatalogError, ensure_omr_baseline_copy
 
 router = APIRouter()
 _piece_state_service = PieceStateService()
@@ -170,6 +174,30 @@ def _score_version_download_metadata(file_path: Path) -> tuple[str, int | None, 
 
 
 def _score_version_role(score_version: ScoreVersion) -> str:
+    workflow_metadata = _piece_state_service.score_version_metadata(
+        score_version.piece_id,
+        score_version.id,
+    )
+    artifact_role = workflow_metadata.get("artifact_role")
+    if isinstance(artifact_role, str) and artifact_role.strip():
+        normalized_role = artifact_role.strip()
+        if normalized_role == "original_import":
+            return "original_pdf"
+        if normalized_role in {
+            "cleaned_pdf",
+            "musescore_render_pdf",
+            "corrected_render_pdf",
+            "human_approved_render_pdf",
+        }:
+            return "processed_render_pdf"
+        if normalized_role in {
+            "musicxml_candidate",
+            "corrected_musicxml",
+            "human_approved_musicxml",
+            "omr_baseline_musicxml",
+        }:
+            return "canonical_musicxml"
+        return normalized_role
     file_path = Path(score_version.file_path)
     suffix = file_path.suffix.lower()
     name = file_path.name.lower()
@@ -192,6 +220,10 @@ def _piece_to_detail_response(request: Request, piece: Piece) -> PieceDetailResp
     for score_version in sorted_score_versions:
         file_path = Path(score_version.file_path)
         content_type, file_size_bytes, content_sha256 = _score_version_download_metadata(file_path)
+        workflow_metadata = _piece_state_service.score_version_metadata(
+            piece.id,
+            score_version.id,
+        )
         score_versions.append(
             ScoreVersionResponse(
                 id=score_version.id,
@@ -203,6 +235,14 @@ def _piece_to_detail_response(request: Request, piece: Piece) -> PieceDetailResp
                 file_size_bytes=file_size_bytes,
                 content_sha256=content_sha256,
                 score_version_role=_score_version_role(score_version),
+                artifact_role=_metadata_string(workflow_metadata, "artifact_role"),
+                replaces_score_version_id=_metadata_string(
+                    workflow_metadata,
+                    "replaces_score_version_id",
+                ),
+                display_rank=_metadata_int(workflow_metadata, "display_rank") or 0,
+                student_default=bool(workflow_metadata.get("student_default")),
+                approved_by_parent=bool(workflow_metadata.get("approved_by_parent")),
                 is_default=score_version.is_default,
                 created_at=score_version.created_at,
             )
@@ -311,6 +351,38 @@ async def _load_raw_score_version(db: AsyncSession, piece_id: str) -> ScoreVersi
     return result.scalar_one_or_none()
 
 
+async def _load_student_default_score_version(
+    db: AsyncSession,
+    piece_id: str,
+) -> ScoreVersion | None:
+    result = await db.execute(
+        select(ScoreVersion)
+        .where(ScoreVersion.piece_id == piece_id)
+        .order_by(ScoreVersion.is_default.desc(), ScoreVersion.created_at.desc())
+    )
+    versions = result.scalars().all()
+    for version in versions:
+        metadata = _piece_state_service.score_version_metadata(piece_id, version.id)
+        if metadata.get("student_default") and Path(version.file_path).suffix.lower() in {
+            ".pdf",
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".webp",
+            ".tif",
+            ".tiff",
+        }:
+            return version
+    for version in versions:
+        metadata = _piece_state_service.score_version_metadata(piece_id, version.id)
+        if metadata.get("artifact_role") == "cleaned_pdf":
+            return version
+    for version in versions:
+        if version.is_default and Path(version.file_path).suffix.lower() in _SUPPORTED_IMPORT_EXTENSIONS:
+            return version
+    return await _load_raw_score_version(db, piece_id)
+
+
 async def _load_existing_score_version_file(
     db: AsyncSession,
     *,
@@ -397,6 +469,69 @@ async def _mark_review_render_refreshed(
                 candidate_data["warnings"] = sorted(
                     set(list(candidate_data.get("warnings") or []) + warnings)
                 )
+        if not matched_top_level and not matched_option:
+            continue
+        item.candidate_data = candidate_data
+        changed = True
+    if changed:
+        await db.commit()
+
+
+async def _mark_review_human_edited(
+    db: AsyncSession,
+    *,
+    piece_id: str,
+    canonical_score_version_id: str,
+    rendered_score_version_id: str,
+    uploaded_file_name: str,
+    baseline_path: Path,
+    edited_at: str,
+) -> None:
+    result = await db.execute(
+        select(ReviewItem).where(
+            ReviewItem.piece_id == piece_id,
+            ReviewItem.status == "pending",
+        )
+    )
+    changed = False
+    for item in result.scalars().all():
+        candidate_data = dict(item.candidate_data or {})
+        matched_top_level = (
+            candidate_data.get("canonical_score_version_id") == canonical_score_version_id
+            and candidate_data.get("score_version_id") == rendered_score_version_id
+        )
+        matched_option = False
+        updated_options = []
+        for option in candidate_data.get("omr_candidates") or []:
+            if not isinstance(option, dict):
+                continue
+            updated_option = dict(option)
+            if (
+                updated_option.get("canonical_score_version_id")
+                == canonical_score_version_id
+                and updated_option.get("score_version_id") == rendered_score_version_id
+            ):
+                updated_option.update(
+                    {
+                        "human_edited_musicxml": True,
+                        "human_edited_at": edited_at,
+                        "human_edited_file_name": uploaded_file_name,
+                        "omr_baseline_file_path": str(baseline_path),
+                    }
+                )
+                matched_option = True
+            updated_options.append(updated_option)
+        if matched_option:
+            candidate_data["omr_candidates"] = updated_options
+        if matched_top_level:
+            candidate_data.update(
+                {
+                    "human_edited_musicxml": True,
+                    "human_edited_at": edited_at,
+                    "human_edited_file_name": uploaded_file_name,
+                    "omr_baseline_file_path": str(baseline_path),
+                }
+            )
         if not matched_top_level and not matched_option:
             continue
         item.candidate_data = candidate_data
@@ -760,7 +895,7 @@ async def push_piece_to_profiles(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    """Assign an approved processed piece or original PDF fallback to profiles."""
+    """Assign the current student PDF/default artifact to profiles."""
     piece = await db.get(Piece, piece_id)
     if not piece:
         raise HTTPException(status_code=404, detail="Piece not found")
@@ -785,15 +920,68 @@ async def push_piece_to_profiles(
         )
         if default_result.scalar_one_or_none() is None:
             raw_version.is_default = True
-    elif piece.status != PieceStatus.approved and not (
-        metadata["piece_kind"] == "book" and can_push_original
-    ):
+        _piece_state_service.set_score_version_metadata(
+            piece_id,
+            raw_version.id,
+            artifact_role="original_import",
+            student_default=True,
+            approved_by_parent=True,
+            display_rank=10,
+        )
+    elif body.mode in {PiecePushMode.processed, PiecePushMode.cleaned_pdf}:
+        student_version = await _load_student_default_score_version(db, piece_id)
+        if student_version is None:
+            raise HTTPException(
+                status_code=409,
+                detail="No student PDF is available to push yet.",
+            )
+        if piece.status != PieceStatus.approved and not (
+            metadata["piece_kind"] == "book" and can_push_original
+        ):
+            raise HTTPException(
+                status_code=409,
+                detail=(
+                    "Approve metadata before pushing the student PDF. "
+                    "Use original_pdf mode only for an explicit fallback push."
+                ),
+            )
+        await db.execute(
+            update(ScoreVersion)
+            .where(ScoreVersion.piece_id == piece_id)
+            .values(is_default=False)
+        )
+        student_version.is_default = True
+        workflow_metadata = _piece_state_service.score_version_metadata(
+            piece_id,
+            student_version.id,
+        )
+        raw_book_fallback = (
+            metadata["piece_kind"] == "book"
+            and student_version.version_type == ScoreVersionType.raw
+            and workflow_metadata.get("artifact_role") != "cleaned_pdf"
+        )
+        if (
+            student_version.version_type != ScoreVersionType.approved
+            and not raw_book_fallback
+        ):
+            student_version.version_type = ScoreVersionType.approved
+        artifact_role = (
+            "original_import"
+            if raw_book_fallback
+            else workflow_metadata.get("artifact_role") or "cleaned_pdf"
+        )
+        _piece_state_service.set_score_version_metadata(
+            piece_id,
+            student_version.id,
+            artifact_role=artifact_role,
+            student_default=True,
+            approved_by_parent=True,
+            display_rank=workflow_metadata.get("display_rank") or 10,
+        )
+    else:
         raise HTTPException(
-            status_code=409,
-            detail=(
-                "Only approved processed pieces can be pushed by default. "
-                "Use original_pdf mode to push the original fallback."
-            ),
+            status_code=400,
+            detail="Unsupported push mode.",
         )
 
     _piece_state_service.assign_profiles(piece_id, body.profile_ids)
@@ -803,6 +991,69 @@ async def push_piece_to_profiles(
     if refreshed_piece is None:
         raise HTTPException(status_code=404, detail="Piece not found")
     return _piece_to_detail_response(request, refreshed_piece)
+
+
+@router.post("/{piece_id}/notation-lab/start", response_model=JobResponse)
+async def start_notation_lab_processing(
+    piece_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Queue optional MusicXML/MuseScore reconstruction after PDF-first approval."""
+    piece = await db.get(Piece, piece_id)
+    if not piece:
+        raise HTTPException(status_code=404, detail="Piece not found")
+    raw_version = await _load_raw_score_version(db, piece_id)
+    if raw_version is None:
+        raise HTTPException(
+            status_code=409,
+            detail="No original score is available for notation processing.",
+        )
+    metadata = _piece_state_service.metadata_for_piece(piece)
+    now = datetime.utcnow()
+    job = BackgroundJob(
+        id=str(uuid.uuid4()),
+        piece_id=piece_id,
+        job_type="score_processing",
+        status=JobStatus.queued,
+        progress=0.0,
+        result_data={
+            "raw_score_version_id": raw_version.id,
+            "processing_stage": "queued_after_metadata_review",
+            "source_book_id": metadata["source_book_id"],
+            "source_page_start": metadata["source_page_start"],
+            "source_page_end": metadata["source_page_end"],
+            "primary_instrument": metadata["primary_instrument"],
+            "contained_piece_titles": metadata["catalog_metadata"].get(
+                "contained_piece_titles"
+            )
+            if isinstance(metadata["catalog_metadata"], dict)
+            else None,
+            "multi_piece_page": metadata["catalog_metadata"].get("multi_piece_page")
+            if isinstance(metadata["catalog_metadata"], dict)
+            else None,
+        },
+        created_at=now,
+        updated_at=now,
+    )
+    piece.status = PieceStatus.processing
+    piece.updated_at = now
+    db.add(job)
+    await db.commit()
+    await db.refresh(job)
+    return JobResponse(
+        id=job.id,
+        piece_id=job.piece_id,
+        piece_title=piece.title,
+        piece_composer=piece.composer,
+        piece_status=piece.status,
+        job_type=job.job_type,
+        status=job.status,
+        progress=job.progress,
+        error_message=job.error_message,
+        result_data=job.result_data,
+        created_at=job.created_at,
+        updated_at=job.updated_at,
+    )
 
 
 @router.post("/{piece_id}/workflow/pull-for-edits")
@@ -1092,6 +1343,15 @@ async def upload_edited_score_version_candidate(
             detail="Rendered score version must be a PDF.",
         )
 
+    try:
+        baseline_path = ensure_omr_baseline_copy(
+            piece_id=piece_id,
+            canonical_score_version=canonical_version,
+            piece_state_service=_piece_state_service,
+        )
+    except TrainingCatalogError as exc:
+        raise HTTPException(status_code=409, detail=str(exc)) from exc
+
     if canonical_path.suffix.lower() == upload_suffix or upload_suffix in {
         ".musicxml",
         ".xml",
@@ -1111,8 +1371,20 @@ async def upload_edited_score_version_candidate(
         rendered_version=rendered_version,
         rendered_path=rendered_path,
     )
+    edited_at = datetime.utcnow().isoformat()
+    await _mark_review_human_edited(
+        db,
+        piece_id=piece_id,
+        canonical_score_version_id=canonical_version.id,
+        rendered_score_version_id=rendered_version.id,
+        uploaded_file_name=upload_name,
+        baseline_path=baseline_path,
+        edited_at=edited_at,
+    )
     response["uploaded_file_name"] = upload_name
     response["canonical_file_path"] = str(target_path)
+    response["omr_baseline_file_path"] = str(baseline_path)
+    response["human_edited_at"] = edited_at
     return response
 
 
@@ -1712,7 +1984,21 @@ async def _refresh_pending_candidate_outputs_for_piece(
 def _metadata_string(metadata: dict, key: str) -> str | None:
     value = metadata.get(key)
     if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
+def _metadata_int(metadata: dict, key: str) -> int | None:
+    value = metadata.get(key)
+    if isinstance(value, bool):
+        return None
+    if isinstance(value, int):
         return value
+    if isinstance(value, str):
+        try:
+            return int(value.strip())
+        except ValueError:
+            return None
     return None
 
 

@@ -9,6 +9,8 @@ import pytest
 import server.database as database_module
 import server.main as main_module
 import server.routers.pieces as pieces_router_module
+import server.routers.review as review_router_module
+import server.services.local_llm as local_llm_module
 import server.services.processing_settings as processing_settings_module
 import server.services.server_urls as server_urls_module
 from fastapi.testclient import TestClient
@@ -21,6 +23,7 @@ from server.models.orm import Base
 from server.services import book_preprocessing as book_preprocessing_module
 from server.services import processing_engines as processing_engines_module
 from server.services import score_processing as score_processing_module
+from server.services.local_llm import LocalLlmScoreReviewResult, LocalLlmScoreVerificationResult
 from server.services.ocr_metadata import OcrMetadataResult, infer_metadata_from_text
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
@@ -86,6 +89,40 @@ def _xml_local_name(node) -> str:
     return node.tag.rsplit("}", maxsplit=1)[-1]
 
 
+def _start_and_run_notation_lab(
+    client: TestClient,
+    piece_id: str,
+    *,
+    max_retries: int = 0,
+) -> dict:
+    start_response = client.post(f"/api/v1/pieces/{piece_id}/notation-lab/start")
+    assert start_response.status_code == 200
+    job_id = start_response.json()["id"]
+    processed = asyncio.run(
+        JobDispatcher(poll_interval_seconds=0.01, max_retries=max_retries).run_once()
+    )
+    assert processed is True
+    job_response = client.get(f"/api/v1/jobs/{job_id}")
+    assert job_response.status_code == 200
+    return job_response.json()
+
+
+def _review_item_for_piece(
+    client: TestClient,
+    piece_id: str,
+    *,
+    processing_stage: str | None = None,
+) -> dict:
+    for item in client.get("/api/v1/review/").json():
+        if item["piece_id"] != piece_id:
+            continue
+        if processing_stage is None:
+            return item
+        if item["candidate_data"].get("processing_stage") == processing_stage:
+            return item
+    raise AssertionError(f"No review item found for {piece_id} at stage {processing_stage}.")
+
+
 @pytest.fixture()
 def api_client(tmp_path, monkeypatch):
     test_db_path = tmp_path / "azmusic_test.db"
@@ -126,7 +163,7 @@ def api_client(tmp_path, monkeypatch):
 
 
 def test_api_route_groups_match_documentation(api_client) -> None:
-    client, _ = api_client
+    client, storage_path = api_client
 
     assert client.get("/api/v1/").status_code == 404
     assert client.get("/api/v1/pieces/").status_code == 200
@@ -208,12 +245,15 @@ def test_piece_detail_exposes_download_metadata(api_client) -> None:
     assert raw_version["file_size_bytes"] == len(raw_pdf_bytes)
     assert raw_version["content_sha256"] == hashlib.sha256(raw_pdf_bytes).hexdigest()
 
-    canonical_version = next(
-        version for version in score_versions if version["file_path"].endswith(".musicxml")
+    cleaned_version = next(
+        version
+        for version in score_versions
+        if version["artifact_role"] == "cleaned_pdf"
     )
-    assert canonical_version["content_type"] == "application/vnd.recordare.musicxml+xml"
-    assert canonical_version["file_size_bytes"] > 0
-    assert len(canonical_version["content_sha256"]) == 64
+    assert cleaned_version["content_type"] == "application/pdf"
+    assert cleaned_version["file_size_bytes"] == len(raw_pdf_bytes)
+    assert cleaned_version["content_sha256"] == hashlib.sha256(raw_pdf_bytes).hexdigest()
+    assert cleaned_version["student_default"] is True
 
 
 def test_pdf_import_uses_filename_metadata_suggestion_when_fields_missing(api_client) -> None:
@@ -247,8 +287,10 @@ def test_pdf_import_uses_filename_metadata_suggestion_when_fields_missing(api_cl
     assert filename_suggestion["fields"]["composer"] == "Bach"
     assert filename_suggestion["fields"]["source_file_name"] == "Bach - Minuet 1.pdf"
 
-    review_item = next(
-        item for item in client.get("/api/v1/review/").json() if item["piece_id"] == piece_id
+    review_item = _review_item_for_piece(
+        client,
+        piece_id,
+        processing_stage="metadata_review_needed",
     )
     assert review_item["candidate_data"]["piece_title"] == "Minuet 1"
     assert review_item["candidate_data"]["catalog_metadata"]["title"] == "Minuet 1"
@@ -353,12 +395,15 @@ def test_image_import_uses_ocr_metadata_for_parent_review(api_client, monkeypatc
     assert piece["catalog_suggestions"][1]["source"] == "ocr_text"
     assert (storage_path / "pieces" / piece_id / "raw_source.jpg").exists()
 
-    review_item = next(
-        item for item in client.get("/api/v1/review/").json() if item["piece_id"] == piece_id
+    review_item = _review_item_for_piece(
+        client,
+        piece_id,
+        processing_stage="metadata_review_needed",
     )
     assert review_item["candidate_data"]["piece_title"] == "Morning Study"
     assert review_item["candidate_data"]["raw_file_url"].endswith("/file")
-    assert "rendered_file_url" not in review_item["candidate_data"]
+    assert review_item["candidate_data"]["rendered_file_url"].endswith("/file")
+    assert review_item["candidate_data"]["student_artifact"] == "cleaned_pdf"
 
     approve_response = client.post(
         f"/api/v1/review/{review_item['id']}",
@@ -368,6 +413,7 @@ def test_image_import_uses_ocr_metadata_for_parent_review(api_client, monkeypatc
     detail = client.get(f"/api/v1/pieces/{piece_id}").json()
     approved_raw = next(version for version in detail["score_versions"] if version["is_default"])
     assert approved_raw["version_type"] == "approved"
+    assert approved_raw["artifact_role"] == "cleaned_pdf"
     assert approved_raw["content_type"] == "image/jpeg"
 
 
@@ -598,8 +644,19 @@ def test_pdf_import_processing_and_approval_flow(api_client) -> None:
     detail = piece_detail.json()
     assert detail["status"] == "review_pending"
     assert detail["file_name"] == "canon_in_d.pdf"
-    assert len(detail["score_versions"]) == 3
-    assert detail["score_versions"][0]["is_default"] is True
+    assert len(detail["score_versions"]) == 2
+    cleaned_version = next(
+        version for version in detail["score_versions"] if version["artifact_role"] == "cleaned_pdf"
+    )
+    raw_version = next(
+        version
+        for version in detail["score_versions"]
+        if version["artifact_role"] == "original_import"
+    )
+    assert cleaned_version["is_default"] is True
+    assert cleaned_version["student_default"] is True
+    assert cleaned_version["score_version_role"] == "processed_render_pdf"
+    assert raw_version["score_version_role"] == "original_pdf"
 
     review_queue = client.get("/api/v1/review/")
     assert review_queue.status_code == 200
@@ -608,41 +665,34 @@ def test_pdf_import_processing_and_approval_flow(api_client) -> None:
     assert review_item["item_type"] == "score_candidate"
     assert review_item["candidate_data"]["raw_file_url"].endswith("/file")
     assert review_item["candidate_data"]["rendered_file_url"].endswith("/file")
-    assert review_item["candidate_data"]["canonical_file_url"].endswith("/file")
-    assert review_item["candidate_data"]["engine_name"] == "stub"
-    assert review_item["candidate_data"]["renderer_name"] == "raw_pdf_fallback"
-    assert review_item["candidate_data"]["warnings"]
+    assert "canonical_file_url" not in review_item["candidate_data"]
+    assert review_item["candidate_data"]["student_artifact"] == "cleaned_pdf"
+    assert review_item["candidate_data"]["conversion_review_required"] is False
+    assert review_item["candidate_data"]["advanced_notation_available"] is True
+    assert review_item["candidate_data"]["processing_stage"] == "metadata_review_needed"
     processed_metadata = review_item["candidate_data"]["processed_metadata"]
-    assert processed_metadata["title"] == "Canon in D"
-    assert processed_metadata["composer"] == "Pachelbel"
     assert "primary_instrument" not in processed_metadata
-    assert processed_metadata["key_signature"] == "C major"
-    assert processed_metadata["time_signature"] == "4/4"
-    assert processed_metadata["tempo"] == "96"
-    assert processed_metadata["measure_count"] == 1
 
     detail_with_metadata = client.get(f"/api/v1/pieces/{piece_id}").json()
-    assert detail_with_metadata["key_signature"] == "C major"
-    assert detail_with_metadata["tempo"] == "96"
-    assert detail_with_metadata["processed_metadata"]["title"] == "Canon in D"
+    assert detail_with_metadata["processed_metadata"] == processed_metadata
 
     raw_file_response = client.get(review_item["candidate_data"]["raw_file_url"])
     rendered_file_response = client.get(review_item["candidate_data"]["rendered_file_url"])
-    canonical_file_response = client.get(review_item["candidate_data"]["canonical_file_url"])
     assert raw_file_response.status_code == 200
     assert rendered_file_response.status_code == 200
-    assert canonical_file_response.status_code == 200
+    assert raw_file_response.content == rendered_file_response.content
 
     piece_storage_dir = storage_path / "pieces" / piece_id
     assert (piece_storage_dir / "raw_source.pdf").exists()
-    assert (piece_storage_dir / "candidate.musicxml").exists()
-    assert (piece_storage_dir / "candidate_review.pdf").exists()
+    assert (piece_storage_dir / "student_cleaned.pdf").exists()
+    assert not (piece_storage_dir / "candidate.musicxml").exists()
 
     jobs = client.get("/api/v1/jobs/")
     assert jobs.status_code == 200
     job = next(job for job in jobs.json() if job["piece_id"] == piece_id)
     assert job["status"] == "succeeded"
-    assert job["result_data"]["engine_name"] == "stub"
+    assert job["job_type"] == "pdf_cleaning"
+    assert job["result_data"]["student_artifact"] == "cleaned_pdf"
 
     approve_response = client.post(
         f"/api/v1/review/{review_item['id']}",
@@ -663,7 +713,13 @@ def test_pdf_import_processing_and_approval_flow(api_client) -> None:
         json={"profile_ids": ["student-alyse"]},
     )
     assert push_response.status_code == 200
-    assert push_response.json()["visible_to_profile_ids"] == ["student-alyse"]
+    pushed_detail = push_response.json()
+    assert pushed_detail["visible_to_profile_ids"] == ["student-alyse"]
+    pushed_default = next(
+        version for version in pushed_detail["score_versions"] if version["is_default"]
+    )
+    assert pushed_default["artifact_role"] == "cleaned_pdf"
+    assert pushed_default["approved_by_parent"] is True
 
     assigned_pieces = client.get("/api/v1/pieces/assigned/student-alyse")
     assert assigned_pieces.status_code == 200
@@ -725,11 +781,126 @@ def test_pdf_import_processing_and_approval_flow(api_client) -> None:
     assert approved_payload["status"] == "approved"
 
 
+def test_cloud_manifest_includes_student_pdf_notes_and_annotations(api_client) -> None:
+    client, storage_path = api_client
+
+    import_response = client.post(
+        "/api/v1/pieces/import",
+        data={"title": "Cloud Sync Etude", "composer": "Family Composer"},
+        files={
+            "file": (
+                "cloud_sync_etude.pdf",
+                _valid_pdf_bytes(),
+                "application/pdf",
+            )
+        },
+    )
+    assert import_response.status_code == 200
+    piece_id = import_response.json()["id"]
+    review_item = _review_item_for_piece(
+        client,
+        piece_id,
+        processing_stage="metadata_review_needed",
+    )
+    approve_response = client.post(
+        f"/api/v1/review/{review_item['id']}",
+        json={"action": "approve"},
+    )
+    assert approve_response.status_code == 200
+    push_response = client.post(
+        f"/api/v1/pieces/{piece_id}/push",
+        json={"profile_ids": ["student-cloud"]},
+    )
+    assert push_response.status_code == 200
+
+    note_response = client.post(
+        "/api/v1/notes/sync",
+        json={
+            "client_id": "parent-windows",
+            "profile_id": "student-cloud",
+            "notes": [
+                {
+                    "id": "note-1",
+                    "profile_id": "student-cloud",
+                    "piece_id": piece_id,
+                    "page_number": 1,
+                    "payload": {"text": "Watch measure 4."},
+                }
+            ],
+        },
+    )
+    assert note_response.status_code == 200
+    assert note_response.json()["accepted_count"] == 1
+
+    annotation_response = client.post(
+        "/api/v1/annotations/sync",
+        json={
+            "client_id": "parent-windows",
+            "profile_id": "student-cloud",
+            "annotations": [
+                {
+                    "id": "annotation-1",
+                    "profile_id": "student-cloud",
+                    "piece_id": piece_id,
+                    "page_number": 1,
+                    "payload": {"strokes": [{"points": [[10, 10], [20, 20]]}]},
+                }
+            ],
+        },
+    )
+    assert annotation_response.status_code == 200
+    assert annotation_response.json()["accepted_count"] == 1
+
+    initial_status = client.get("/api/v1/cloud/status")
+    assert initial_status.status_code == 200
+    assert initial_status.json()["connected"] is False
+
+    connect_response = client.post(
+        "/api/v1/cloud/connect/github",
+        json={
+            "repository": "family/azmusic-sync-private",
+            "branch": "main",
+            "path_prefix": "azmusic-test",
+        },
+    )
+    assert connect_response.status_code == 200
+    assert connect_response.json()["connected"] is True
+
+    sync_response = client.post("/api/v1/cloud/sync")
+    assert sync_response.status_code == 200
+    sync_payload = sync_response.json()
+    assert sync_payload["pieces_count"] == 1
+    assert sync_payload["score_versions_count"] == 2
+    assert sync_payload["assignments_count"] == 1
+    assert sync_payload["notes_count"] == 1
+    assert sync_payload["annotations_count"] == 1
+
+    manifest_path = Path(sync_payload["family_manifest_path"])
+    assert manifest_path == storage_path / "cloud_sync" / "family-manifest.json"
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["account_scope"] == "parent_teacher"
+    assert manifest["pieces"][0]["state"]["visible_to_profile_ids"] == ["student-cloud"]
+    assert manifest["notes"][0]["payload"]["text"] == "Watch measure 4."
+    assert manifest["annotations"][0]["payload"]["strokes"][0]["points"] == [
+        [10, 10],
+        [20, 20],
+    ]
+    assert any(
+        version["workflow"].get("artifact_role") == "cleaned_pdf"
+        and version["workflow"].get("student_default") is True
+        for version in manifest["score_versions"]
+    )
+
+    restore_response = client.post("/api/v1/cloud/restore")
+    assert restore_response.status_code == 200
+    assert restore_response.json()["pieces_count"] == 1
+
+
 def test_parent_can_compare_and_approve_alternate_omr_candidate(
     api_client,
     monkeypatch,
 ) -> None:
-    client, _ = api_client
+    client, storage_path = api_client
 
     def fake_generate(
         self,
@@ -832,9 +1003,14 @@ def test_parent_can_compare_and_approve_alternate_omr_candidate(
     )
     assert import_response.status_code == 200
     piece_id = import_response.json()["id"]
+    notation_job = _start_and_run_notation_lab(client, piece_id)
+    assert notation_job["status"] == "succeeded"
 
     review_item = next(
-        item for item in client.get("/api/v1/review/").json() if item["piece_id"] == piece_id
+        item
+        for item in client.get("/api/v1/review/").json()
+        if item["piece_id"] == piece_id
+        and item["candidate_data"].get("processing_stage") == "notation_edit_queued"
     )
     candidate_data = review_item["candidate_data"]
     candidates = candidate_data["omr_candidates"]
@@ -871,6 +1047,17 @@ def test_parent_can_compare_and_approve_alternate_omr_candidate(
         if version["id"] == homr_candidate["canonical_score_version_id"]
     )
     assert canonical_version["version_type"] == "approved"
+    assert canonical_version["artifact_role"] == "human_approved_musicxml"
+    assert approved_candidate_data["human_approved_for_training"] is True
+    sample_id = approved_candidate_data["training_sample_id"]
+    manifest_path = storage_path / "training_samples" / sample_id / "manifest.json"
+    assert manifest_path.exists()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["human_edit_status"] == "accepted_as_is"
+    assert manifest["selected_omr_candidate_id"] == homr_candidate["candidate_id"]
+    assert manifest["files"]["omr_baseline_musicxml"]["sha256"] == manifest["files"][
+        "final_musicxml"
+    ]["sha256"]
 
 
 def test_parent_can_open_and_rerender_musescore_candidate(api_client, monkeypatch) -> None:
@@ -889,6 +1076,8 @@ def test_parent_can_open_and_rerender_musescore_candidate(api_client, monkeypatc
     )
     assert import_response.status_code == 200
     piece_id = import_response.json()["id"]
+    notation_job = _start_and_run_notation_lab(client, piece_id)
+    assert notation_job["status"] == "succeeded"
 
     detail = client.get(f"/api/v1/pieces/{piece_id}").json()
     canonical_version = next(
@@ -1121,6 +1310,8 @@ def test_render_blocked_candidate_keeps_musicxml_and_requires_rerender(
     )
     assert import_response.status_code == 200
     piece_id = import_response.json()["id"]
+    failed_job = _start_and_run_notation_lab(client, piece_id)
+    assert failed_job["status"] == "failed"
 
     detail = client.get(f"/api/v1/pieces/{piece_id}").json()
     canonical_version = next(
@@ -1133,8 +1324,10 @@ def test_render_blocked_candidate_keeps_musicxml_and_requires_rerender(
         for version in detail["score_versions"]
         if version["file_path"].endswith("_review.pdf")
     )
-    review_item = next(
-        item for item in client.get("/api/v1/review/").json() if item["piece_id"] == piece_id
+    review_item = _review_item_for_piece(
+        client,
+        piece_id,
+        processing_stage="notation_edit_queued",
     )
     candidate_data = review_item["candidate_data"]
     assert candidate_data["render_validation_status"] == "render_failed"
@@ -1142,7 +1335,11 @@ def test_render_blocked_candidate_keeps_musicxml_and_requires_rerender(
     assert "rendered_file_url" not in candidate_data
     assert (storage_path / "pieces" / piece_id / "candidate.musicxml").exists()
 
-    failed_jobs = [job for job in client.get("/api/v1/jobs/").json() if job["piece_id"] == piece_id]
+    failed_jobs = [
+        job
+        for job in client.get("/api/v1/jobs/").json()
+        if job["piece_id"] == piece_id and job["job_type"] == "score_processing"
+    ]
     assert failed_jobs[0]["status"] == "failed"
     assert "Rendered PDF is empty" in failed_jobs[0]["error_message"]
 
@@ -1229,9 +1426,7 @@ def test_retry_failed_render_job_reuses_existing_musicxml(
     )
     assert import_response.status_code == 200
     piece_id = import_response.json()["id"]
-    failed_job = next(
-        job for job in client.get("/api/v1/jobs/").json() if job["piece_id"] == piece_id
-    )
+    failed_job = _start_and_run_notation_lab(client, piece_id)
     assert failed_job["status"] == "failed"
     assert failed_job["result_data"]["render_diagnostics"]["exit_code"] == 1320
 
@@ -1291,8 +1486,10 @@ def test_retry_failed_render_job_reuses_existing_musicxml(
     assert refreshed_job["result_data"]["render_validation_status"] == "valid"
     assert refreshed_job["result_data"]["render_diagnostics"]["exit_code"] == 0
 
-    refreshed_item = next(
-        item for item in client.get("/api/v1/review/").json() if item["piece_id"] == piece_id
+    refreshed_item = _review_item_for_piece(
+        client,
+        piece_id,
+        processing_stage="notation_edit_queued",
     )
     candidate_data = refreshed_item["candidate_data"]
     assert candidate_data["render_validation_status"] == "valid"
@@ -1319,6 +1516,8 @@ def test_parent_can_upload_edited_musicxml_and_refresh_review_pdf(
     )
     assert import_response.status_code == 200
     piece_id = import_response.json()["id"]
+    notation_job = _start_and_run_notation_lab(client, piece_id)
+    assert notation_job["status"] == "succeeded"
     detail = client.get(f"/api/v1/pieces/{piece_id}").json()
     canonical_version = next(
         version
@@ -1330,9 +1529,12 @@ def test_parent_can_upload_edited_musicxml_and_refresh_review_pdf(
         for version in detail["score_versions"]
         if version["file_path"].endswith("_review.pdf")
     )
-    review_item = next(
-        item for item in client.get("/api/v1/review/").json() if item["piece_id"] == piece_id
+    review_item = _review_item_for_piece(
+        client,
+        piece_id,
+        processing_stage="notation_edit_queued",
     )
+    original_omr_bytes = Path(canonical_version["file_path"]).read_bytes()
     edited_musicxml = b"""<?xml version="1.0" encoding="UTF-8"?>
 <score-partwise version="4.0"><movement-title>Parent Corrected</movement-title></score-partwise>
 """
@@ -1367,8 +1569,12 @@ def test_parent_can_upload_edited_musicxml_and_refresh_review_pdf(
     assert payload["uploaded_file_name"] == "edited_candidate.musicxml"
     assert payload["renderer_version"] == "parent-upload-test"
     assert payload["rendered_content_sha256"]
+    assert payload["omr_baseline_file_path"]
 
     piece_dir = storage_path / "pieces" / piece_id
+    baseline_path = Path(payload["omr_baseline_file_path"])
+    assert baseline_path.exists()
+    assert baseline_path.read_bytes() == original_omr_bytes
     assert (piece_dir / "candidate.musicxml").read_bytes() == edited_musicxml
     assert (piece_dir / "candidate_review.pdf").read_bytes() == (
         b"%PDF-1.4\n%rerendered from parent upload\n"
@@ -1379,6 +1585,31 @@ def test_parent_can_upload_edited_musicxml_and_refresh_review_pdf(
     assert candidate_data["renderer_name"] == "musescore"
     assert candidate_data["renderer_version"] == "parent-upload-test"
     assert "render refreshed from uploaded MusicXML" in candidate_data["warnings"]
+    assert candidate_data["human_edited_musicxml"] is True
+    assert candidate_data["omr_baseline_file_path"] == str(baseline_path)
+
+    approve_response = client.post(
+        f"/api/v1/review/{review_item['id']}",
+        json={"action": "approve"},
+    )
+    assert approve_response.status_code == 200
+    approved_data = approve_response.json()["candidate_data"]
+    assert approved_data["human_approved_for_training"] is True
+    sample_id = approved_data["training_sample_id"]
+    manifest_path = storage_path / "training_samples" / sample_id / "manifest.json"
+    assert manifest_path.exists()
+    manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
+    assert manifest["human_edit_status"] == "human_edited"
+    assert manifest["files"]["omr_baseline_musicxml"]["sha256"] == hashlib.sha256(
+        original_omr_bytes
+    ).hexdigest()
+    assert manifest["files"]["final_musicxml"]["sha256"] == hashlib.sha256(
+        edited_musicxml
+    ).hexdigest()
+
+    samples_response = client.get("/api/v1/debug/training-samples")
+    assert samples_response.status_code == 200
+    assert samples_response.json()["sample_count"] == 1
 
     invalid_response = client.post(
         f"/api/v1/pieces/{piece_id}/score_versions/{canonical_version['id']}/edited-candidate",
@@ -1603,14 +1834,19 @@ def test_book_pdf_import_without_split_hints_uses_preprocessing_baseline(
     )
     assert approve_response.status_code == 200
     fanfare_piece = client.get(f"/api/v1/pieces/{fanfare_review['piece_id']}").json()
-    assert fanfare_piece["status"] == "processing"
+    assert fanfare_piece["status"] == "approved"
+    default_version = next(
+        version for version in fanfare_piece["score_versions"] if version["is_default"]
+    )
+    assert default_version["artifact_role"] == "cleaned_pdf"
+    assert default_version["student_default"] is True
     jobs_after_approval = client.get("/api/v1/jobs/").json()
     queued_jobs = [
         job
         for job in jobs_after_approval
         if job["piece_id"] == fanfare_review["piece_id"] and job["job_type"] == "score_processing"
     ]
-    assert queued_jobs[0]["status"] == "queued"
+    assert queued_jobs == []
 
 
 def test_likely_book_pdf_import_auto_uses_preprocessing(
@@ -2301,6 +2537,222 @@ def test_homr_engine_collects_musicxml_output(tmp_path, monkeypatch) -> None:
     assert result.metadata["omr_attempts"][0]["engine"] == "homr"
 
 
+def test_legato_engine_converts_abc_to_musicxml(tmp_path, monkeypatch) -> None:
+    raw_image = tmp_path / "source.png"
+    Image.new("RGB", (200, 120), "white").save(raw_image)
+    output_path = tmp_path / "candidate.musicxml"
+    fake_legato = tmp_path / "legato-runner.exe"
+    fake_legato.write_text("fake legato", encoding="utf-8")
+    fake_model = tmp_path / "legato-model"
+    fake_model.mkdir()
+    commands = []
+
+    class FakeLegatoStatus:
+        discovered_path = str(fake_legato)
+        version = "LEGATO test"
+        available = True
+        error = None
+
+    class FakeRunResult:
+        returncode = 0
+        stdout = "legato complete"
+        stderr = ""
+
+    def fake_legato_status(_settings):
+        return FakeLegatoStatus()
+
+    def fake_run(command, **kwargs):
+        commands.append((command, kwargs))
+        output_dir = Path(kwargs["cwd"])
+        (output_dir / "candidate.abc").write_text(
+            "X:1\nT:LEGATO Study\nM:4/4\nK:C\nCDEF|GABC|\n",
+            encoding="utf-8",
+        )
+        return FakeRunResult()
+
+    def fake_convert_abc_to_musicxml(
+        *,
+        abc_path,
+        output_path,
+        title,
+        composer,
+        primary_instrument,
+    ):
+        assert abc_path.exists()
+        output_path.write_text(
+            processing_engines_module._build_stub_musicxml(
+                title=title,
+                composer=composer,
+                primary_instrument=primary_instrument,
+                measure_count=2,
+            ),
+            encoding="utf-8",
+        )
+        return {"converter": "test", "abc_path": str(abc_path)}
+
+    monkeypatch.setattr(processing_engines_module, "legato_status", fake_legato_status)
+    monkeypatch.setattr(processing_engines_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        processing_engines_module,
+        "_convert_legato_abc_to_musicxml",
+        fake_convert_abc_to_musicxml,
+    )
+
+    result = processing_engines_module.LegatoMusicXmlEngine().generate(
+        raw_pdf_path=raw_image,
+        output_path=output_path,
+        title="LEGATO Study",
+        composer="Test Composer",
+        primary_instrument="Cello",
+        processing_settings={
+            "legato_cli_path": str(fake_legato),
+            "legato_model_path": str(fake_model),
+            "omr_strategy": "legato_experimental",
+        },
+    )
+
+    assert result.engine_name == "legato"
+    assert result.provenance == "legato_abc_to_musicxml"
+    assert output_path.exists()
+    assert commands[0][0][0] == str(fake_legato)
+    assert "--output-abc" in commands[0][0]
+    assert result.metadata["omr_strategy"] == "legato_experimental"
+    assert result.metadata["omr_attempts"][0]["engine"] == "legato"
+    assert result.metadata["abc_conversion"]["converter"] == "test"
+
+
+def test_legato_engine_preserves_huggingface_model_id(tmp_path, monkeypatch) -> None:
+    raw_image = tmp_path / "source.png"
+    Image.new("RGB", (200, 120), "white").save(raw_image)
+    output_path = tmp_path / "candidate.musicxml"
+    fake_legato = tmp_path / "legato_runner.py"
+    fake_legato.write_text("fake legato", encoding="utf-8")
+    commands = []
+
+    class FakeLegatoStatus:
+        discovered_path = str(fake_legato)
+        version = "LEGATO test"
+        available = True
+        error = None
+
+    class FakeRunResult:
+        returncode = 0
+        stdout = "legato complete"
+        stderr = ""
+
+    def fake_legato_status(_settings):
+        return FakeLegatoStatus()
+
+    def fake_run(command, **kwargs):
+        commands.append((command, kwargs))
+        output_dir = Path(kwargs["cwd"])
+        (output_dir / "candidate.abc").write_text(
+            "X:1\nT:LEGATO Study\nM:4/4\nK:C\nCDEF|GABC|\n",
+            encoding="utf-8",
+        )
+        return FakeRunResult()
+
+    def fake_convert_abc_to_musicxml(
+        *,
+        abc_path,
+        output_path,
+        title,
+        composer,
+        primary_instrument,
+    ):
+        output_path.write_text(
+            processing_engines_module._build_stub_musicxml(
+                title=title,
+                composer=composer,
+                primary_instrument=primary_instrument,
+                measure_count=2,
+            ),
+            encoding="utf-8",
+        )
+        return {"converter": "test", "abc_path": str(abc_path)}
+
+    monkeypatch.setattr(processing_engines_module, "legato_status", fake_legato_status)
+    monkeypatch.setattr(processing_engines_module.subprocess, "run", fake_run)
+    monkeypatch.setattr(
+        processing_engines_module,
+        "_convert_legato_abc_to_musicxml",
+        fake_convert_abc_to_musicxml,
+    )
+
+    processing_engines_module.LegatoMusicXmlEngine().generate(
+        raw_pdf_path=raw_image,
+        output_path=output_path,
+        title="LEGATO Study",
+        composer="Test Composer",
+        primary_instrument="Cello",
+        processing_settings={
+            "legato_cli_path": str(fake_legato),
+            "legato_model_path": "guangyangmusic/legato",
+            "omr_strategy": "legato_experimental",
+        },
+    )
+
+    model_index = commands[0][0].index("--model") + 1
+    assert commands[0][0][model_index] == "guangyangmusic/legato"
+
+
+def test_legato_status_accepts_huggingface_model_id(tmp_path, monkeypatch) -> None:
+    fake_legato = tmp_path / "legato_runner.py"
+    fake_legato.write_text("fake legato", encoding="utf-8")
+    monkeypatch.setattr(
+        processing_settings_module,
+        "_read_legato_version",
+        lambda _path: "AZMusic LEGATO adapter test",
+    )
+
+    status = processing_settings_module.legato_status(
+        {
+            "legato_cli_path": str(fake_legato),
+            "legato_model_path": "example-org/legato-test",
+        }
+    )
+
+    assert status.available is True
+    assert status.version == "AZMusic LEGATO adapter test"
+    assert status.error is None
+
+
+def test_legato_status_requires_huggingface_auth_for_official_model(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    fake_legato = tmp_path / "legato_runner.py"
+    fake_legato.write_text("fake legato", encoding="utf-8")
+    monkeypatch.setattr(
+        processing_settings_module,
+        "_huggingface_token_available",
+        lambda: False,
+    )
+
+    status = processing_settings_module.legato_status(
+        {
+            "legato_cli_path": str(fake_legato),
+            "legato_model_path": "guangyangmusic/legato",
+        }
+    )
+
+    assert status.available is False
+    assert "Hugging Face login" in status.error
+
+
+def test_legato_gated_model_error_is_actionable() -> None:
+    message = processing_engines_module._summarize_process_failure(
+        "LEGATO",
+        "huggingface_hub.errors.GatedRepoError: 401 Client Error. "
+        "Cannot access gated repo for url https://huggingface.co/guangyangmusic/legato",
+        exit_code=1,
+    )
+
+    assert "gated or private" in message
+    assert "Log in" in message
+    assert "Traceback" not in message
+
+
 def test_musicxml_normalization_overrides_voice_with_book_instrument(tmp_path) -> None:
     raw_path = tmp_path / "audiveris.musicxml"
     output_path = tmp_path / "candidate.musicxml"
@@ -2651,8 +3103,10 @@ def test_async_dispatcher_processes_approved_book_split(api_client) -> None:
         for piece in client.get("/api/v1/pieces/").json()
         if piece["source_book_id"] == book_id
     )
-    split_review = next(
-        item for item in client.get("/api/v1/review/").json() if item["piece_id"] == child["id"]
+    split_review = _review_item_for_piece(
+        client,
+        child["id"],
+        processing_stage="split_review_needed",
     )
 
     approve_response = client.post(
@@ -2660,6 +3114,9 @@ def test_async_dispatcher_processes_approved_book_split(api_client) -> None:
         json={"action": "approve"},
     )
     assert approve_response.status_code == 200
+    start_response = client.post(f"/api/v1/pieces/{child['id']}/notation-lab/start")
+    assert start_response.status_code == 200
+    assert start_response.json()["status"] == "queued"
 
     dispatcher = JobDispatcher(poll_interval_seconds=0, stale_after_seconds=1, max_retries=0)
     assert asyncio.run(dispatcher.run_once()) is True
@@ -2672,19 +3129,22 @@ def test_async_dispatcher_processes_approved_book_split(api_client) -> None:
     )
     assert processing_job["status"] == "succeeded"
     assert processing_job["progress"] == 100.0
-    assert processing_job["result_data"]["processing_stage"] == "candidate_review_needed"
+    assert processing_job["result_data"]["processing_stage"] == "notation_edit_queued"
     assert processing_job["result_data"]["candidate_review_item_id"]
 
     detail = client.get(f"/api/v1/pieces/{child['id']}").json()
     assert detail["status"] == "review_pending"
-    assert len(detail["score_versions"]) == 3
+    assert len(detail["score_versions"]) == 4
+    assert any(
+        version["artifact_role"] == "cleaned_pdf" for version in detail["score_versions"]
+    )
 
     pending_reviews = client.get("/api/v1/review/").json()
     candidate_review = next(
         item
         for item in pending_reviews
         if item["piece_id"] == child["id"]
-        and item["candidate_data"].get("processing_stage") == "candidate_review_needed"
+        and item["candidate_data"].get("processing_stage") == "notation_edit_queued"
     )
     assert candidate_review["candidate_data"]["rendered_file_url"].endswith("/file")
     assert candidate_review["candidate_data"]["canonical_file_url"].endswith("/file")
@@ -2867,7 +3327,7 @@ def test_bulk_approve_book_candidate_reviews_marks_pieces_ready(api_client) -> N
                 "candidate_data": {
                     "piece_title": child["title"],
                     "source_review_item_id": source_review["id"],
-                    "processing_stage": "candidate_review_needed",
+                    "processing_stage": "notation_edit_queued",
                     "catalog_metadata": {"title": child["title"]},
                 },
             },
@@ -2878,7 +3338,7 @@ def test_bulk_approve_book_candidate_reviews_marks_pieces_ready(api_client) -> N
         "/api/v1/review/bulk/approve",
         json={
             "source_review_item_id": source_review["id"],
-            "processing_stage": "candidate_review_needed",
+            "processing_stage": "notation_edit_queued",
         },
     )
 
@@ -2926,7 +3386,7 @@ def test_score_candidate_approval_keeps_authoritative_catalog_metadata(api_clien
             "title": "Review reconstructed score for Landler",
             "candidate_data": {
                 "piece_title": "Landler",
-                "processing_stage": "candidate_review_needed",
+                "processing_stage": "notation_edit_queued",
                 "catalog_suggestions": [
                     {
                         "source": "ocr_text",
@@ -2993,8 +3453,10 @@ def test_async_dispatcher_retries_then_fails_visibly(api_client) -> None:
         for piece in client.get("/api/v1/pieces/").json()
         if piece["source_book_id"] == book_id
     )
-    split_review = next(
-        item for item in client.get("/api/v1/review/").json() if item["piece_id"] == child["id"]
+    split_review = _review_item_for_piece(
+        client,
+        child["id"],
+        processing_stage="split_review_needed",
     )
     approve_response = client.post(
         f"/api/v1/review/{split_review['id']}",
@@ -3009,6 +3471,8 @@ def test_async_dispatcher_retries_then_fails_visibly(api_client) -> None:
         },
     )
     assert settings_response.status_code == 200
+    start_response = client.post(f"/api/v1/pieces/{child['id']}/notation-lab/start")
+    assert start_response.status_code == 200
 
     dispatcher = JobDispatcher(poll_interval_seconds=0, stale_after_seconds=1, max_retries=2)
     assert asyncio.run(dispatcher.run_once()) is True
@@ -3247,6 +3711,73 @@ def test_debug_clear_workflow_preserves_settings_and_clears_generated_data(
     assert not generated_state.exists()
 
 
+def test_debug_clear_single_piece_preserves_other_workflow_data(api_client) -> None:
+    client, storage_path = api_client
+    settings_file = storage_path / "processing_settings.json"
+    settings_file.parent.mkdir(parents=True, exist_ok=True)
+    settings_file.write_text('{"musescore_cli_path":"C:/MuseScore/MuseScore4.exe"}')
+
+    first_response = client.post(
+        "/api/v1/pieces/import",
+        data={"title": "Debug Single Clear"},
+        files={
+            "file": (
+                "debug_single_clear.pdf",
+                _valid_pdf_bytes(page_count=1),
+                "application/pdf",
+            )
+        },
+    )
+    second_response = client.post(
+        "/api/v1/pieces/import",
+        data={"title": "Debug Keep Piece"},
+        files={
+            "file": (
+                "debug_keep_piece.pdf",
+                _valid_pdf_bytes(page_count=1) + b"\n% distinct debug keep piece",
+                "application/pdf",
+            )
+        },
+    )
+    assert first_response.status_code == 200
+    assert second_response.status_code == 200
+    first_piece_id = first_response.json()["id"]
+    second_piece_id = second_response.json()["id"]
+
+    first_generated_piece = storage_path / "pieces" / first_piece_id / "candidate.pdf"
+    second_generated_piece = storage_path / "pieces" / second_piece_id / "candidate.pdf"
+    first_generated_state = storage_path / "piece_state" / f"{first_piece_id}.json"
+    second_generated_state = storage_path / "piece_state" / f"{second_piece_id}.json"
+    for path in (
+        first_generated_piece,
+        second_generated_piece,
+        first_generated_state,
+        second_generated_state,
+    ):
+        path.parent.mkdir(parents=True, exist_ok=True)
+        path.write_bytes(b"{}" if path.suffix == ".json" else b"pdf")
+
+    preserved_settings = settings_file.read_text()
+
+    clear_response = client.delete(f"/api/v1/debug/pieces/{first_piece_id}")
+
+    assert clear_response.status_code == 200
+    payload = clear_response.json()
+    assert payload["status"] == "cleared"
+    assert payload["piece_id"] == first_piece_id
+    assert payload["deleted_counts"]["pieces"] == 1
+    assert settings_file.read_text() == preserved_settings
+    assert client.get(f"/api/v1/pieces/{first_piece_id}").status_code == 404
+    assert client.get(f"/api/v1/pieces/{second_piece_id}").status_code == 200
+    assert not first_generated_piece.exists()
+    assert not first_generated_state.exists()
+    assert second_generated_piece.exists()
+    assert second_generated_state.exists()
+    jobs = client.get("/api/v1/jobs/").json()
+    assert all(job["piece_id"] != first_piece_id for job in jobs)
+    assert any(job["piece_id"] == second_piece_id for job in jobs)
+
+
 def test_multi_piece_review_warns_when_rendered_staff_lines_drop(monkeypatch, tmp_path) -> None:
     raw_pdf = tmp_path / "raw.pdf"
     rendered_pdf = tmp_path / "rendered.pdf"
@@ -3307,24 +3838,26 @@ def test_multi_piece_review_pdf_title_overlay_centers_second_title(tmp_path) -> 
     assert "Hoedown" in text
 
 
-def test_review_reprocess_records_unavailable_local_llm(api_client) -> None:
+def test_metadata_llm_reprocess_is_not_available(api_client) -> None:
     client, _ = api_client
 
     import_response = client.post(
         "/api/v1/pieces/import",
-        data={"title": "Metadata Needs Review"},
+        data={"title": "Metadata Direct Edit"},
         files={
             "file": (
-                "metadata_needs_review.pdf",
-                b"%PDF-1.4\n%AZMusic LLM reprocess test\n",
+                "metadata_direct_edit.pdf",
+                b"%PDF-1.4\n%AZMusic metadata direct edit test\n",
                 "application/pdf",
             )
         },
     )
     assert import_response.status_code == 200
     piece_id = import_response.json()["id"]
-    review_item = next(
-        item for item in client.get("/api/v1/review/").json() if item["piece_id"] == piece_id
+    review_item = _review_item_for_piece(
+        client,
+        piece_id,
+        processing_stage="metadata_review_needed",
     )
 
     reprocess_response = client.post(
@@ -3334,25 +3867,497 @@ def test_review_reprocess_records_unavailable_local_llm(api_client) -> None:
             "parent_notes": "Validate the title and composer.",
         },
     )
-    assert reprocess_response.status_code == 200
-    job = reprocess_response.json()
-    assert job["status"] == "failed"
-    assert "Local LLM provider is not configured" in job["error_message"]
-    assert job["result_data"]["local_llm_available"] is False
+    assert reprocess_response.status_code == 422
 
-    refreshed_item = client.get(f"/api/v1/review/{review_item['id']}").json()
-    warnings = refreshed_item["candidate_data"]["validation_warnings"]
-    assert any("Local LLM provider is not configured" in warning for warning in warnings)
-    assert refreshed_item["candidate_data"]["reprocess_history"][0]["status"] == "failed"
 
-    settings_after_failure = client.get("/api/v1/processing/settings").json()
-    assert (
-        "Local LLM provider is not configured"
-        in settings_after_failure["last_llm_processing_error"]
+def test_local_llm_score_review_uses_structured_output(tmp_path, monkeypatch) -> None:
+    captured_payloads: list[dict] = []
+
+    def fake_lm_studio_request(method, url, *, payload=None, timeout=0):
+        del timeout
+        assert url.startswith("http://127.0.0.1:1234/v1/")
+        if method == "GET" and url.endswith("/models"):
+            return {
+                "data": [
+                    {"id": "text-embedding-nomic-embed-text-v1.5"},
+                    {"id": "qwen-local-metadata"},
+                    {"id": "qwen-local-vision"},
+                ]
+            }
+        if method == "POST" and url.endswith("/chat/completions"):
+            assert payload["model"] == "qwen-local-vision"
+            captured_payloads.append(payload)
+            schema_name = payload["response_format"]["json_schema"]["name"]
+            if schema_name == "azmusic_score_notation_audit":
+                return {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": json.dumps(
+                                    {
+                                        "summary": "No visible notation issue.",
+                                        "confidence": 0.4,
+                                        "notation_findings": [],
+                                        "warnings": [],
+                                    }
+                                )
+                            }
+                        }
+                    ]
+                }
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {
+                                    "summary": "No safe automated edit.",
+                                    "confidence": 0.4,
+                                    "tool_calls": [],
+                                    "warnings": ["Parent should edit manually."],
+                                }
+                            )
+                        }
+                    }
+                ]
+            }
+        raise AssertionError(f"Unexpected LM Studio request: {method} {url}")
+
+    monkeypatch.setattr(local_llm_module, "_http_json_request", fake_lm_studio_request)
+    monkeypatch.setattr(local_llm_module, "_lm_studio_cli_models", lambda: [])
+    monkeypatch.setattr(
+        local_llm_module,
+        "_score_review_image_inputs",
+        lambda path, *, label: [
+            {
+                "label": f"{label} page 1",
+                "data_url": "data:image/png;base64,AA==",
+            }
+        ],
     )
 
+    raw_pdf = tmp_path / "raw.pdf"
+    rendered_pdf = tmp_path / "rendered.pdf"
+    musicxml = tmp_path / "candidate.musicxml"
+    raw_pdf.write_bytes(_valid_pdf_bytes())
+    rendered_pdf.write_bytes(_valid_pdf_bytes())
+    musicxml.write_text(
+        '<?xml version="1.0"?><score-partwise version="4.0"></score-partwise>',
+        encoding="utf-8",
+    )
 
-def test_score_reprocess_is_wired_as_coming_soon(api_client) -> None:
+    provider = local_llm_module.LocalLlmProvider(
+        {
+            "local_llm_provider": "lmstudio",
+            "local_llm_base_url": "http://127.0.0.1:1234/v1",
+            "local_llm_model": "",
+        }
+    )
+    result = provider.review_score(
+        raw_pdf_path=raw_pdf,
+        rendered_pdf_path=rendered_pdf,
+        canonical_musicxml_path=musicxml,
+        candidate_data={"piece_title": "Structured Output Study"},
+        parent_notes="Check visible notation.",
+    )
+
+    assert result.provider == "lmstudio"
+    assert result.model == "qwen-local-vision"
+    assert result.vision_model_hint is True
+    assert result.tool_calls == []
+    assert captured_payloads
+    assert [payload["response_format"]["json_schema"]["name"] for payload in captured_payloads] == [
+        "azmusic_score_notation_audit",
+        "azmusic_score_notation_correction",
+    ]
+    payload = captured_payloads[-1]
+    assert payload["response_format"]["type"] == "json_schema"
+    assert payload["response_format"]["json_schema"]["name"] == (
+        "azmusic_score_notation_correction"
+    )
+    assert payload["response_format"]["json_schema"]["strict"] is True
+
+
+def test_local_llm_score_review_uses_lm_studio_default_when_model_blank(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    captured_payloads: list[dict] = []
+
+    def fake_lm_studio_request(method, url, *, payload=None, timeout=0):
+        del timeout
+        assert url.startswith("http://127.0.0.1:1234/v1/")
+        if method == "GET" and url.endswith("/models"):
+            return {
+                "data": [
+                    {"id": "text-embedding-nomic-embed-text-v1.5"},
+                    {"id": "qwen-local-default"},
+                    {"id": "qwen-local-vision"},
+                ]
+            }
+        if method == "POST" and url.endswith("/chat/completions"):
+            assert payload["model"] == "qwen-local-vision"
+            captured_payloads.append(payload)
+            schema_name = payload["response_format"]["json_schema"]["name"]
+            if schema_name == "azmusic_score_notation_audit":
+                return {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": json.dumps(
+                                    {
+                                        "summary": "Default model checked the score.",
+                                        "confidence": 0.4,
+                                        "notation_findings": [],
+                                        "warnings": [],
+                                    }
+                                )
+                            }
+                        }
+                    ]
+                }
+            return {
+                "choices": [
+                    {
+                        "message": {
+                            "content": json.dumps(
+                                {
+                                    "summary": "Default model checked the score.",
+                                    "confidence": 0.4,
+                                    "tool_calls": [],
+                                    "warnings": ["No safe edit."],
+                                }
+                            )
+                        }
+                    }
+                ]
+            }
+        raise AssertionError(f"Unexpected LM Studio request: {method} {url}")
+
+    monkeypatch.setattr(local_llm_module, "_http_json_request", fake_lm_studio_request)
+    monkeypatch.setattr(local_llm_module, "_lm_studio_cli_models", lambda: [])
+    monkeypatch.setattr(
+        local_llm_module,
+        "_score_review_image_inputs",
+        lambda path, *, label: [
+            {
+                "label": f"{label} page 1",
+                "data_url": "data:image/png;base64,AA==",
+            }
+        ],
+    )
+
+    raw_pdf = tmp_path / "raw.pdf"
+    rendered_pdf = tmp_path / "rendered.pdf"
+    musicxml = tmp_path / "candidate.musicxml"
+    raw_pdf.write_bytes(_valid_pdf_bytes())
+    rendered_pdf.write_bytes(_valid_pdf_bytes())
+    musicxml.write_text(
+        '<?xml version="1.0"?><score-partwise version="4.0"></score-partwise>',
+        encoding="utf-8",
+    )
+
+    provider = local_llm_module.LocalLlmProvider(
+        {
+            "local_llm_provider": "lmstudio",
+            "local_llm_base_url": "http://127.0.0.1:1234/v1",
+            "local_llm_model": "",
+        }
+    )
+
+    result = provider.review_score(
+        raw_pdf_path=raw_pdf,
+        rendered_pdf_path=rendered_pdf,
+        canonical_musicxml_path=musicxml,
+        candidate_data={"piece_title": "Default Model Study"},
+        parent_notes="Check visible notation.",
+    )
+
+    assert result.model == "qwen-local-vision"
+    assert captured_payloads
+
+
+def test_local_llm_score_review_rejects_text_only_models(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    def fake_lm_studio_request(method, url, *, payload=None, timeout=0):
+        del payload, timeout
+        assert url.startswith("http://127.0.0.1:1234/v1/")
+        if method == "GET" and url.endswith("/models"):
+            return {
+                "data": [
+                    {"id": "text-embedding-nomic-embed-text-v1.5"},
+                    {"id": "qwen-local-default"},
+                ]
+            }
+        raise AssertionError(f"Unexpected LM Studio request: {method} {url}")
+
+    monkeypatch.setattr(local_llm_module, "_http_json_request", fake_lm_studio_request)
+    monkeypatch.setattr(local_llm_module, "_lm_studio_cli_models", lambda: [])
+
+    raw_pdf = tmp_path / "raw.pdf"
+    rendered_pdf = tmp_path / "rendered.pdf"
+    musicxml = tmp_path / "candidate.musicxml"
+    raw_pdf.write_bytes(_valid_pdf_bytes())
+    rendered_pdf.write_bytes(_valid_pdf_bytes())
+    musicxml.write_text(
+        '<?xml version="1.0"?><score-partwise version="4.0"></score-partwise>',
+        encoding="utf-8",
+    )
+
+    provider = local_llm_module.LocalLlmProvider(
+        {
+            "local_llm_provider": "lmstudio",
+            "local_llm_base_url": "http://127.0.0.1:1234/v1",
+            "local_llm_model": "qwen-local-default",
+        }
+    )
+
+    with pytest.raises(
+        local_llm_module.LocalLlmUnavailableError,
+        match="vision-capable model",
+    ):
+        provider.review_score(
+            raw_pdf_path=raw_pdf,
+            rendered_pdf_path=rendered_pdf,
+            canonical_musicxml_path=musicxml,
+            candidate_data={"piece_title": "Text Model Study"},
+            parent_notes="Check visible notation.",
+        )
+
+
+def test_local_llm_score_review_prefers_configured_lms_vision_model_path(
+    tmp_path,
+    monkeypatch,
+) -> None:
+    captured_payloads: list[dict] = []
+    configured_path = (
+        "C:/Users/Travis/.lmstudio/models/mradermacher/"
+        "Huihui-Qwen3.5-0.8B-abliterated-GGUF/"
+        "Huihui-Qwen3.5-0.8B-abliterated.Q4_K_S.gguf"
+    )
+
+    def fake_lm_studio_request(method, url, *, payload=None, timeout=0):
+        del timeout
+        assert url.startswith("http://127.0.0.1:1234/v1/")
+        if method == "GET" and url.endswith("/models"):
+            return {
+                "data": [
+                    {"id": "qwen3.5-9b-abliterated-vision.gguf"},
+                    {"id": "huihui-qwen3.5-0.8b-abliterated"},
+                ]
+            }
+        if method == "POST" and url.endswith("/chat/completions"):
+            assert payload["model"] == "huihui-qwen3.5-0.8b-abliterated"
+            captured_payloads.append(payload)
+            schema_name = payload["response_format"]["json_schema"]["name"]
+            if schema_name == "azmusic_score_notation_audit":
+                return {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": json.dumps(
+                                    {
+                                        "summary": "No visible notation issues.",
+                                        "confidence": 0.9,
+                                        "notation_findings": [],
+                                        "warnings": [],
+                                    }
+                                )
+                            }
+                        }
+                    ]
+                }
+            if schema_name == "azmusic_score_notation_correction":
+                return {
+                    "choices": [
+                        {
+                            "message": {
+                                "content": json.dumps(
+                                    {
+                                        "summary": "No safe edits needed.",
+                                        "confidence": 0.9,
+                                        "tool_calls": [],
+                                        "warnings": [],
+                                    }
+                                )
+                            }
+                        }
+                    ]
+                }
+            raise AssertionError(f"Unexpected schema: {schema_name}")
+        raise AssertionError(f"Unexpected LM Studio request: {method} {url}")
+
+    monkeypatch.setattr(local_llm_module, "_http_json_request", fake_lm_studio_request)
+    monkeypatch.setattr(
+        local_llm_module,
+        "_lm_studio_cli_models",
+        lambda: [
+            {
+                "identifier": "qwen3.5-9b-abliterated-vision.gguf",
+                "path": (
+                    "Manojb/Qwen3.5-9B-abliterated-vision-Q4_K_M.gguf/"
+                    "Qwen3.5-9B-abliterated-vision-Q4_K_M.gguf"
+                ),
+                "vision": False,
+            },
+            {
+                "identifier": "huihui-qwen3.5-0.8b-abliterated",
+                "path": (
+                    "mradermacher/Huihui-Qwen3.5-0.8B-abliterated-GGUF/"
+                    "Huihui-Qwen3.5-0.8B-abliterated.Q4_K_S.gguf"
+                ),
+                "vision": True,
+            },
+        ],
+    )
+    monkeypatch.setattr(
+        local_llm_module,
+        "_score_review_image_inputs",
+        lambda path, *, label: [
+            {
+                "label": f"{label} page 1",
+                "data_url": "data:image/png;base64,AA==",
+            }
+        ],
+    )
+
+    raw_pdf = tmp_path / "raw.pdf"
+    rendered_pdf = tmp_path / "rendered.pdf"
+    musicxml = tmp_path / "candidate.musicxml"
+    raw_pdf.write_bytes(_valid_pdf_bytes())
+    rendered_pdf.write_bytes(_valid_pdf_bytes())
+    musicxml.write_text(
+        '<?xml version="1.0"?><score-partwise version="4.0"></score-partwise>',
+        encoding="utf-8",
+    )
+
+    provider = local_llm_module.LocalLlmProvider(
+        {
+            "local_llm_provider": "lmstudio",
+            "local_llm_base_url": "http://127.0.0.1:1234/v1",
+            "local_llm_model": configured_path,
+        }
+    )
+
+    result = provider.review_score(
+        raw_pdf_path=raw_pdf,
+        rendered_pdf_path=rendered_pdf,
+        canonical_musicxml_path=musicxml,
+        candidate_data={"piece_title": "Configured Vision Path Study"},
+        parent_notes="Check visible notation.",
+    )
+
+    assert result.model == "huihui-qwen3.5-0.8b-abliterated"
+    assert result.vision_model_hint is True
+    assert result.model_auto_selected is False
+    assert len(captured_payloads) == 2
+
+
+def test_local_llm_score_review_repairs_missing_tool_call_object_brace() -> None:
+    malformed = (
+        '{"summary":"Checked score.","confidence":0.8,'
+        '"tool_calls":[{"name":"replace_musicxml_text","arguments":{'
+        '"old_text":"<part-name>Voice Oohs</part-name>",'
+        '"new_text":"<part-name>Cello</part-name>",'
+        '"reason":"Correct instrument name."}],'
+        '"warnings":["Verify against the original."]}'
+    )
+
+    parsed = local_llm_module._parse_json_response(malformed)
+
+    assert parsed["summary"] == "Checked score."
+    assert parsed["tool_calls"] == [
+        {
+            "name": "replace_musicxml_text",
+            "arguments": {
+                "old_text": "<part-name>Voice Oohs</part-name>",
+                "new_text": "<part-name>Cello</part-name>",
+                "reason": "Correct instrument name.",
+            },
+        }
+    ]
+
+
+def test_local_llm_score_review_repairs_damaged_warning_tail() -> None:
+    malformed = (
+        '{"summary":"Checked score.","confidence":0.8,'
+        '"tool_calls":[{"name":"replace_musicxml_text","arguments":{'
+        '"old_text":"<time><beats>2</beats></time>",'
+        '"new_text":"<time><beats>4</beats></time>",'
+        '"reason":"Correct time."}}],'
+        '"warnings":["Parent should verify '
+    )
+
+    parsed = local_llm_module._parse_json_response(malformed)
+
+    assert parsed["summary"] == "Checked score."
+    assert parsed["warnings"] == []
+    assert parsed["tool_calls"][0]["arguments"]["reason"] == "Correct time."
+
+
+def test_local_llm_score_review_can_salvage_length_finished_tool_call() -> None:
+    response = {
+        "choices": [
+            {
+                "finish_reason": "length",
+                "message": {
+                    "content": (
+                        '{"summary":"Checked score.","confidence":0.8,'
+                        '"tool_calls":[{"name":"replace_musicxml_text","arguments":{'
+                        '"old_text":"<part-name>Voice Oohs</part-name>",'
+                        '"new_text":"<part-name>Cello</part-name>",'
+                        '"reason":"Correct part name."}}],'
+                        '"warnings":["Parent should verify '
+                    )
+                },
+            }
+        ]
+    }
+
+    parsed = local_llm_module._parse_json_response(
+        local_llm_module._chat_response_content(response)
+    )
+
+    assert parsed["tool_calls"][0]["arguments"]["new_text"] == (
+        "<part-name>Cello</part-name>"
+    )
+    assert parsed["warnings"] == []
+
+
+def test_local_llm_status_reports_selected_model_probe_failure(monkeypatch) -> None:
+    def fake_lm_studio_request(method, url, *, payload=None, timeout=0):
+        del timeout
+        assert url.startswith("http://127.0.0.1:1234/v1/")
+        if method == "GET" and url.endswith("/models"):
+            return {"data": [{"id": "qwen-local-vision"}]}
+        if method == "POST" and url.endswith("/chat/completions"):
+            assert payload["model"] == "qwen-local-vision"
+            raise local_llm_module.LocalLlmUnavailableError(
+                "LM Studio returned HTTP 400: Failed to load model."
+            )
+        raise AssertionError(f"Unexpected LM Studio request: {method} {url}")
+
+    monkeypatch.setattr(local_llm_module, "_http_json_request", fake_lm_studio_request)
+
+    provider = local_llm_module.LocalLlmProvider(
+        {
+            "local_llm_provider": "lmstudio",
+            "local_llm_base_url": "http://127.0.0.1:1234/v1",
+            "local_llm_model": "",
+        }
+    )
+
+    status = provider.status(probe=True)
+
+    assert status.configured is True
+    assert status.available is False
+    assert "structured chat probe" in (status.error or "")
+    assert "Failed to load model" in (status.error or "")
+
+
+def test_score_reprocess_requires_configured_local_llm(api_client) -> None:
     client, _ = api_client
 
     import_response = client.post(
@@ -3361,15 +4366,19 @@ def test_score_reprocess_is_wired_as_coming_soon(api_client) -> None:
         files={
             "file": (
                 "ai_score_review_placeholder.pdf",
-                b"%PDF-1.4\n%AZMusic score review coming soon\n",
+                b"%PDF-1.4\n%AZMusic score review needs local LLM\n",
                 "application/pdf",
             )
         },
     )
     assert import_response.status_code == 200
     piece_id = import_response.json()["id"]
-    review_item = next(
-        item for item in client.get("/api/v1/review/").json() if item["piece_id"] == piece_id
+    notation_job = _start_and_run_notation_lab(client, piece_id)
+    assert notation_job["status"] == "succeeded"
+    review_item = _review_item_for_piece(
+        client,
+        piece_id,
+        processing_stage="notation_edit_queued",
     )
 
     reprocess_response = client.post(
@@ -3382,13 +4391,613 @@ def test_score_reprocess_is_wired_as_coming_soon(api_client) -> None:
     assert reprocess_response.status_code == 200
     job = reprocess_response.json()
     assert job["status"] == "failed"
-    assert job["result_data"]["coming_soon"] is True
-    assert "AI score review is coming soon" in job["error_message"]
+    assert job["result_data"]["local_llm_available"] is False
+    assert "Local LLM provider is not configured" in job["error_message"]
 
     refreshed_item = client.get(f"/api/v1/review/{review_item['id']}").json()
     warnings = refreshed_item["candidate_data"]["validation_warnings"]
-    assert any("AI score review is coming soon" in warning for warning in warnings)
+    assert any("Local LLM provider is not configured" in warning for warning in warnings)
     assert refreshed_item["candidate_data"]["reprocess_history"][0]["reprocess_type"] == "score"
+
+
+def test_gemini_oauth_client_secret_upload_configures_server(api_client) -> None:
+    client, storage_path = api_client
+
+    initial_status = client.get("/api/v1/processing/gemini/oauth/status")
+    assert initial_status.status_code == 200
+    assert initial_status.json()["configured"] is False
+
+    invalid_response = client.post(
+        "/api/v1/processing/gemini/oauth/client-secret",
+        files={"file": ("not-google.json", b"{}", "application/json")},
+    )
+    assert invalid_response.status_code == 400
+    assert "Google OAuth client secret" in invalid_response.json()["detail"]
+
+    client_secret = {
+        "web": {
+            "client_id": "azmusic-test.apps.googleusercontent.com",
+            "project_id": "azmusic-test",
+            "auth_uri": "https://accounts.google.com/o/oauth2/auth",
+            "token_uri": "https://oauth2.googleapis.com/token",
+            "auth_provider_x509_cert_url": "https://www.googleapis.com/oauth2/v1/certs",
+            "client_secret": "test-secret",
+            "redirect_uris": ["http://localhost:8795/api/v1/processing/gemini/oauth/callback"],
+        }
+    }
+    upload_response = client.post(
+        "/api/v1/processing/gemini/oauth/client-secret",
+        files={
+            "file": (
+                "client_secret.json",
+                json.dumps(client_secret).encode("utf-8"),
+                "application/json",
+            )
+        },
+    )
+    assert upload_response.status_code == 200
+    assert upload_response.json()["configured"] is True
+    assert upload_response.json()["connected"] is False
+    assert (storage_path / "gemini_oauth_client_secret.json").exists()
+
+    start_response = client.post("/api/v1/processing/gemini/oauth/start")
+    assert start_response.status_code == 200
+    assert start_response.json()["authorization_url"].startswith(
+        "https://accounts.google.com/o/oauth2/auth"
+    )
+    assert "select_account" in start_response.json()["authorization_url"]
+    assert start_response.json()["redirect_uri"].endswith(
+        "/api/v1/processing/gemini/oauth/callback"
+    )
+
+
+def test_score_reprocess_applies_mocked_local_llm_musicxml_patch(
+    api_client,
+    monkeypatch,
+) -> None:
+    client, _ = api_client
+
+    class FakeLocalLlmProvider:
+        def __init__(self, settings_payload):
+            self.settings_payload = settings_payload
+
+        def status(self):
+            return local_llm_module.ProcessingExecutableStatus(
+                name="LM Studio",
+                configured=True,
+                available=True,
+                version="qwen-local-vision",
+            )
+
+        def review_score(
+            self,
+            *,
+            raw_pdf_path,
+            rendered_pdf_path,
+            canonical_musicxml_path,
+            candidate_data,
+            parent_notes,
+        ):
+            del self, raw_pdf_path, rendered_pdf_path, candidate_data, parent_notes
+            musicxml = Path(canonical_musicxml_path).read_text(encoding="utf-8")
+            assert '<part id="P1">' in musicxml
+            return LocalLlmScoreReviewResult(
+                summary="Corrected note pitch after visual review.",
+                confidence=0.91,
+                tool_calls=[
+                    {
+                        "name": "update_note_pitch",
+                        "arguments": {
+                            "part_id": "P1",
+                            "measure_number": 1,
+                            "note_index": 1,
+                            "step": "D",
+                            "octave": 4,
+                            "reason": "Pitch was corrected by local LLM review.",
+                        },
+                    }
+                ],
+                warnings=[],
+                provider="lmstudio",
+                model="qwen-local-vision",
+                raw_response_text="{}",
+                review_status="notation_correction_requested",
+                notation_findings=[
+                    {
+                        "finding_id": "f1",
+                        "part_id": "P1",
+                        "measure_number": 1,
+                        "note_index": 1,
+                        "issue": "First note pitch differs from the original.",
+                        "evidence": "Original starts on D.",
+                        "severity": "major",
+                        "recommended_action": "Change note 1 to D4.",
+                    }
+                ],
+            )
+
+        def verify_score_edit(
+            self,
+            *,
+            raw_pdf_path,
+            before_rendered_pdf_path,
+            after_rendered_pdf_path,
+            candidate_data,
+            parent_notes,
+            target_finding,
+            tool_call,
+            tool_result,
+            visual_diff,
+        ):
+            del (
+                self,
+                raw_pdf_path,
+                before_rendered_pdf_path,
+                after_rendered_pdf_path,
+                candidate_data,
+                parent_notes,
+                target_finding,
+                tool_call,
+                tool_result,
+                visual_diff,
+            )
+            return LocalLlmScoreVerificationResult(
+                accepted=True,
+                confidence=0.92,
+                summary="The edited render is closer to the original.",
+                evidence="The first note target changed as requested.",
+                warnings=[],
+            )
+
+    def fake_render(
+        self,
+        *,
+        canonical_path,
+        raw_pdf_path,
+        output_pdf_path,
+        processing_settings,
+    ):
+        del self, canonical_path, raw_pdf_path, processing_settings
+        pdf_bytes = _valid_pdf_bytes()
+        output_pdf_path.write_bytes(pdf_bytes)
+        return processing_engines_module.RenderResult(
+            file_path=output_pdf_path,
+            renderer_name="test_musescore",
+            renderer_version="test-renderer",
+            provenance="musescore_render",
+            warnings=[],
+            validation_status="valid",
+            validation_error=None,
+            file_size_bytes=len(pdf_bytes),
+            page_count=1,
+            diagnostics={"test_renderer": True},
+        )
+
+    monkeypatch.setattr(
+        review_router_module,
+        "LocalLlmProvider",
+        FakeLocalLlmProvider,
+    )
+    monkeypatch.setattr(
+        review_router_module.MuseScoreRenderEngine,
+        "render",
+        fake_render,
+    )
+    monkeypatch.setattr(
+        review_router_module,
+        "compare_score_pdfs",
+        lambda **kwargs: {
+            "passed": True,
+            "changed_pixel_ratio": 0.01,
+            "changed_bbox": [10, 10, 20, 20],
+            "page_count_compared": 1,
+            "original_alignment": None,
+        },
+    )
+
+    import_response = client.post(
+        "/api/v1/pieces/import",
+        data={"title": "Local LLM Patch Study"},
+        files={"file": ("local_llm_patch_study.pdf", _valid_pdf_bytes(), "application/pdf")},
+    )
+    assert import_response.status_code == 200
+    piece_id = import_response.json()["id"]
+    notation_job = _start_and_run_notation_lab(client, piece_id)
+    assert notation_job["status"] == "succeeded"
+    review_item = _review_item_for_piece(
+        client,
+        piece_id,
+        processing_stage="notation_edit_queued",
+    )
+
+    reprocess_response = client.post(
+        f"/api/v1/review/{review_item['id']}/reprocess",
+        json={
+            "reprocess_type": "score",
+            "parent_notes": "Check the title.",
+        },
+    )
+    assert reprocess_response.status_code == 200
+    job = reprocess_response.json()
+    assert job["status"] == "succeeded"
+    assert job["result_data"]["provider"] == "lmstudio"
+    assert job["result_data"]["model"] == "qwen-local-vision"
+
+    refreshed_item = client.get(f"/api/v1/review/{review_item['id']}").json()
+    candidate_data = refreshed_item["candidate_data"]
+    assert candidate_data["engine_name"] == "local_llm"
+    assert candidate_data["selected_omr_candidate_label"] == "Local LLM notation correction"
+    assert candidate_data["llm_review_status"] == "notation_corrected"
+    assert candidate_data["llm_notation_review_status"] == "notation_corrected"
+    assert candidate_data["llm_review_provider"] == "lmstudio"
+    assert candidate_data["reprocess_history"][-1]["status"] == "succeeded"
+    assert candidate_data["reprocess_history"][-1]["outcome"] == "notation_corrected"
+    assert candidate_data["llm_tool_results"][0]["affects_notation"] is True
+    assert candidate_data["llm_measure_reviews"][0]["status"] == "accepted"
+    assert candidate_data["llm_measure_reviews"][0]["verification"]["accepted"] is True
+    assert candidate_data["score_quality_loop"]["outcome"] == "verified_musicxml"
+    assert candidate_data["omr_candidates"][0]["engine_name"] == "local_llm"
+
+
+def test_score_reprocess_rejects_unverified_local_llm_notation_patch(
+    api_client,
+    monkeypatch,
+) -> None:
+    client, _ = api_client
+
+    class FakeLocalLlmProvider:
+        def __init__(self, settings_payload):
+            self.settings_payload = settings_payload
+
+        def status(self):
+            return local_llm_module.ProcessingExecutableStatus(
+                name="LM Studio",
+                configured=True,
+                available=True,
+                version="qwen-local-vision",
+            )
+
+        def review_score(
+            self,
+            *,
+            raw_pdf_path,
+            rendered_pdf_path,
+            canonical_musicxml_path,
+            candidate_data,
+            parent_notes,
+        ):
+            del self, raw_pdf_path, rendered_pdf_path, candidate_data, parent_notes
+            assert Path(canonical_musicxml_path).exists()
+            return LocalLlmScoreReviewResult(
+                summary="A notation edit was proposed, but must be verified.",
+                confidence=0.88,
+                tool_calls=[
+                    {
+                        "name": "update_note_pitch",
+                        "arguments": {
+                            "part_id": "P1",
+                            "measure_number": 1,
+                            "note_index": 1,
+                            "step": "E",
+                            "octave": 7,
+                            "reason": "Intentional bad edit for verifier rejection.",
+                        },
+                    }
+                ],
+                warnings=[],
+                provider="lmstudio",
+                model="qwen-local-vision",
+                raw_response_text="{}",
+                review_status="notation_correction_requested",
+                notation_findings=[
+                    {
+                        "finding_id": "f1",
+                        "part_id": "P1",
+                        "measure_number": 1,
+                        "note_index": 1,
+                        "issue": "Possible first note mismatch.",
+                        "evidence": "The target is visually ambiguous.",
+                        "severity": "major",
+                        "recommended_action": "Change note only if verified.",
+                    }
+                ],
+            )
+
+        def verify_score_edit(
+            self,
+            *,
+            raw_pdf_path,
+            before_rendered_pdf_path,
+            after_rendered_pdf_path,
+            candidate_data,
+            parent_notes,
+            target_finding,
+            tool_call,
+            tool_result,
+            visual_diff,
+        ):
+            del (
+                self,
+                raw_pdf_path,
+                before_rendered_pdf_path,
+                after_rendered_pdf_path,
+                candidate_data,
+                parent_notes,
+                target_finding,
+                tool_call,
+                tool_result,
+                visual_diff,
+            )
+            return LocalLlmScoreVerificationResult(
+                accepted=False,
+                confidence=0.93,
+                summary="The edited render is not closer to the original.",
+                evidence="The edit moved the pitch farther from the visible source.",
+                warnings=["Rejected during visual verification."],
+            )
+
+        def retry_score_correction(
+            self,
+            *,
+            raw_pdf_path,
+            rendered_pdf_path,
+            canonical_musicxml_path,
+            candidate_data,
+            parent_notes,
+            audit_result,
+            retry_context,
+        ):
+            del (
+                self,
+                raw_pdf_path,
+                rendered_pdf_path,
+                canonical_musicxml_path,
+                candidate_data,
+                parent_notes,
+                audit_result,
+                retry_context,
+            )
+            return LocalLlmScoreReviewResult(
+                summary="No safer bounded edit was available.",
+                confidence=0.7,
+                tool_calls=[],
+                warnings=[],
+                provider="lmstudio",
+                model="qwen-local-vision",
+                raw_response_text="{}",
+                review_status="no_safe_notation_edit",
+                notation_findings=[],
+            )
+
+    def fake_render(
+        self,
+        *,
+        canonical_path,
+        raw_pdf_path,
+        output_pdf_path,
+        processing_settings,
+    ):
+        del self, canonical_path, raw_pdf_path, processing_settings
+        pdf_bytes = _valid_pdf_bytes()
+        output_pdf_path.write_bytes(pdf_bytes)
+        return processing_engines_module.RenderResult(
+            file_path=output_pdf_path,
+            renderer_name="test_musescore",
+            renderer_version="test-renderer",
+            provenance="musescore_render",
+            warnings=[],
+            validation_status="valid",
+            validation_error=None,
+            file_size_bytes=len(pdf_bytes),
+            page_count=1,
+            diagnostics={"test_renderer": True},
+        )
+
+    monkeypatch.setattr(review_router_module, "LocalLlmProvider", FakeLocalLlmProvider)
+    monkeypatch.setattr(
+        review_router_module.MuseScoreRenderEngine,
+        "render",
+        fake_render,
+    )
+    monkeypatch.setattr(
+        review_router_module,
+        "compare_score_pdfs",
+        lambda **kwargs: {
+            "passed": True,
+            "changed_pixel_ratio": 0.02,
+            "changed_bbox": [10, 10, 40, 40],
+            "page_count_compared": 1,
+            "original_alignment": None,
+        },
+    )
+
+    import_response = client.post(
+        "/api/v1/pieces/import",
+        data={"title": "Rejected Local LLM Patch Study"},
+        files={
+            "file": (
+                "rejected_local_llm_patch_study.pdf",
+                _valid_pdf_bytes(),
+                "application/pdf",
+            )
+        },
+    )
+    assert import_response.status_code == 200
+    piece_id = import_response.json()["id"]
+    notation_job = _start_and_run_notation_lab(client, piece_id)
+    assert notation_job["status"] == "succeeded"
+    review_item = _review_item_for_piece(
+        client,
+        piece_id,
+        processing_stage="notation_edit_queued",
+    )
+
+    reprocess_response = client.post(
+        f"/api/v1/review/{review_item['id']}/reprocess",
+        json={
+            "reprocess_type": "score",
+            "parent_notes": "Reject changes that are not visually closer.",
+        },
+    )
+
+    assert reprocess_response.status_code == 200
+    job = reprocess_response.json()
+    assert job["status"] == "succeeded"
+    assert job["result_data"]["llm_notation_review_status"] == "finding_only"
+    assert job["result_data"]["measure_reviews"][0]["status"] == "rejected"
+    assert job["result_data"]["measure_reviews"][0]["verification"]["accepted"] is False
+
+    refreshed_item = client.get(f"/api/v1/review/{review_item['id']}").json()
+    candidate_data = refreshed_item["candidate_data"]
+    assert candidate_data["engine_name"] != "local_llm"
+    assert candidate_data["llm_notation_review_status"] == "finding_only"
+    assert candidate_data["score_quality_loop"]["outcome"] == "hybrid_fallback"
+    assert candidate_data["hybrid_fallback_available"] is True
+    assert candidate_data["llm_measure_reviews"][0]["status"] == "rejected"
+    assert candidate_data["omr_candidates"][0]["engine_name"] == "hybrid_fallback"
+    assert not any(
+        candidate.get("engine_name") == "local_llm"
+        for candidate in candidate_data.get("omr_candidates", [])
+    )
+
+
+def test_score_reprocess_records_metadata_only_llm_patch_without_candidate(
+    api_client,
+    monkeypatch,
+) -> None:
+    client, _ = api_client
+
+    class FakeLocalLlmProvider:
+        def __init__(self, settings_payload):
+            self.settings_payload = settings_payload
+
+        def status(self):
+            return local_llm_module.ProcessingExecutableStatus(
+                name="LM Studio",
+                configured=True,
+                available=True,
+                version="qwen-local-vision",
+            )
+
+        def review_score(
+            self,
+            *,
+            raw_pdf_path,
+            rendered_pdf_path,
+            canonical_musicxml_path,
+            candidate_data,
+            parent_notes,
+        ):
+            del self, raw_pdf_path, rendered_pdf_path, candidate_data, parent_notes
+            musicxml = Path(canonical_musicxml_path).read_text(encoding="utf-8")
+            start = musicxml.index("<work-title>")
+            end = musicxml.index("</work-title>") + len("</work-title>")
+            old_text = musicxml[start:end]
+            return LocalLlmScoreReviewResult(
+                summary="Only instrument label cleanup was safe.",
+                confidence=0.8,
+                tool_calls=[
+                    {
+                        "name": "replace_musicxml_text",
+                        "arguments": {
+                            "old_text": old_text,
+                            "new_text": "<work-title>Metadata Label Cleanup</work-title>",
+                            "reason": "Title label cleanup.",
+                        },
+                    }
+                ],
+                warnings=["No safe notation edit was identified."],
+                provider="lmstudio",
+                model="qwen-local-vision",
+                raw_response_text="{}",
+                review_status="notation_correction_requested",
+                notation_findings=[],
+            )
+
+        def retry_score_correction(
+            self,
+            *,
+            raw_pdf_path,
+            rendered_pdf_path,
+            canonical_musicxml_path,
+            candidate_data,
+            parent_notes,
+            audit_result,
+            retry_context,
+        ):
+            del (
+                self,
+                raw_pdf_path,
+                rendered_pdf_path,
+                canonical_musicxml_path,
+                candidate_data,
+                parent_notes,
+                audit_result,
+                retry_context,
+            )
+            return LocalLlmScoreReviewResult(
+                summary="Retry found no safe notation edit.",
+                confidence=0.7,
+                tool_calls=[],
+                warnings=["No safe notation edit was identified on retry."],
+                provider="lmstudio",
+                model="qwen-local-vision",
+                raw_response_text="{}",
+                review_status="no_safe_notation_edit",
+                notation_findings=[],
+            )
+
+    monkeypatch.setattr(
+        review_router_module,
+        "LocalLlmProvider",
+        FakeLocalLlmProvider,
+    )
+
+    import_response = client.post(
+        "/api/v1/pieces/import",
+        data={"title": "Metadata Only LLM Study"},
+        files={
+            "file": (
+                "metadata_only_llm_study.pdf",
+                _valid_pdf_bytes(),
+                "application/pdf",
+            )
+        },
+    )
+    assert import_response.status_code == 200
+    piece_id = import_response.json()["id"]
+    notation_job = _start_and_run_notation_lab(client, piece_id)
+    assert notation_job["status"] == "succeeded"
+    review_item = _review_item_for_piece(
+        client,
+        piece_id,
+        processing_stage="notation_edit_queued",
+    )
+
+    reprocess_response = client.post(
+        f"/api/v1/review/{review_item['id']}/reprocess",
+        json={
+            "reprocess_type": "score",
+            "parent_notes": "Check notation, not labels.",
+        },
+    )
+
+    assert reprocess_response.status_code == 200
+    job = reprocess_response.json()
+    assert job["status"] == "succeeded"
+    assert job["result_data"]["llm_notation_review_status"] == "metadata_or_layout_only"
+
+    refreshed_item = client.get(f"/api/v1/review/{review_item['id']}").json()
+    candidate_data = refreshed_item["candidate_data"]
+    assert candidate_data["engine_name"] != "local_llm"
+    assert candidate_data["llm_notation_review_status"] == "metadata_or_layout_only"
+    assert candidate_data["score_quality_loop"]["outcome"] == "metadata_or_layout_only"
+    assert candidate_data.get("hybrid_fallback_available") is not True
+    assert candidate_data["llm_tool_results"][0]["affects_notation"] is False
+    assert not any(
+        candidate.get("engine_name") == "local_llm"
+        for candidate in candidate_data.get("omr_candidates", [])
+    )
 
 
 def test_rejected_review_keeps_original_pushable(api_client) -> None:
@@ -3433,8 +5042,12 @@ def test_rejected_review_keeps_original_pushable(api_client) -> None:
         for version in piece_detail["score_versions"]
     )
     assert any(
-        version["score_version_role"] == "canonical_musicxml"
+        version["artifact_role"] == "cleaned_pdf"
         and version["version_type"] == "rejected"
+        for version in piece_detail["score_versions"]
+    )
+    assert not any(
+        version["score_version_role"] == "canonical_musicxml"
         for version in piece_detail["score_versions"]
     )
 
@@ -3468,11 +5081,14 @@ def test_processing_settings_and_device_worker_registration(api_client) -> None:
     assert settings_payload["processing_mode"] == "server_only"
     assert settings_payload["allow_stub_musicxml"] is True
     assert settings_payload["local_llm_provider"] is None
+    assert settings_payload["local_llm_base_url"] is None
     assert settings_payload["cloud_enabled"] is False
     assert settings_payload["cloud_api_key_configured"] is False
     assert settings_payload["max_concurrent_jobs"] == 2
     assert settings_payload["ocr_language"] == "eng"
     assert "homr_cli_path" in settings_payload
+    assert "legato_cli_path" in settings_payload
+    assert "legato_model_path" in settings_payload
 
     missing_audiveris = storage_path / "missing-audiveris.exe"
     validation_response = client.post(
@@ -3485,6 +5101,7 @@ def test_processing_settings_and_device_worker_registration(api_client) -> None:
     assert validation["audiveris"]["configured"] is True
     assert validation["audiveris"]["available"] is False
     assert validation["homr"]["name"] == "HOMR"
+    assert validation["legato"]["name"] == "LEGATO"
 
     missing_homr_response = client.post(
         "/api/v1/processing/settings/validate",
@@ -3499,6 +5116,20 @@ def test_processing_settings_and_device_worker_registration(api_client) -> None:
     assert missing_homr["homr"]["available"] is False
     assert any("HOMR" in warning for warning in missing_homr["warnings"])
 
+    missing_legato_response = client.post(
+        "/api/v1/processing/settings/validate",
+        json={
+            "legato_cli_path": str(storage_path / "missing-legato.exe"),
+            "legato_model_path": str(storage_path / "missing-legato-model"),
+            "omr_strategy": "legato_experimental",
+        },
+    )
+    assert missing_legato_response.status_code == 200
+    missing_legato = missing_legato_response.json()
+    assert missing_legato["valid"] is False
+    assert missing_legato["legato"]["available"] is False
+    assert any("LEGATO" in warning for warning in missing_legato["warnings"])
+
     update_response = client.patch(
         "/api/v1/processing/settings",
         json={
@@ -3506,6 +5137,7 @@ def test_processing_settings_and_device_worker_registration(api_client) -> None:
             "allow_stub_musicxml": False,
             "local_llm_provider": "ollama",
             "local_llm_model": "qwen2.5",
+            "local_llm_base_url": "http://127.0.0.1:11434/v1",
             "cloud_enabled": True,
             "cloud_provider": "openai",
             "cloud_model": "gpt-test",
@@ -3518,6 +5150,7 @@ def test_processing_settings_and_device_worker_registration(api_client) -> None:
     assert updated["processing_mode"] == "server_plus_device_and_cloud_workers"
     assert updated["local_llm_provider"] == "ollama"
     assert updated["local_llm_model"] == "qwen2.5"
+    assert updated["local_llm_base_url"] == "http://127.0.0.1:11434/v1"
     assert updated["cloud_enabled"] is True
     assert updated["cloud_provider"] == "openai"
     assert updated["cloud_model"] == "gpt-test"
@@ -3552,7 +5185,7 @@ def test_processing_settings_and_device_worker_registration(api_client) -> None:
     assert capabilities["device_workers"][0]["device_id"] == "surface-book-dev"
     assert capabilities["local_llm"]["configured"] is True
     assert capabilities["local_llm"]["available"] is False
-    assert "not implemented yet" in capabilities["local_llm"]["error"]
+    assert "not implemented" in capabilities["local_llm"]["error"]
     assert capabilities["cloud_llm"]["configured"] is True
     assert capabilities["cloud_llm"]["available"] is True
 
@@ -3667,6 +5300,8 @@ def test_server_setup_page_hosts_pairing_qr(api_client) -> None:
     assert "azmusic://pair?" in setup_response.text
     assert "parent_setup" in setup_response.text
     assert "/api/v1/pairing/code.png?code=" in setup_response.text
+    assert "Gemini" not in setup_response.text
+    assert "/setup/gemini" not in setup_response.text
 
 
 def test_local_setup_page_pairs_with_detected_lan_url(api_client, monkeypatch) -> None:
@@ -4010,10 +5645,10 @@ def test_production_processing_mode_requires_real_tools(
             )
         },
     )
-    assert import_response.status_code == 409
-    assert (
-        "Production processing requires configured real tools" in import_response.json()["detail"]
-    )
+    assert import_response.status_code == 200
+    notation_job = _start_and_run_notation_lab(client, import_response.json()["id"])
+    assert notation_job["status"] == "failed"
+    assert "Production processing requires configured real tools" in notation_job["error_message"]
 
 
 def test_metadata_edits_refresh_pending_review_musicxml(api_client) -> None:
@@ -4054,17 +5689,10 @@ def test_metadata_edits_refresh_pending_review_musicxml(api_client) -> None:
     candidate_data = refreshed_item["candidate_data"]
     assert candidate_data["catalog_metadata"]["title"] == "Corrected Jig"
     assert candidate_data["catalog_metadata"]["composer"] == "Traditional"
-    assert candidate_data["processed_metadata"]["title"] == "Corrected Jig"
-    assert candidate_data["processed_metadata"]["composer"] == "Traditional"
-    assert candidate_data["processed_metadata"]["primary_instrument"] == "Cello"
-    assert candidate_data["metadata_rerendered_at"]
-
-    canonical_response = client.get(candidate_data["canonical_file_url"])
-    assert canonical_response.status_code == 200
-    canonical_text = canonical_response.text
-    assert "Corrected Jig" in canonical_text
-    assert "Traditional" in canonical_text
-    assert "Cello" in canonical_text
+    assert candidate_data["catalog_metadata"]["primary_instrument"] == "Cello"
+    assert candidate_data["processing_stage"] == "metadata_review_needed"
+    assert "canonical_file_url" not in candidate_data
+    assert "metadata_rerendered_at" not in candidate_data
 
 
 def test_pdf_import_preserves_raw_when_required_engine_is_missing(api_client) -> None:
@@ -4093,20 +5721,28 @@ def test_pdf_import_preserves_raw_when_required_engine_is_missing(api_client) ->
     assert import_response.status_code == 200
     piece = import_response.json()
     piece_id = piece["id"]
-    assert piece["status"] == "imported"
+    assert piece["status"] == "review_pending"
 
     detail_response = client.get(f"/api/v1/pieces/{piece_id}")
     assert detail_response.status_code == 200
     detail = detail_response.json()
-    assert len(detail["score_versions"]) == 1
-    assert detail["score_versions"][0]["version_type"] == "raw"
+    assert len(detail["score_versions"]) == 2
+    assert any(version["version_type"] == "raw" for version in detail["score_versions"])
+    assert any(
+        version["artifact_role"] == "cleaned_pdf" for version in detail["score_versions"]
+    )
     assert (storage_path / "pieces" / piece_id / "raw_source.pdf").exists()
+    assert (storage_path / "pieces" / piece_id / "student_cleaned.pdf").exists()
 
     jobs_response = client.get("/api/v1/jobs/")
     assert jobs_response.status_code == 200
     job = next(job for job in jobs_response.json() if job["piece_id"] == piece_id)
-    assert job["status"] == "failed"
-    assert "Audiveris is not configured" in job["error_message"]
+    assert job["job_type"] == "pdf_cleaning"
+    assert job["status"] == "succeeded"
+
+    notation_job = _start_and_run_notation_lab(client, piece_id)
+    assert notation_job["status"] == "failed"
+    assert "Audiveris is not configured" in notation_job["error_message"]
 
     settings_after_failure = client.get("/api/v1/processing/settings").json()
     assert "Audiveris is not configured" in settings_after_failure["last_processing_error"]

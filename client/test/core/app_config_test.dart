@@ -109,6 +109,12 @@ void main() {
   });
 
   group('AppConfig parent PIN', () {
+    test('does not accept a default PIN before setup', () {
+      expect(AppConfig.hasParentPin, isFalse);
+      expect(AppConfig.verifyParentPin('0000'), isFalse);
+      expect(AppConfig.verifyParentPin('2468'), isFalse);
+    });
+
     test('stores and verifies a salted parent PIN hash', () async {
       await AppConfig.setParentPin('2468');
 

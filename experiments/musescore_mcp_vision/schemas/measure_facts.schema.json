@@ -1,0 +1,137 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "title": "AZMusic MuseScore MCP Vision Measure Facts",
+  "type": "object",
+  "additionalProperties": false,
+  "required": [
+    "schema_version",
+    "source",
+    "measure",
+    "warnings"
+  ],
+  "properties": {
+    "schema_version": {
+      "const": "azmusic.musescore_mcp_vision.measure_facts.v1"
+    },
+    "source": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["pdf_path", "page_number", "measure_region"],
+      "properties": {
+        "pdf_path": {"type": "string"},
+        "page_number": {"type": "integer", "minimum": 1},
+        "measure_region": {
+          "type": "object",
+          "additionalProperties": true
+        }
+      }
+    },
+    "measure": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "measure_index",
+        "staff_count",
+        "time_signature",
+        "events",
+        "notations",
+        "fingerings",
+        "confidence",
+        "uncertainties"
+      ],
+      "properties": {
+        "measure_index": {"type": "integer", "minimum": 1},
+        "printed_measure_number": {"type": ["integer", "null"], "minimum": 1},
+        "staff_count": {"type": "integer", "minimum": 1},
+        "clef": {"type": ["string", "null"]},
+        "key_signature": {"type": ["string", "null"]},
+        "time_signature": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["beats", "beat_type"],
+          "properties": {
+            "beats": {"type": "integer", "minimum": 1},
+            "beat_type": {"type": "integer", "minimum": 1}
+          }
+        },
+        "events": {
+          "type": "array",
+          "minItems": 1,
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "duration"],
+            "properties": {
+              "kind": {"enum": ["note", "rest"]},
+              "pitch": {
+                "type": ["object", "null"],
+                "additionalProperties": false,
+                "required": ["step", "octave"],
+                "properties": {
+                  "step": {"enum": ["C", "D", "E", "F", "G", "A", "B"]},
+                  "octave": {"type": "integer", "minimum": 0, "maximum": 9},
+                  "alter": {"type": "integer", "minimum": -2, "maximum": 2}
+                }
+              },
+              "duration": {
+                "type": "object",
+                "additionalProperties": false,
+                "required": ["numerator", "denominator"],
+                "properties": {
+                  "numerator": {"type": "integer", "minimum": 1},
+                  "denominator": {"type": "integer", "minimum": 1}
+                }
+              },
+              "dots": {"type": "integer", "minimum": 0, "default": 0},
+              "tie": {"enum": ["start", "stop", "continue", "none", null]},
+              "slur": {"enum": ["start", "stop", "continue", "none", null]},
+              "articulations": {
+                "type": "array",
+                "items": {"type": "string"}
+              },
+              "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+            }
+          }
+        },
+        "notations": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["kind", "text"],
+            "properties": {
+              "kind": {"type": "string"},
+              "text": {"type": "string"},
+              "event_index": {"type": ["integer", "null"], "minimum": 1},
+              "placement": {"enum": ["above", "below", "unknown", null]},
+              "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+            }
+          }
+        },
+        "fingerings": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["text", "event_index"],
+            "properties": {
+              "text": {"type": "string"},
+              "event_index": {"type": "integer", "minimum": 1},
+              "placement": {"enum": ["above", "below", "unknown", null]},
+              "confidence": {"type": "number", "minimum": 0, "maximum": 1}
+            }
+          }
+        },
+        "confidence": {"type": "number", "minimum": 0, "maximum": 1},
+        "uncertainties": {
+          "type": "array",
+          "items": {"type": "string"}
+        }
+      }
+    },
+    "warnings": {
+      "type": "array",
+      "items": {"type": "string"}
+    }
+  }
+}

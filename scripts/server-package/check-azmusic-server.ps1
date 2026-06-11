@@ -113,6 +113,15 @@ function Test-MuseHubInstalled {
     return $false
 }
 
+function Test-HuggingFaceToken {
+    $tokenPath = Join-Path $HOME ".cache\huggingface\token"
+    if (Test-Path $tokenPath) {
+        $token = (Get-Content -LiteralPath $tokenPath -Raw -ErrorAction SilentlyContinue).Trim()
+        return -not [string]::IsNullOrWhiteSpace($token)
+    }
+    return $false
+}
+
 Write-Host "AZMusic server package check"
 Write-Host "Package: $PackageRoot"
 Write-Host "Bundled server executable: $(if (Test-Path $ServerExe) { 'ready' } else { 'missing; recreate package' })"
@@ -141,6 +150,12 @@ Test-ConfiguredTool `
     -EnvName "HOMR_CLI_PATH" `
     -CommandNames @("homr") `
     -CommonPaths @("$PackageRoot\tools\homr\.venv\Scripts\homr.exe", "$env:LOCALAPPDATA\AZMusic\Server\tools\homr\.venv\Scripts\homr.exe")
+Test-ConfiguredTool `
+    -Label "LEGATO (experimental)" `
+    -EnvName "LEGATO_CLI_PATH" `
+    -CommandNames @("legato-runner", "legato") `
+    -CommonPaths @("$PackageRoot\server\tools\legato_runner.py", "$env:LOCALAPPDATA\AZMusic\Server\tools\legato\legato-runner.py", "$env:LOCALAPPDATA\AZMusic\Server\tools\legato\legato-runner.cmd")
+Write-Host "LEGATO Hugging Face token: $(if (Test-HuggingFaceToken) { 'found' } else { 'not found; run Connect LEGATO Hugging Face.cmd if using guangyangmusic/legato' })"
 
 try {
     $health = Invoke-RestMethod -Uri "http://localhost:$Port/health" -TimeoutSec 2

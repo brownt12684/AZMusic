@@ -4,14 +4,16 @@ from html import escape
 from urllib.parse import quote
 
 from fastapi import APIRouter, Request
-from fastapi.responses import HTMLResponse
+from fastapi.responses import HTMLResponse, RedirectResponse
 
 from server.config import settings
+from server.services.gemini_oauth import GeminiOAuthError, GeminiOAuthManager
 from server.services.pairing import PairingService
 from server.services.server_urls import reachable_server_urls
 
 router = APIRouter()
 _pairing_service = PairingService()
+_gemini_oauth = GeminiOAuthManager()
 
 
 @router.get("/setup", response_class=HTMLResponse)
@@ -45,6 +47,30 @@ async def setup_page(request: Request):
     )
 
 
+@router.get("/setup/gemini")
+async def start_gemini_setup(request: Request):
+    """Start server-side Google sign-in for Gemini vision review."""
+    try:
+        start = _gemini_oauth.start(str(request.base_url).rstrip("/"))
+    except GeminiOAuthError as exc:
+        return HTMLResponse(_gemini_error_html(str(exc)), status_code=409)
+    return RedirectResponse(start.authorization_url)
+
+
+@router.get("/api/v1/processing/gemini/oauth/callback", response_class=HTMLResponse)
+async def gemini_oauth_callback(request: Request, state: str = ""):
+    """Complete Google OAuth after the browser returns to the server."""
+    authorization_response = str(request.url)
+    try:
+        _gemini_oauth.finish(
+            state=state,
+            authorization_response=authorization_response,
+        )
+    except GeminiOAuthError as exc:
+        return HTMLResponse(_gemini_error_html(str(exc)), status_code=409)
+    return HTMLResponse(_gemini_success_html())
+
+
 def _setup_html(
     *,
     server_name: str,
@@ -67,10 +93,8 @@ def _setup_html(
     alternate_urls_html = ""
     if alternate_server_urls:
         alternate_urls_html = (
-            "<div class=\"alternates\"><strong>Alternate URLs if pairing times out:</strong><ul>"
-            + "".join(
-                f"<li><code>{escape(url)}</code></li>" for url in alternate_server_urls
-            )
+            '<div class="alternates"><strong>Alternate URLs if pairing times out:</strong><ul>'
+            + "".join(f"<li><code>{escape(url)}</code></li>" for url in alternate_server_urls)
             + "</ul></div>"
         )
 
@@ -185,6 +209,85 @@ def _setup_html(
       <p><strong>Expires UTC:</strong> {escape(expires_at)}</p>
       <p class="payload">{escape(pairing_uri)}</p>
     </section>
+  </main>
+</body>
+</html>"""
+
+
+def _gemini_success_html() -> str:
+    return """<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gemini Connected</title>
+  <style>
+    body {
+      font-family: "Segoe UI", sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #f8f6f0;
+      color: #1b1b16;
+    }
+    main {
+      width: min(640px, calc(100vw - 32px));
+      padding: 28px;
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 18px 60px rgba(32, 28, 20, 0.14);
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Gemini is connected</h1>
+    <p>
+      You can close this browser tab and return to AZMusic. Gemini vision
+      review is now available for parent-triggered score correction after
+      deterministic rendering.
+    </p>
+  </main>
+</body>
+</html>"""
+
+
+def _gemini_error_html(message: str) -> str:
+    return f"""<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Gemini Setup Needed</title>
+  <style>
+    body {{
+      font-family: "Segoe UI", sans-serif;
+      margin: 0;
+      min-height: 100vh;
+      display: grid;
+      place-items: center;
+      background: #fff8f5;
+      color: #1b1b16;
+    }}
+    main {{
+      width: min(720px, calc(100vw - 32px));
+      padding: 28px;
+      background: white;
+      border-radius: 24px;
+      box-shadow: 0 18px 60px rgba(32, 28, 20, 0.14);
+    }}
+    code {{ overflow-wrap: anywhere; }}
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Gemini setup is not ready</h1>
+    <p>{escape(message)}</p>
+    <p>
+      Install the AZMusic-owned Google OAuth client JSON on the server,
+      restart AZMusic Server, then try again.
+    </p>
   </main>
 </body>
 </html>"""

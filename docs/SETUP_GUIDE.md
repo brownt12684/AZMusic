@@ -6,7 +6,7 @@ This repository is currently at a foundations milestone.
 
 - The client can bootstrap, import scores into parent intake, persist them offline immediately, push ready pieces to students, and open stored score versions in the reader.
 - The server can bootstrap, create its SQLite database and storage folders, expose the current piece and review routes, and persist richer sync-state bookkeeping.
-- The server now exposes processing settings/capabilities for Audiveris, MuseScore, development stub fallback, and experimental device workers.
+- The server now exposes processing settings/capabilities for PDF-first review, optional Audiveris/MuseScore notation processing, development stub fallback, parent-owned sync scaffolding, and experimental device workers.
 - Client/server sync is still opportunistic. The local SQLite library remains the source of truth for immediate usability.
 
 ## Prerequisites
@@ -80,17 +80,25 @@ Key settings in `server/.env`:
 | `DATABASE_URL` | `sqlite+aiosqlite:///./azmusic_server.db` | Relative SQLite paths are normalized against `server/` |
 | `STORAGE_PATH` | `./storage` | Relative storage paths are normalized against `server/` |
 | `LAN_AUTH_TOKEN` | *(empty)* | Placeholder only; routes do not enforce auth yet |
-| `PRODUCTION_MODE` | `false` | When `true`, stub MusicXML is disabled and real processing tools are required |
+| `PRODUCTION_MODE` | `false` | When `true`, stub MusicXML is disabled and real processing tools are required for optional notation jobs |
 | `REQUIRE_DEVICE_AUTH` | `false` | When `true`, protected API routes require a QR-paired device token |
 | `PUBLIC_SERVER_URL` | *(empty)* | Optional URL to encode in QR pairing payloads when auto-detection chooses the wrong network address |
 | `AI_ENABLED` | `true` | Enables processing-related code paths |
 | `MAX_CONCURRENT_JOBS` | `2` | Background job concurrency limit |
 | `AUDIVERIS_CLI_PATH` | *(empty)* | Optional real OMR engine path; can also be set from the parent processing settings screen |
-| `MUSESCORE_CLI_PATH` | *(empty)* | Optional MusicXML-to-PDF renderer path; can also be set from the parent processing settings screen |
+| `MUSESCORE_CLI_PATH` | *(empty)* | Optional MusicXML-to-PDF renderer path; can also be set from the parent Advanced processing settings screen |
 | `OCR_CLI_PATH` | *(empty)* | Optional Tesseract OCR path; required in production mode |
 | `PROCESSING_MODE` | `server_only` | Use `server_plus_device_workers` only for experimental device-worker registration |
-| `ALLOW_STUB_MUSICXML` | `true` | Allows development imports to produce deterministic placeholder MusicXML when Audiveris is not configured |
-| `HOMR_CLI_PATH` | empty | Optional experimental HOMR CLI path for server-side MusicXML OMR bakeoff |
+| `ALLOW_STUB_MUSICXML` | `true` | Allows development notation jobs to produce deterministic placeholder MusicXML when Audiveris is not configured |
+| `HOMR_CLI_PATH` | empty | Optional experimental HOMR CLI path for backend-only OMR evidence |
+| `LEGATO_CLI_PATH` | empty | Optional experimental LEGATO runner path for ABC-based OMR evidence |
+| `LEGATO_MODEL_PATH` | empty | Optional experimental LEGATO model id or local model directory |
+
+### Notation Edit Workflow
+
+Metadata review is parent-edited directly in the review screen. There is no active LLM metadata review path.
+
+For notation, parents should use Advanced Notation Lab after the student PDF is approved. Audiveris/MuseScore output is queued as a notation edit item, not as part of metadata approval. Parents can inspect the render, edit the MusicXML externally in MuseScore, upload the edited file, rerender, and mark the edit ready. Final readiness catalogs a retraining sample with the original source, OMR baseline, final MusicXML, rendered PDF, metadata, and provenance.
 
 Processing settings are persisted at `server/storage/processing_settings.json` after being changed from the parent app or `/api/v1/processing/settings`. Device-worker registrations are persisted at `server/storage/device_workers.json`.
 
@@ -144,7 +152,9 @@ Release build outputs:
 
 These build tasks pass `AZMUSIC_PRODUCTION=true` into the client. Android release signing reads `client/android/key.properties` when present; otherwise it uses debug signing only for internal development installs.
 
-The preferred Windows server install path is `AZMusic.Server.Setup.exe`. It embeds the internal portable server package, installs the bundled `azmusic-server.exe`, creates desktop and Start Menu shortcuts, runs setup, and offers guided links for Audiveris, MuseScore, Tesseract, and optional experimental HOMR. HOMR is installed into a separate Python virtual environment when selected; it is not bundled into the AZMusic executable.
+The preferred Windows server install path is `AZMusic.Server.Setup.exe`. It embeds the internal portable server package, installs the bundled `azmusic-server.exe`, creates desktop and Start Menu shortcuts, runs setup, and offers guided links for Audiveris, MuseScore, Tesseract, and optional experimental HOMR/LEGATO. HOMR and LEGATO are installed into separate Python virtual environments when selected; they are not bundled into the AZMusic executable. LEGATO uses the official `guangyangmusic/legato` model id by default, and that model currently requires Hugging Face account access or a locally configured model directory. Optional LLM correction is configured from the parent Advanced processing settings by pointing AZMusic at a local LM Studio endpoint.
+
+For LEGATO, accepting model terms in the browser is not enough by itself. Run `Connect LEGATO Hugging Face.cmd` from the installed server package so the same isolated LEGATO environment used by AZMusic receives a Hugging Face token for command-line model downloads.
 
 The preferred Windows client install path is `AZMusic.Windows.Client.Setup.exe`. It embeds the internal Windows client package, installs `azmusic.exe` for the current user, and creates Desktop and Start Menu shortcuts.
 
@@ -174,13 +184,13 @@ Use this sequence when you want to validate the current milestone end to end:
 2. Bootstrap and run the Windows client. If you launched the server on the same machine, prefer `-ClientServerHost 127.0.0.1 -ClientServerPort 8795`.
 3. Sign in as the parent profile and choose `Import music`.
 4. Select a `pdf`, `png`, `jpg`, `jpeg`, or `webp` file.
-5. Confirm the intake item is written locally immediately. If the import is a PDF and the server is reachable, confirm it also appears in the parent review queue.
+5. Confirm the intake item is written locally immediately. If the import is a PDF and the server is reachable, confirm it also appears in the parent review queue as a metadata/student-PDF review.
 6. Approve the candidate and push the ready piece to one or more student profiles when you want to validate the server-backed flow.
 7. Switch to a student profile, open the piece from the student library or piece detail, and confirm the reader opens the local score.
 
 For first-time server setup, open `http://<server-address>:8795/setup` on the server or another device on the same network. That page shows the parent/admin QR code used to initialize the parent device. If the page is opened as `localhost` on the server PC, the QR payload uses the detected LAN address instead of `localhost` so tablets can reach the server. If the displayed server URL is still wrong, set `PUBLIC_SERVER_URL=http://<server-lan-ip>:8795` in `server/.env` and restart the server. After the parent device is connected, use the parent section in the app to generate separate student-device QR codes for each student. Android and Windows clients can scan pairing QR codes from the pairing dialog; manual QR payload/code entry remains available as a fallback.
 
-For real OMR testing, open the parent server-processing settings screen and configure Audiveris before importing the PDF. Without Audiveris, the development fallback can still generate stub MusicXML if `ALLOW_STUB_MUSICXML` remains enabled. Configure MuseScore when you want rendered review PDFs produced from MusicXML instead of raw-PDF fallback copies.
+For real OMR testing, open the parent Advanced processing settings screen and configure Audiveris, then start Advanced Notation Lab for an approved PDF. Without Audiveris, the development fallback can still generate stub MusicXML if `ALLOW_STUB_MUSICXML` remains enabled. Configure MuseScore when you want rendered notation review PDFs produced from MusicXML instead of raw-PDF fallback copies.
 
 Current local persistence behavior:
 
@@ -188,7 +198,7 @@ Current local persistence behavior:
 - Parent intake entries stay in the local library even if the server upload fails.
 - Library metadata, notes, and annotation layers are stored in local SQLite at `azmusic.sqlite`.
 - Existing `library/library_index.json` files are migrated into SQLite on first load and backed up as `library_index.json.migrated-backup`.
-- Approved server PDF versions download as additional local score versions without removing the raw fallback.
+- Approved server student PDF versions download as additional local score versions without removing the raw fallback.
 - The client remains usable without the server for the local import-and-read flow.
 
 ## Fast prototype flow
@@ -248,7 +258,7 @@ Verification caveats:
 
 - `check-server` runs Python bytecode compilation plus `pytest server/tests`, which currently covers the health path, piece import and detail smoke flows, score-version download metadata, review and job routes, and sync-state retry bookkeeping.
 - `lint-server` adds Ruff on top of bytecode compilation.
-- The server smoke path now also covers `/api/v1/processing` settings, executable validation, QR-paired device-token enforcement, production processing gates, metadata refresh into pending MusicXML candidates, device-worker registration, processing metadata on review candidates, and the raw-preservation failure path when required processing is unavailable.
+- The server smoke path now also covers `/api/v1/processing` settings, executable validation, QR-paired device-token enforcement, production notation gates, metadata refresh into pending review candidates, cloud/notes/annotation manifest export, device-worker registration, processing metadata on review candidates, and raw/cleaned-PDF preservation when optional notation processing is unavailable.
 - `check-client` runs `flutter analyze` plus `flutter test --no-pub --no-test-assets --no-dds -r expanded`.
 - `client/test/` now contains committed coverage for import workflow cancellation, local image-import persistence, app-config host and port resolution, library sync banner states, alpha-jump lookup, reader spread layout rules, the local-library repository, sandbox launch routing, and the main app shell. It still does not drive the native OS file picker itself.
 - `check-client-windows` runs `check-client` and then launches the sandbox library on Windows to verify that the desktop shell starts cleanly.
@@ -257,7 +267,7 @@ Verification caveats:
 ## Shared operating assumptions
 
 - The client is offline-first; importing and reading the raw score must not depend on server availability.
-- v1 is LAN-only and private. No cloud or WAN dependency belongs in the core flow.
+- v1 core import/read/review/push is LAN/offline capable. Parent-owned cloud sync is optional restore scaffolding and must not become a hard dependency for student reading.
 - Raw imported score files must remain available even if later processing creates reviewed or approved derivatives.
 - Windows Surface Book is the primary client target. Android tablets are secondary.
 

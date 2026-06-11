@@ -7,7 +7,19 @@ from fastapi import Depends, FastAPI
 from server.config import settings
 from server.database import engine
 from server.jobs.dispatcher import JobDispatcher
-from server.routers import debug, jobs, pairing, pieces, processing, review, setup, sync
+from server.routers import (
+    annotations,
+    cloud,
+    debug,
+    jobs,
+    notes,
+    pairing,
+    pieces,
+    processing,
+    review,
+    setup,
+    sync,
+)
 from server.services.auth import require_paired_device
 
 
@@ -71,6 +83,24 @@ app.include_router(
     debug.router,
     prefix="/api/v1/debug",
     tags=["debug"],
+    dependencies=_protected_dependencies,
+)
+app.include_router(
+    cloud.router,
+    prefix="/api/v1/cloud",
+    tags=["cloud"],
+    dependencies=_protected_dependencies,
+)
+app.include_router(
+    notes.router,
+    prefix="/api/v1/notes",
+    tags=["notes"],
+    dependencies=_protected_dependencies,
+)
+app.include_router(
+    annotations.router,
+    prefix="/api/v1/annotations",
+    tags=["annotations"],
     dependencies=_protected_dependencies,
 )
 app.include_router(pairing.router, prefix="/api/v1/pairing", tags=["pairing"])

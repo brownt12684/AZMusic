@@ -11,7 +11,7 @@ Use this ZIP manually only when testing portable installs or troubleshooting.
 ## First Run From ZIP
 
 1. Double-click `Setup AZMusic Server.cmd`.
-2. When setup reports missing processing tools, choose `Y` to open the guided installer helper for Audiveris, MuseScore, Tesseract, and optional experimental HOMR.
+2. When setup reports missing processing tools, choose `Y` to open the guided installer helper for Audiveris, MuseScore, Tesseract, and optional experimental HOMR/LEGATO.
 3. If Windows asks for firewall access, allow the server on private networks. For automatic firewall setup, run setup/start as Administrator.
 4. Double-click `Start AZMusic Server.cmd`.
 5. Confirm the start window shows at least one `LAN setup URL`.
@@ -30,8 +30,11 @@ The setup script detects missing tools and can launch the helper automatically. 
 - MuseScore for rendering edited MusicXML back to review PDFs.
 - Tesseract OCR for title, metadata, and book-page text extraction.
 - HOMR as an optional experimental OMR engine for bakeoff testing against Audiveris.
+- LEGATO as an optional experimental OMR engine that converts score images to ABC before MusicXML conversion. The official `guangyangmusic/legato` model currently requires Hugging Face account access unless you configure a local model directory.
 
 Tool paths can be configured from the parent processing settings screen after pairing. Advanced users can also edit `server\.env`.
+
+If you enable LEGATO with the default `guangyangmusic/legato` model, run `Connect LEGATO Hugging Face.cmd` after accepting the model terms in the browser. Browser login alone does not authenticate the command-line model download used by the server.
 
 ## Bundled Server Runtime
 

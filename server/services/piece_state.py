@@ -147,6 +147,36 @@ class PieceStateService:
         state["visible_to_profile_ids"] = sorted(visible_to_profile_ids)
         return self.save(piece_id, state)
 
+    def set_score_version_metadata(
+        self,
+        piece_id: str,
+        score_version_id: str,
+        **metadata: Any,
+    ) -> dict[str, Any]:
+        """Persist score-version workflow metadata without requiring a DB migration."""
+        state = self.load(piece_id)
+        versions = _score_version_state(state)
+        previous = dict(versions.get(score_version_id) or {})
+        previous.update({key: value for key, value in metadata.items() if value is not None})
+        versions[score_version_id] = previous
+        state["score_versions"] = versions
+        return self.save(piece_id, state)
+
+    def score_version_metadata(
+        self,
+        piece_id: str,
+        score_version_id: str,
+    ) -> dict[str, Any]:
+        state = self.load(piece_id)
+        return dict(_score_version_state(state).get(score_version_id) or {})
+
+    def score_versions_metadata(self, piece_id: str) -> dict[str, dict[str, Any]]:
+        state = self.load(piece_id)
+        return {
+            score_version_id: dict(metadata)
+            for score_version_id, metadata in _score_version_state(state).items()
+        }
+
     def close_workflow(self, piece_id: str) -> dict[str, Any]:
         state = self.load(piece_id)
         state["workflow_closed"] = True
@@ -212,6 +242,18 @@ def _library_status_for_piece(piece: Piece) -> str:
     if piece.status == PieceStatus.processing:
         return "processing"
     return "intake"
+
+
+def _score_version_state(state: dict[str, Any]) -> dict[str, dict[str, Any]]:
+    raw_versions = state.get("score_versions")
+    if not isinstance(raw_versions, dict):
+        return {}
+    versions: dict[str, dict[str, Any]] = {}
+    for score_version_id, metadata in raw_versions.items():
+        if not isinstance(score_version_id, str) or not isinstance(metadata, dict):
+            continue
+        versions[score_version_id] = dict(metadata)
+    return versions
 
 
 def _normalize_for_search(value: str) -> str:

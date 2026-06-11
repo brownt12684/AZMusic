@@ -153,6 +153,48 @@ class ParentDebugToolsNotifier extends Notifier<ParentDebugToolsState> {
     }
   }
 
+  Future<void> clearPiece({
+    required String title,
+    String? localPieceId,
+    String? serverPieceId,
+  }) async {
+    if (localPieceId == null && serverPieceId == null) {
+      state = state.copyWith(
+        error: StateError('No local or server piece id was provided.'),
+        clearMessage: true,
+      );
+      return;
+    }
+    state = state.copyWith(busy: true, clearError: true, clearMessage: true);
+    try {
+      if (serverPieceId != null) {
+        if (!AppConfig.isServerPaired) {
+          throw const ServerNotPairedException();
+        }
+        await ref
+            .read(serverPieceSyncRepositoryProvider)
+            .clearServerPieceWorkflowData(serverPieceId);
+      }
+      if (localPieceId != null) {
+        await ref.read(allPiecesProvider.notifier).removeLocalEntry(
+              localPieceId,
+            );
+      }
+      await _refreshParentWorkflow();
+      final jobs = AppConfig.isServerPaired
+          ? await ref.read(serverPieceSyncRepositoryProvider).fetchJobs()
+          : const <ServerJob>[];
+      state = state.copyWith(
+        busy: false,
+        jobs: jobs,
+        message: 'Cleared $title from the debug library workflow.',
+        clearError: true,
+      );
+    } catch (error) {
+      state = state.copyWith(busy: false, error: error, clearMessage: true);
+    }
+  }
+
   Future<void> _refreshParentWorkflow() async {
     ref.invalidate(serverHealthProvider);
     await ref
