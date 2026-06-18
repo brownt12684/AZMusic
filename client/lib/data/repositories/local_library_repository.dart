@@ -1,5 +1,6 @@
 import 'dart:io';
 
+import 'package:crypto/crypto.dart';
 import 'package:path/path.dart' as path;
 import 'package:uuid/uuid.dart';
 
@@ -44,6 +45,7 @@ class LocalLibraryRepository {
     String? composer,
     String? primaryInstrument,
     String? bookOrCollection,
+    String pieceKind = 'piece',
   }) async {
     final sourceFile = File(sourcePath);
     if (!await sourceFile.exists()) {
@@ -73,6 +75,8 @@ class LocalLibraryRepository {
     await sourceFile.copy(destinationPath);
 
     final title = _titleFromSourcePath(sourcePath);
+    final sourceContentSha256 =
+        (await sha256.bind(sourceFile.openRead()).first).toString();
     final piece = Piece(
       id: pieceId,
       title: title,
@@ -83,6 +87,8 @@ class LocalLibraryRepository {
           : <String>[assignedProfileId],
       primaryInstrument: primaryInstrument,
       bookOrCollection: bookOrCollection,
+      pieceKind: pieceKind,
+      sourceContentSha256: sourceContentSha256,
       libraryStatus: assignedProfileId == null
           ? LibraryStatus.intake
           : LibraryStatus.uploadPending,
@@ -119,12 +125,14 @@ class LocalLibraryRepository {
     String? composer,
     String? primaryInstrument,
     String? bookOrCollection,
+    String pieceKind = 'piece',
   }) async {
     final entry = await importScoreForProfile(
       sourcePath: sourcePath,
       composer: composer,
       primaryInstrument: primaryInstrument,
       bookOrCollection: bookOrCollection,
+      pieceKind: pieceKind,
     );
     if (title == null || title.trim().isEmpty) {
       return entry;
@@ -328,6 +336,7 @@ class LocalLibraryRepository {
     required String title,
     String? composer,
     required List<String> visibleToProfileIds,
+    List<String> previousVisibleToProfileIds = const <String>[],
     String? primaryInstrument,
     String? bookOrCollection,
     String? keySignature,
@@ -375,6 +384,7 @@ class LocalLibraryRepository {
       composer: composer,
       serverPieceId: serverPieceId,
       visibleToProfileIds: visibleToProfileIds,
+      previousVisibleToProfileIds: previousVisibleToProfileIds,
       primaryInstrument: primaryInstrument,
       bookOrCollection: bookOrCollection,
       keySignature: keySignature,

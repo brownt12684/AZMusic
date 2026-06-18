@@ -8,6 +8,7 @@ from __future__ import annotations
 
 import asyncio
 import json
+import os
 from dataclasses import dataclass
 from typing import Any
 
@@ -25,11 +26,18 @@ class McpToolCallResult:
 class McpStdioClient:
     """Small JSON-RPC client for MCP servers launched over stdio."""
 
-    def __init__(self, command: list[str], *, timeout_seconds: int = 30) -> None:
+    def __init__(
+        self,
+        command: list[str],
+        *,
+        timeout_seconds: int = 30,
+        env: dict[str, str] | None = None,
+    ) -> None:
         if not command:
             raise McpClientError("mcp.server_command cannot be empty.")
         self.command = command
         self.timeout_seconds = timeout_seconds
+        self.env = env or {}
         self.process: asyncio.subprocess.Process | None = None
         self._next_id = 1
 
@@ -39,6 +47,7 @@ class McpStdioClient:
             stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
+            env={**os.environ, **self.env},
         )
         await self.initialize()
         return self

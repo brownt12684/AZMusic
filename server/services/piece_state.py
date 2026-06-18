@@ -43,6 +43,7 @@ class PieceStateService:
         validation_warnings: list[str] | None = None,
         split_confidence: float | None = None,
         workflow_closed: bool | None = None,
+        previous_visible_to_profile_ids: list[str] | None = None,
         notes: str | None = None,
     ) -> dict[str, Any]:
         state = self.load(piece_id)
@@ -99,6 +100,10 @@ class PieceStateService:
             state["workflow_closed"] = workflow_closed
         else:
             state.setdefault("workflow_closed", False)
+        if previous_visible_to_profile_ids is not None:
+            state["previous_visible_to_profile_ids"] = sorted(set(previous_visible_to_profile_ids))
+        else:
+            state.setdefault("previous_visible_to_profile_ids", [])
         if notes is not None:
             state["notes"] = notes
         else:
@@ -145,6 +150,22 @@ class PieceStateService:
         visible_to_profile_ids = set(state.get("visible_to_profile_ids", []))
         visible_to_profile_ids.update(profile_ids)
         state["visible_to_profile_ids"] = sorted(visible_to_profile_ids)
+        previous_visible_to_profile_ids = set(state.get("previous_visible_to_profile_ids", []))
+        previous_visible_to_profile_ids.difference_update(profile_ids)
+        state["previous_visible_to_profile_ids"] = sorted(previous_visible_to_profile_ids)
+        return self.save(piece_id, state)
+
+    def pull_back_for_edits(self, piece_id: str) -> dict[str, Any]:
+        state = self.load(piece_id)
+        visible_to_profile_ids = sorted(
+            set(str(profile_id) for profile_id in state.get("visible_to_profile_ids", []))
+        )
+        previous_visible_to_profile_ids = sorted(
+            set(state.get("previous_visible_to_profile_ids", [])) | set(visible_to_profile_ids)
+        )
+        state["visible_to_profile_ids"] = []
+        state["previous_visible_to_profile_ids"] = previous_visible_to_profile_ids
+        state["workflow_closed"] = False
         return self.save(piece_id, state)
 
     def set_score_version_metadata(
@@ -186,13 +207,14 @@ class PieceStateService:
         state = self.load(piece.id)
         attempt_status = state.get("attempt_status") or "canonical"
         canonical_piece_id = state.get("canonical_piece_id")
-        is_duplicate_attempt = (
-            attempt_status in {"duplicate_archived", "superseded", "failed_attempt"}
-            or (
-                isinstance(canonical_piece_id, str)
-                and bool(canonical_piece_id.strip())
-                and canonical_piece_id != piece.id
-            )
+        is_duplicate_attempt = attempt_status in {
+            "duplicate_archived",
+            "superseded",
+            "failed_attempt",
+        } or (
+            isinstance(canonical_piece_id, str)
+            and bool(canonical_piece_id.strip())
+            and canonical_piece_id != piece.id
         )
         return {
             "primary_instrument": state.get("primary_instrument"),
@@ -208,6 +230,7 @@ class PieceStateService:
             "validation_warnings": state.get("validation_warnings", []),
             "split_confidence": state.get("split_confidence"),
             "workflow_closed": bool(state.get("workflow_closed", False)),
+            "previous_visible_to_profile_ids": state.get("previous_visible_to_profile_ids", []),
             "notes": state.get("notes"),
             "library_status": _library_status_for_piece(piece),
             "normalized_title": state.get("normalized_title") or _normalize_for_search(piece.title),

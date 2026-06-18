@@ -30,9 +30,10 @@ Expected interactive run shape:
 4. Start the plugin from `Plugins -> MuseScore API Server`.
 5. Start the Python MCP server from the `mcp-musescore` checkout.
 
-The upstream plugin runs a WebSocket server on port `8765`; the Python MCP
-server exposes tools such as `ping_musescore`, `set_time_signature`,
-`add_note`, `add_rest`, and `processSequence`.
+The local plugin copy is configured to run its WebSocket server on port `18765`
+to avoid conflicts with other local tools. The Python MCP server exposes tools
+such as `ping_musescore`, `set_time_signature`, `add_note`, `add_rest`, and
+`processSequence`.
 
 ## Setup
 
@@ -138,3 +139,8 @@ The first probe successfully produced schema-valid measure facts, but the
 sequence builder rejected them because the reported durations did not add up to
 the visible `6/8` time signature. That rejection is intentional: the experiment
 must not send unsafe notation to MuseScore.
+
+A hand-authored valid measure smoke test has been run against the live
+MuseScore plugin on port `18765`. `ping_musescore` returned `pong`, and
+`processSequence` returned `success: true`. The harness now exits non-zero if
+the MCP tool payload reports an error such as `Not connected to MuseScore`.

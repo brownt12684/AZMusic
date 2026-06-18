@@ -71,6 +71,10 @@ _BULK_APPROVAL_STAGES = {
     "candidate_review_needed",
     "notation_edit_queued",
 }
+_METADATA_REVIEW_STAGES = {
+    "metadata_review_needed",
+    "split_review_needed",
+}
 _LOCAL_LLM_ALLOWED_SMALL_SCORE_TOOLS = {
     "update_note_pitch",
     "update_note_duration",
@@ -499,6 +503,7 @@ async def _apply_review_decision(
                     canonical_piece_id=piece.id,
                     resolved_review_item_id=item.id,
                 )
+        await _mark_source_book_ready_if_metadata_review_complete(db, item=item)
 
     elif action_value == ReviewAction.reject.value:
         item.status = "rejected"
@@ -529,6 +534,7 @@ async def _apply_review_decision(
             if piece:
                 piece.status = PieceStatus.needs_edits
                 piece.updated_at = datetime.utcnow()
+        await _mark_source_book_ready_if_metadata_review_complete(db, item=item)
     else:
         raise HTTPException(status_code=400, detail="Unsupported review action.")
 
@@ -603,6 +609,108 @@ async def _approve_student_pdf_review(
             canonical_piece_id=piece.id,
             resolved_review_item_id=item.id,
         )
+    await _mark_source_book_ready_if_metadata_review_complete(db, item=item)
+
+
+async def _mark_source_book_ready_if_metadata_review_complete(
+    db: AsyncSession,
+    *,
+    item: ReviewItem,
+) -> None:
+    """Make the preserved book PDF pushable only after child metadata review finishes."""
+    source_book_id = await _source_book_id_for_review_item(db, item)
+    if not source_book_id:
+        return
+
+    source_book = await db.get(Piece, source_book_id)
+    if not source_book:
+        return
+    source_metadata = _piece_state_service.metadata_for_piece(source_book)
+    if source_metadata["piece_kind"] != "book" or source_book.status == PieceStatus.archived:
+        return
+
+    child_result = await db.execute(select(Piece))
+    has_child_piece = False
+    for child_piece in child_result.scalars().all():
+        if child_piece.id == source_book_id:
+            continue
+        child_metadata = _piece_state_service.metadata_for_piece(child_piece)
+        if child_metadata["source_book_id"] == source_book_id:
+            has_child_piece = True
+            break
+    if not has_child_piece:
+        return
+
+    review_result = await db.execute(select(ReviewItem))
+    for review_item in review_result.scalars().all():
+        if review_item.status != "pending":
+            continue
+        candidate_data = dict(review_item.candidate_data or {})
+        if candidate_data.get("processing_stage") not in _METADATA_REVIEW_STAGES:
+            continue
+        review_source_book_id = await _source_book_id_for_review_item(db, review_item)
+        if review_source_book_id == source_book_id:
+            return
+
+    source_book.status = PieceStatus.approved
+    source_book.updated_at = datetime.utcnow()
+
+    raw_result = await db.execute(
+        select(ScoreVersion)
+        .where(
+            ScoreVersion.piece_id == source_book_id,
+            ScoreVersion.version_type == ScoreVersionType.raw,
+        )
+        .limit(1)
+    )
+    raw_version = raw_result.scalar_one_or_none()
+    if raw_version:
+        raw_version.is_default = False
+        _piece_state_service.set_score_version_metadata(
+            source_book_id,
+            raw_version.id,
+            artifact_role="original_import",
+            approved_by_parent=True,
+            student_default=False,
+            display_rank=100,
+        )
+
+    cleaned_result = await db.execute(
+        select(ScoreVersion).where(ScoreVersion.piece_id == source_book_id)
+    )
+    for score_version in cleaned_result.scalars().all():
+        workflow_metadata = _piece_state_service.score_version_metadata(
+            source_book_id,
+            score_version.id,
+        )
+        if workflow_metadata.get("artifact_role") != "cleaned_pdf":
+            continue
+        score_version.is_default = True
+        score_version.version_type = ScoreVersionType.approved
+        _piece_state_service.set_score_version_metadata(
+            source_book_id,
+            score_version.id,
+            artifact_role="cleaned_pdf",
+            replaces_score_version_id=raw_version.id if raw_version else None,
+            approved_by_parent=True,
+            student_default=True,
+            display_rank=10,
+        )
+        break
+
+    if source_metadata["visible_to_profile_ids"]:
+        child_result = await db.execute(select(Piece))
+        for child_piece in child_result.scalars().all():
+            if child_piece.id == source_book_id or child_piece.status != PieceStatus.approved:
+                continue
+            child_metadata = _piece_state_service.metadata_for_piece(child_piece)
+            if child_metadata["source_book_id"] != source_book_id:
+                continue
+            _piece_state_service.assign_profiles(
+                child_piece.id,
+                list(source_metadata["visible_to_profile_ids"]),
+            )
+            child_piece.updated_at = datetime.utcnow()
 
 
 @router.post("/{item_id}/reprocess", response_model=JobResponse)
@@ -694,6 +802,7 @@ async def request_review_reprocess(
             created_at=job.created_at,
             updated_at=job.updated_at,
         )
+
 
 @router.post("/{item_id}/llm-correction-json", response_model=JobResponse)
 async def request_llm_correction_json(
@@ -1515,10 +1624,7 @@ def _local_llm_score_edit_is_accepted(
     if confidence_value < _LOCAL_LLM_EDIT_VERIFICATION_CONFIDENCE:
         return (
             False,
-            (
-                "The verifier confidence was below "
-                f"{_LOCAL_LLM_EDIT_VERIFICATION_CONFIDENCE:.2f}."
-            ),
+            (f"The verifier confidence was below {_LOCAL_LLM_EDIT_VERIFICATION_CONFIDENCE:.2f}."),
         )
     return True, verification.get("summary") or "The verifier accepted the edit."
 
@@ -1669,9 +1775,7 @@ def _score_tool_target_payload(tool_call: dict) -> dict:
         "part_id": str(arguments.get("part_id") or "").strip(),
         "staff": str(arguments.get("staff") or "").strip(),
         "voice": str(arguments.get("voice") or "").strip(),
-        "physical_measure_index": _optional_positive_int(
-            arguments.get("physical_measure_index")
-        ),
+        "physical_measure_index": _optional_positive_int(arguments.get("physical_measure_index")),
         "measure_number": _optional_nonnegative_int(arguments.get("measure_number")),
         "note_index": _optional_positive_int(arguments.get("note_index")),
     }
@@ -1733,6 +1837,7 @@ def _attach_local_llm_hybrid_fallback_candidate(
     candidate_data["hybrid_fallback_available"] = True
     candidate_data["hybrid_fallback_reason"] = hybrid_candidate["hybrid_fallback_reason"]
     return candidate_data
+
 
 def _record_local_llm_score_status(
     candidate_data: dict,

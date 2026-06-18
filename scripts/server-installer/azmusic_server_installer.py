@@ -8,10 +8,14 @@ import shutil
 import sqlite3
 import subprocess
 import sys
-import tempfile
 import zipfile
 from datetime import datetime
 from pathlib import Path
+
+if hasattr(sys.stdout, "reconfigure"):
+    sys.stdout.reconfigure(line_buffering=True)
+if hasattr(sys.stderr, "reconfigure"):
+    sys.stderr.reconfigure(line_buffering=True)
 
 PRESERVED_RELATIVE_PATHS = {
     Path("server") / ".env",
@@ -70,12 +74,17 @@ def stop_running_server_processes() -> None:
     if os.name != "nt":
         return
 
-    subprocess.run(
-        ["taskkill", "/F", "/IM", "azmusic-server.exe"],
-        check=False,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    print("Checking for running AZMusic server processes.")
+    try:
+        subprocess.run(
+            ["taskkill", "/F", "/IM", "azmusic-server.exe"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+        )
+    except subprocess.TimeoutExpired:
+        print("Timed out while checking for running server processes; continuing install.")
 
 
 def is_preserved(relative_path: Path) -> bool:
@@ -105,19 +114,40 @@ def copy_runtime(source: Path, destination: Path) -> None:
 
 
 def extract_package(package_zip: Path, install_dir: Path) -> None:
-    with tempfile.TemporaryDirectory(prefix="azmusic-server-install-") as temp_dir_name:
-        temp_dir = Path(temp_dir_name)
-        with zipfile.ZipFile(package_zip) as archive:
-            archive.extractall(temp_dir)
+    install_dir.mkdir(parents=True, exist_ok=True)
+    with zipfile.ZipFile(package_zip) as archive:
+        package_root = find_package_root(archive)
+        print(f"Installing package root: {package_root}")
+        for entry in archive.infolist():
+            if entry.filename.endswith("/"):
+                continue
+            relative_path = relative_zip_path(entry.filename, package_root)
+            if relative_path is None:
+                continue
+            target = install_dir / relative_path
+            if is_preserved(relative_path) and target.exists():
+                continue
 
-        package_roots = [
-            path for path in temp_dir.iterdir()
-            if path.is_dir() and path.name.startswith("AZMusic-server-windows-")
-        ]
-        if not package_roots:
-            raise RuntimeError("The embedded package did not contain an AZMusic server folder.")
+            target.parent.mkdir(parents=True, exist_ok=True)
+            if entry.file_size >= 10_000_000:
+                print(f"Extracting {relative_path} ({entry.file_size // 1_000_000} MB)")
+            with archive.open(entry) as source, target.open("wb") as output:
+                shutil.copyfileobj(source, output, length=1024 * 1024)
 
-        copy_runtime(package_roots[0], install_dir)
+
+def find_package_root(archive: zipfile.ZipFile) -> str:
+    for entry in archive.infolist():
+        parts = Path(entry.filename).parts
+        if parts and parts[0].startswith("AZMusic-server-windows-"):
+            return parts[0]
+    raise RuntimeError("The embedded package did not contain an AZMusic server folder.")
+
+
+def relative_zip_path(filename: str, package_root: str) -> Path | None:
+    parts = Path(filename).parts
+    if not parts or parts[0] != package_root or len(parts) == 1:
+        return None
+    return Path(*parts[1:])
 
 
 def clear_workflow_data(install_dir: Path) -> Path | None:

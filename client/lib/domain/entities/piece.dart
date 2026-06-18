@@ -16,6 +16,7 @@ class Piece {
   final String? serverPieceId;
   final String? assignedProfileId;
   final List<String> visibleToProfileIds;
+  final List<String> previousVisibleToProfileIds;
   final String? primaryInstrument;
   final String? bookOrCollection;
   final LibraryStatus libraryStatus;
@@ -39,6 +40,7 @@ class Piece {
   final List<Map<String, dynamic>> catalogSuggestions;
   final List<String> validationWarnings;
   final double? splitConfidence;
+  final String? sourceContentSha256;
   final bool workflowClosed;
   final DateTime createdAt;
   final DateTime updatedAt;
@@ -50,6 +52,7 @@ class Piece {
     this.serverPieceId,
     this.assignedProfileId,
     this.visibleToProfileIds = const <String>[],
+    this.previousVisibleToProfileIds = const <String>[],
     this.primaryInstrument,
     this.bookOrCollection,
     this.libraryStatus = LibraryStatus.intake,
@@ -73,6 +76,7 @@ class Piece {
     this.catalogSuggestions = const <Map<String, dynamic>>[],
     this.validationWarnings = const <String>[],
     this.splitConfidence,
+    this.sourceContentSha256,
     this.workflowClosed = false,
     required this.createdAt,
     required this.updatedAt,
@@ -86,6 +90,7 @@ class Piece {
     String? serverPieceId,
     String? assignedProfileId,
     List<String>? visibleToProfileIds,
+    List<String>? previousVisibleToProfileIds,
     String? primaryInstrument,
     String? bookOrCollection,
     LibraryStatus? libraryStatus,
@@ -109,6 +114,7 @@ class Piece {
     List<Map<String, dynamic>>? catalogSuggestions,
     List<String>? validationWarnings,
     double? splitConfidence,
+    String? sourceContentSha256,
     bool? workflowClosed,
     DateTime? createdAt,
     DateTime? updatedAt,
@@ -132,6 +138,8 @@ class Piece {
           clearServerPieceId ? null : serverPieceId ?? this.serverPieceId,
       assignedProfileId: assignedProfileId ?? this.assignedProfileId,
       visibleToProfileIds: visibleToProfileIds ?? this.visibleToProfileIds,
+      previousVisibleToProfileIds:
+          previousVisibleToProfileIds ?? this.previousVisibleToProfileIds,
       primaryInstrument: clearPrimaryInstrument
           ? null
           : primaryInstrument ?? this.primaryInstrument,
@@ -164,6 +172,7 @@ class Piece {
       validationWarnings: validationWarnings ?? this.validationWarnings,
       splitConfidence:
           clearSplitConfidence ? null : splitConfidence ?? this.splitConfidence,
+      sourceContentSha256: sourceContentSha256 ?? this.sourceContentSha256,
       workflowClosed: workflowClosed ?? this.workflowClosed,
       createdAt: createdAt ?? this.createdAt,
       updatedAt: updatedAt ?? this.updatedAt,
@@ -178,6 +187,7 @@ class Piece {
       'server_piece_id': serverPieceId,
       'assigned_profile_id': assignedProfileId,
       'visible_to_profile_ids': visibleToProfileIds,
+      'previous_visible_to_profile_ids': previousVisibleToProfileIds,
       'primary_instrument': primaryInstrument,
       'book_or_collection': bookOrCollection,
       'library_status': libraryStatus.name,
@@ -201,6 +211,7 @@ class Piece {
       'catalog_suggestions': catalogSuggestions,
       'validation_warnings': validationWarnings,
       'split_confidence': splitConfidence,
+      'source_content_sha256': sourceContentSha256,
       'workflow_closed': workflowClosed,
       'created_at': createdAt.toIso8601String(),
       'updated_at': updatedAt.toIso8601String(),
@@ -225,6 +236,11 @@ class Piece {
       serverPieceId: map['server_piece_id'] as String?,
       assignedProfileId: legacyAssignedProfileId,
       visibleToProfileIds: visibleToProfileIds,
+      previousVisibleToProfileIds:
+          (map['previous_visible_to_profile_ids'] as List<dynamic>?)
+                  ?.map((item) => item as String)
+                  .toList() ??
+              const <String>[],
       primaryInstrument: map['primary_instrument'] as String?,
       bookOrCollection: map['book_or_collection'] as String?,
       libraryStatus: LibraryStatus.values.firstWhere(
@@ -287,6 +303,7 @@ class Piece {
               .map((item) => item.toString())
               .toList(),
       splitConfidence: (map['split_confidence'] as num?)?.toDouble(),
+      sourceContentSha256: map['source_content_sha256'] as String?,
       workflowClosed: map['workflow_closed'] as bool? ?? false,
       createdAt: DateTime.parse(map['created_at'] as String),
       updatedAt: DateTime.parse(map['updated_at'] as String),

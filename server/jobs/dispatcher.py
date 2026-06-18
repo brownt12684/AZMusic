@@ -14,6 +14,8 @@ from server.models.orm import BackgroundJob, JobStatus, Piece, PieceStatus, Revi
 from server.services.processing_settings import ProcessingSettingsStore
 from server.services.score_processing import JobCanceledError, ScoreProcessingService
 
+_DISPATCHABLE_JOB_TYPES = ("score_processing", "book_import")
+
 
 class JobDispatcher:
     """Poll and process queued jobs inside the FastAPI process."""
@@ -153,7 +155,7 @@ class JobDispatcher:
         async with database.async_session() as db:
             result = await db.execute(
                 select(BackgroundJob).where(
-                    BackgroundJob.job_type == "score_processing",
+                    BackgroundJob.job_type.in_(_DISPATCHABLE_JOB_TYPES),
                     BackgroundJob.status == JobStatus.running,
                     BackgroundJob.updated_at < cutoff,
                 )
@@ -175,7 +177,7 @@ class JobDispatcher:
         result = await db.execute(
             select(BackgroundJob)
             .where(
-                BackgroundJob.job_type == "score_processing",
+                BackgroundJob.job_type.in_(_DISPATCHABLE_JOB_TYPES),
                 BackgroundJob.status == JobStatus.queued,
             )
             .order_by(BackgroundJob.created_at.asc())
@@ -204,9 +206,11 @@ class JobDispatcher:
         return job
 
     async def _process_job(self, db, job: BackgroundJob) -> None:
-        if job.job_type != "score_processing":
+        if job.job_type == "score_processing":
+            await self._score_processing_service.process_existing_pdf_job(db, job=job)
             return
-        await self._score_processing_service.process_existing_pdf_job(db, job=job)
+        if job.job_type == "book_import":
+            await self._score_processing_service.process_book_import_job(db, job=job)
 
     async def _record_job_failure(self, job_id: str, exc: Exception) -> None:
         async with database.async_session() as db:

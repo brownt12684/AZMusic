@@ -27,6 +27,18 @@ enum _ReaderModule {
   notes,
 }
 
+typedef _ReaderAnnotationRequest = ({
+  String profileId,
+  String scoreVersionId,
+  int pageNumber
+});
+
+typedef _ReaderNoteScope = ({
+  String pieceId,
+  String scoreVersionId,
+  int pageNumber
+});
+
 class ReaderScreen extends ConsumerStatefulWidget {
   const ReaderScreen({
     super.key,
@@ -111,9 +123,10 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     }
 
     final annotationRequest = activeProfile.role == ProfileRole.student
-        ? (
-            profileId: activeProfile.id,
-            scoreVersionId: scoreVersion.id,
+        ? _annotationRequestForPage(
+            entry: entry,
+            scoreVersion: scoreVersion,
+            activeProfile: activeProfile,
             pageNumber: _currentPage,
           )
         : null;
@@ -291,11 +304,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
   void _handleModuleSelection(
     _ReaderModule module,
-    ({
-      String profileId,
-      String scoreVersionId,
-      int pageNumber
-    })? annotationRequest,
+    _ReaderAnnotationRequest? annotationRequest,
   ) {
     final nextModule = _activeModule == module ? null : module;
     _cancelChromeAutoHide();
@@ -308,13 +317,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     }
   }
 
-  void _handleBack(
-    ({
-      String profileId,
-      String scoreVersionId,
-      int pageNumber
-    })? annotationRequest,
-  ) async {
+  void _handleBack(_ReaderAnnotationRequest? annotationRequest) async {
     _cancelChromeAutoHide();
     _stopDrawing(annotationRequest);
     final fallbackRoute =
@@ -327,13 +330,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     }
   }
 
-  void _stopDrawing(
-    ({
-      String profileId,
-      String scoreVersionId,
-      int pageNumber
-    })? annotationRequest,
-  ) {
+  void _stopDrawing(_ReaderAnnotationRequest? annotationRequest) {
     if (annotationRequest == null) {
       return;
     }
@@ -352,11 +349,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     required ScoreVersion scoreVersion,
     required File scoreFile,
     required Profile activeProfile,
-    required ({
-      String profileId,
-      String scoreVersionId,
-      int pageNumber
-    })? annotationRequest,
+    required _ReaderAnnotationRequest? annotationRequest,
     required AsyncValue<AnnotationPageState>? annotationState,
     required bool spreadMode,
   }) {
@@ -475,7 +468,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
             pageCount: _pageCount,
             currentPage: _currentPage,
             activeProfile: activeProfile,
-            scoreVersionId: scoreVersion.id,
+            entry: entry,
+            scoreVersion: scoreVersion,
             onPageSelected: (pageNumber) {
               if (!mounted) {
                 return;
@@ -574,11 +568,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   }
 
   void _toggleWriteMode(
-    ({
-      String profileId,
-      String scoreVersionId,
-      int pageNumber
-    }) annotationRequest,
+    _ReaderAnnotationRequest annotationRequest,
     AnnotationPageState? annotationPageState,
   ) {
     final notifier =
@@ -607,6 +597,56 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
       y: (localPosition.dy / size.height).clamp(0.0, 1.0),
     );
   }
+}
+
+_ReaderAnnotationRequest _annotationRequestForPage({
+  required LibraryEntry entry,
+  required ScoreVersion scoreVersion,
+  required Profile activeProfile,
+  required int pageNumber,
+}) {
+  final scope = _noteScopeForPage(
+    entry: entry,
+    scoreVersion: scoreVersion,
+    pageNumber: pageNumber,
+  );
+  return (
+    profileId: activeProfile.id,
+    scoreVersionId: scope.scoreVersionId,
+    pageNumber: scope.pageNumber,
+  );
+}
+
+_ReaderNoteScope _noteScopeForPage({
+  required LibraryEntry entry,
+  required ScoreVersion scoreVersion,
+  required int pageNumber,
+}) {
+  final piece = entry.piece;
+  final sourceBookId = piece.sourceBookId;
+  final bookId = piece.pieceKind == 'book'
+      ? piece.serverPieceId ?? piece.id
+      : sourceBookId;
+  if (bookId != null && bookId.isNotEmpty) {
+    final logicalPageNumber = piece.pieceKind == 'book'
+        ? pageNumber
+        : (piece.sourcePageStart ?? 1) + pageNumber - 1;
+    final safeBookId = _safeScopeToken(bookId);
+    return (
+      pieceId: 'book_$safeBookId',
+      scoreVersionId: 'book_${safeBookId}_cleaned_pdf',
+      pageNumber: logicalPageNumber < 1 ? 1 : logicalPageNumber,
+    );
+  }
+  return (
+    pieceId: piece.id,
+    scoreVersionId: scoreVersion.id,
+    pageNumber: pageNumber,
+  );
+}
+
+String _safeScopeToken(String value) {
+  return value.replaceAll(RegExp(r'[^A-Za-z0-9_-]'), '_');
 }
 
 class _ReaderEdgeReveal extends StatelessWidget {
@@ -959,11 +999,7 @@ class _ReaderModulePanel extends StatelessWidget {
   final int currentPage;
   final int pageCount;
   final Profile activeProfile;
-  final ({
-    String profileId,
-    String scoreVersionId,
-    int pageNumber
-  })? annotationRequest;
+  final _ReaderAnnotationRequest? annotationRequest;
   final AsyncValue<AnnotationPageState>? annotationState;
 
   @override
@@ -1016,7 +1052,8 @@ class _PdfSpreadCanvas extends ConsumerStatefulWidget {
     required this.pageCount,
     required this.currentPage,
     required this.activeProfile,
-    required this.scoreVersionId,
+    required this.entry,
+    required this.scoreVersion,
     required this.onPageSelected,
   });
 
@@ -1024,7 +1061,8 @@ class _PdfSpreadCanvas extends ConsumerStatefulWidget {
   final int pageCount;
   final int currentPage;
   final Profile activeProfile;
-  final String scoreVersionId;
+  final LibraryEntry entry;
+  final ScoreVersion scoreVersion;
   final ValueChanged<int> onPageSelected;
 
   @override
@@ -1085,8 +1123,15 @@ class _PdfSpreadCanvasState extends ConsumerState<_PdfSpreadCanvas> {
                 pageNumber: leftPage,
                 selected: widget.currentPage == leftPage,
                 rasterFuture: _loadRaster(leftPage),
-                activeProfile: widget.activeProfile,
-                scoreVersionId: widget.scoreVersionId,
+                annotationRequest:
+                    widget.activeProfile.role == ProfileRole.student
+                        ? _annotationRequestForPage(
+                            entry: widget.entry,
+                            scoreVersion: widget.scoreVersion,
+                            activeProfile: widget.activeProfile,
+                            pageNumber: leftPage,
+                          )
+                        : null,
                 onTap: widget.onPageSelected,
               ),
             ),
@@ -1098,8 +1143,15 @@ class _PdfSpreadCanvasState extends ConsumerState<_PdfSpreadCanvas> {
                       pageNumber: rightPage,
                       selected: widget.currentPage == rightPage,
                       rasterFuture: _loadRaster(rightPage),
-                      activeProfile: widget.activeProfile,
-                      scoreVersionId: widget.scoreVersionId,
+                      annotationRequest:
+                          widget.activeProfile.role == ProfileRole.student
+                              ? _annotationRequestForPage(
+                                  entry: widget.entry,
+                                  scoreVersion: widget.scoreVersion,
+                                  activeProfile: widget.activeProfile,
+                                  pageNumber: rightPage,
+                                )
+                              : null,
                       onTap: widget.onPageSelected,
                     ),
             ),
@@ -1129,31 +1181,22 @@ class _SpreadPagePane extends ConsumerWidget {
     required this.pageNumber,
     required this.selected,
     required this.rasterFuture,
-    required this.activeProfile,
-    required this.scoreVersionId,
+    required this.annotationRequest,
     required this.onTap,
   });
 
   final int pageNumber;
   final bool selected;
   final Future<PdfRaster?> rasterFuture;
-  final Profile activeProfile;
-  final String scoreVersionId;
+  final _ReaderAnnotationRequest? annotationRequest;
   final ValueChanged<int> onTap;
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
     final theme = Theme.of(context);
-    final annotationRequest = activeProfile.role == ProfileRole.student
-        ? (
-            profileId: activeProfile.id,
-            scoreVersionId: scoreVersionId,
-            pageNumber: pageNumber,
-          )
-        : null;
-    final annotationState = annotationRequest == null
-        ? null
-        : ref.watch(annotationPageProvider(annotationRequest));
+    final request = annotationRequest;
+    final annotationState =
+        request == null ? null : ref.watch(annotationPageProvider(request));
     final pageState = annotationState?.valueOrNull;
     final isVisible = pageState?.isVisible ?? true;
 
@@ -1352,11 +1395,7 @@ class _NotesModule extends ConsumerStatefulWidget {
   final int currentPage;
   final int pageCount;
   final Profile activeProfile;
-  final ({
-    String profileId,
-    String scoreVersionId,
-    int pageNumber
-  })? annotationRequest;
+  final _ReaderAnnotationRequest? annotationRequest;
   final AsyncValue<AnnotationPageState>? annotationState;
 
   @override
@@ -1390,10 +1429,15 @@ class _NotesModuleState extends ConsumerState<_NotesModule> {
       );
     }
 
+    final noteScope = _noteScopeForPage(
+      entry: widget.entry,
+      scoreVersion: widget.scoreVersion,
+      pageNumber: widget.currentPage,
+    );
     final request = (
       profileId: widget.activeProfile.id,
-      pieceId: widget.entry.piece.id,
-      scoreVersionId: widget.scoreVersion.id,
+      pieceId: noteScope.pieceId,
+      scoreVersionId: noteScope.scoreVersionId,
     );
     final notesState = ref.watch(pieceNotesProvider(request));
     final annotationPageState = widget.annotationState?.valueOrNull;
@@ -1511,18 +1555,18 @@ class _NotesModuleState extends ConsumerState<_NotesModule> {
           minLines: 2,
           maxLines: 5,
           decoration: InputDecoration(
-            hintText: 'Add a typed note for page ${widget.currentPage}...',
+            hintText: 'Add a typed note for page ${noteScope.pageNumber}...',
             suffixIcon: IconButton(
               tooltip: 'Save note',
-              onPressed: () => _addNote(request),
+              onPressed: () => _addNote(request, noteScope.pageNumber),
               icon: const Icon(Icons.add_comment_outlined),
             ),
           ),
-          onSubmitted: (_) => _addNote(request),
+          onSubmitted: (_) => _addNote(request, noteScope.pageNumber),
         ),
         const SizedBox(height: 12),
         Text(
-          'Typed notes from this reader view are tagged to page ${widget.currentPage} of ${widget.pageCount}.',
+          'Typed notes from this reader view are tagged to logical page ${noteScope.pageNumber}.',
           style: theme.textTheme.bodySmall?.copyWith(
             color: theme.colorScheme.onSurfaceVariant,
           ),
@@ -1568,7 +1612,10 @@ class _NotesModuleState extends ConsumerState<_NotesModule> {
     );
   }
 
-  Future<void> _addNote(NotesNotebookRequest request) async {
+  Future<void> _addNote(
+    NotesNotebookRequest request,
+    int logicalPageNumber,
+  ) async {
     final text = _noteController.text.trim();
     if (text.isEmpty) {
       return;
@@ -1577,7 +1624,7 @@ class _NotesModuleState extends ConsumerState<_NotesModule> {
           text: text,
           pageNumber: widget.scoreVersion.format.toLowerCase() == 'image'
               ? 1
-              : widget.currentPage,
+              : logicalPageNumber,
         );
     _noteController.clear();
   }

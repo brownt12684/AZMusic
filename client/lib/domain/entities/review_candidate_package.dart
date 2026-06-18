@@ -78,6 +78,7 @@ class RemotePieceSummary {
     required this.status,
     required this.libraryStatus,
     required this.visibleToProfileIds,
+    this.previousVisibleToProfileIds = const <String>[],
     this.composer,
     this.primaryInstrument,
     this.bookOrCollection,
@@ -110,6 +111,7 @@ class RemotePieceSummary {
   final String status;
   final String libraryStatus;
   final List<String> visibleToProfileIds;
+  final List<String> previousVisibleToProfileIds;
   final String? composer;
   final String? primaryInstrument;
   final String? bookOrCollection;
@@ -171,6 +173,8 @@ class RemotePieceSummary {
           (json['visible_to_profile_ids'] as List<dynamic>? ?? const [])
               .map((item) => item as String)
               .toList(),
+      previousVisibleToProfileIds:
+          _stringListFromJson(json['previous_visible_to_profile_ids']),
     );
   }
 
@@ -206,6 +210,7 @@ class RemotePieceSummary {
       status: detail.status,
       libraryStatus: detail.libraryStatus,
       visibleToProfileIds: detail.visibleToProfileIds,
+      previousVisibleToProfileIds: detail.previousVisibleToProfileIds,
     );
   }
 }
@@ -289,6 +294,7 @@ class RemotePieceDetail {
     required this.libraryStatus,
     required this.visibleToProfileIds,
     required this.scoreVersions,
+    this.previousVisibleToProfileIds = const <String>[],
     this.composer,
     this.primaryInstrument,
     this.bookOrCollection,
@@ -346,6 +352,7 @@ class RemotePieceDetail {
   final String status;
   final String libraryStatus;
   final List<String> visibleToProfileIds;
+  final List<String> previousVisibleToProfileIds;
   final List<RemoteScoreVersion> scoreVersions;
 
   factory RemotePieceDetail.fromJson(Map<String, dynamic> json) {
@@ -383,6 +390,8 @@ class RemotePieceDetail {
           (json['visible_to_profile_ids'] as List<dynamic>? ?? const [])
               .map((item) => item as String)
               .toList(),
+      previousVisibleToProfileIds:
+          _stringListFromJson(json['previous_visible_to_profile_ids']),
       scoreVersions: (json['score_versions'] as List<dynamic>? ?? const [])
           .map(
             (version) => RemoteScoreVersion.fromJson(

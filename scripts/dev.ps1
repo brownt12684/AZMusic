@@ -677,6 +677,7 @@ function Invoke-ServerWindowsReleasePackage {
 
     Copy-Item -LiteralPath (Join-Path $ServerDir "requirements.txt") -Destination $packageServerDir -Force
     Set-Content -LiteralPath (Join-Path $packageServerDir ".env.example") -Value (Get-ReleaseEnvTemplate) -Encoding utf8
+    Copy-Item -LiteralPath (Ensure-ClientVcRuntimeInstaller) -Destination (Join-Path $packageRoot "vc_redist.x64.exe") -Force
     Copy-PythonRuntimeNotice -PackageRoot $packageRoot
     Write-PythonDependencyNotices -PackageRoot $packageRoot
     Write-ProcessingToolNotices -PackageRoot $packageRoot
@@ -744,9 +745,9 @@ function Invoke-ServerWindowsInstallerPackage {
 
 function Invoke-ClientWindowsReleasePackage {
     $releaseDir = Join-Path $ClientBuildDir "windows\x64\runner\Release"
-    if (-not (Test-Path (Join-Path $releaseDir "azmusic.exe"))) {
-        Invoke-ClientWindowsReleaseBuild
-    }
+    # Always rebuild before packaging so the installer cannot embed a stale
+    # Flutter bundle after Dart source changes.
+    Invoke-ClientWindowsReleaseBuild
 
     $packageName = "AZMusic-windows-$ReleaseVersion"
     $stagingRoot = Join-Path $DistDir "staging"
@@ -761,9 +762,9 @@ function Invoke-ClientWindowsReleasePackage {
 
 function Invoke-ClientWindowsInstallerPackage {
     $clientZip = Join-Path $DistDir "AZMusic-windows-$ReleaseVersion.zip"
-    if (-not (Test-Path $clientZip)) {
-        Invoke-ClientWindowsReleasePackage
-    }
+    # Always rebuild the embedded client ZIP. Otherwise the installer can
+    # silently package an older Flutter bundle when the ZIP already exists.
+    Invoke-ClientWindowsReleasePackage
 
     Bootstrap-Server
 

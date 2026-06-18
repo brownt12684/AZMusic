@@ -19,12 +19,15 @@ from pypdf import PdfReader, PdfWriter
 from server.config import settings
 from server.jobs.dispatcher import JobDispatcher
 from server.main import app
-from server.models.orm import Base
+from server.models.orm import Base, Piece, PieceStatus, ScoreVersion, ScoreVersionType
 from server.services import book_preprocessing as book_preprocessing_module
 from server.services import processing_engines as processing_engines_module
 from server.services import score_processing as score_processing_module
 from server.services.local_llm import LocalLlmScoreReviewResult, LocalLlmScoreVerificationResult
 from server.services.ocr_metadata import OcrMetadataResult, infer_metadata_from_text
+from server.services.piece_state import PieceStateService
+from server.services.startup_repairs import repair_missing_book_student_pdfs
+from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
 
 
@@ -246,9 +249,7 @@ def test_piece_detail_exposes_download_metadata(api_client) -> None:
     assert raw_version["content_sha256"] == hashlib.sha256(raw_pdf_bytes).hexdigest()
 
     cleaned_version = next(
-        version
-        for version in score_versions
-        if version["artifact_role"] == "cleaned_pdf"
+        version for version in score_versions if version["artifact_role"] == "cleaned_pdf"
     )
     assert cleaned_version["content_type"] == "application/pdf"
     assert cleaned_version["file_size_bytes"] == len(raw_pdf_bytes)
@@ -477,6 +478,14 @@ def test_book_import_uses_ocr_metadata_for_book_record(api_client, monkeypatch) 
 
     assert import_response.status_code == 200
     book = import_response.json()
+    assert book["piece_kind"] == "book"
+    assert book["library_status"] == "processing"
+    assert book["source_content_sha256"]
+    assert book["processed_metadata"]["processing_stage"] == "book_import_queued"
+
+    dispatcher = JobDispatcher(poll_interval_seconds=0, stale_after_seconds=1, max_retries=0)
+    assert asyncio.run(dispatcher.run_once()) is True
+    book = client.get(f"/api/v1/pieces/{book['id']}").json()
     assert book["title"] == "Suzuki Violin School Volume 1"
     assert book["composer"] == "Shinichi Suzuki"
     assert book["piece_kind"] == "book"
@@ -780,6 +789,20 @@ def test_pdf_import_processing_and_approval_flow(api_client) -> None:
     assert approved_default["version_type"] == "approved"
     assert approved_payload["status"] == "approved"
 
+    pull_back_response = client.post(f"/api/v1/pieces/{piece_id}/workflow/pull-for-edits")
+    assert pull_back_response.status_code == 200
+    pulled_back = pull_back_response.json()
+    assert pulled_back["status"] == "needs_edits"
+    assert pulled_back["library_status"] == "needsEdits"
+    assert pulled_back["workflow_closed"] is False
+    assert pulled_back["visible_to_profile_ids"] == []
+    assert pulled_back["previous_visible_to_profile_ids"] == ["student-alyse"]
+    assert "hidden from student libraries" in " ".join(pulled_back["validation_warnings"])
+
+    assigned_after_pull_back = client.get("/api/v1/pieces/assigned/student-alyse")
+    assert assigned_after_pull_back.status_code == 200
+    assert all(item["id"] != piece_id for item in assigned_after_pull_back.json())
+
 
 def test_cloud_manifest_includes_student_pdf_notes_and_annotations(api_client) -> None:
     client, storage_path = api_client
@@ -1055,9 +1078,10 @@ def test_parent_can_compare_and_approve_alternate_omr_candidate(
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert manifest["human_edit_status"] == "accepted_as_is"
     assert manifest["selected_omr_candidate_id"] == homr_candidate["candidate_id"]
-    assert manifest["files"]["omr_baseline_musicxml"]["sha256"] == manifest["files"][
-        "final_musicxml"
-    ]["sha256"]
+    assert (
+        manifest["files"]["omr_baseline_musicxml"]["sha256"]
+        == manifest["files"]["final_musicxml"]["sha256"]
+    )
 
 
 def test_parent_can_open_and_rerender_musescore_candidate(api_client, monkeypatch) -> None:
@@ -1600,12 +1624,13 @@ def test_parent_can_upload_edited_musicxml_and_refresh_review_pdf(
     assert manifest_path.exists()
     manifest = json.loads(manifest_path.read_text(encoding="utf-8"))
     assert manifest["human_edit_status"] == "human_edited"
-    assert manifest["files"]["omr_baseline_musicxml"]["sha256"] == hashlib.sha256(
-        original_omr_bytes
-    ).hexdigest()
-    assert manifest["files"]["final_musicxml"]["sha256"] == hashlib.sha256(
-        edited_musicxml
-    ).hexdigest()
+    assert (
+        manifest["files"]["omr_baseline_musicxml"]["sha256"]
+        == hashlib.sha256(original_omr_bytes).hexdigest()
+    )
+    assert (
+        manifest["files"]["final_musicxml"]["sha256"] == hashlib.sha256(edited_musicxml).hexdigest()
+    )
 
     samples_response = client.get("/api/v1/debug/training-samples")
     assert samples_response.status_code == 200
@@ -1800,10 +1825,19 @@ def test_book_pdf_import_without_split_hints_uses_preprocessing_baseline(
     book = import_response.json()
     book_id = book["id"]
     assert book["piece_kind"] == "book"
+    assert book["library_status"] == "processing"
+    assert book["processed_metadata"]["processing_stage"] == "book_import_queued"
     assert book["title"] == "Position Pieces for Cello, Book 1"
+    assert (storage_path / "pieces" / book_id / "raw_source.pdf").exists()
+
+    pieces_before_dispatch = client.get("/api/v1/pieces/").json()
+    assert [piece for piece in pieces_before_dispatch if piece["source_book_id"] == book_id] == []
+
+    dispatcher = JobDispatcher(poll_interval_seconds=0, stale_after_seconds=1, max_retries=0)
+    assert asyncio.run(dispatcher.run_once()) is True
+    book = client.get(f"/api/v1/pieces/{book_id}").json()
     assert book["composer"] == "Rick Mooney"
     assert book["processed_metadata"]["book_preprocessing"]["page_count"] == 4
-    assert (storage_path / "pieces" / book_id / "raw_source.pdf").exists()
 
     pieces = client.get("/api/v1/pieces/").json()
     children = [piece for piece in pieces if piece["source_book_id"] == book_id]
@@ -1897,6 +1931,12 @@ def test_likely_book_pdf_import_auto_uses_preprocessing(
     assert import_response.status_code == 200
     book = import_response.json()
     assert book["piece_kind"] == "book"
+    assert book["library_status"] == "processing"
+    assert book["processed_metadata"]["processing_stage"] == "book_import_queued"
+
+    dispatcher = JobDispatcher(poll_interval_seconds=0, stale_after_seconds=1, max_retries=0)
+    assert asyncio.run(dispatcher.run_once()) is True
+    book = client.get(f"/api/v1/pieces/{book['id']}").json()
     assert book["primary_instrument"] == "Cello"
     assert book["processed_metadata"]["book_preprocessing"]["page_count"] == 9
 
@@ -2812,7 +2852,7 @@ def test_musicxml_normalization_overrides_voice_with_book_instrument(tmp_path) -
     assert "<instrument-name>Cello</instrument-name>" in normalized_xml
 
 
-def test_raw_book_can_be_pushed_while_children_are_processing(api_client) -> None:
+def test_book_push_sends_cleaned_book_and_syncs_reviewed_children(api_client) -> None:
     client, _ = api_client
     split_hints = [
         {
@@ -2845,29 +2885,167 @@ def test_raw_book_can_be_pushed_while_children_are_processing(api_client) -> Non
     assert book["status"] == "imported"
     assert book["piece_kind"] == "book"
 
-    push_response = client.post(
+    raw_push_response = client.post(
         f"/api/v1/pieces/{book['id']}/push",
-        json={"profile_ids": ["student-cello"]},
+        json={"profile_ids": ["student-cello"], "mode": "original_pdf"},
     )
-    assert push_response.status_code == 200
-    pushed_book = push_response.json()
-    assert "student-cello" in pushed_book["visible_to_profile_ids"]
+    assert raw_push_response.status_code == 409
 
-    assigned = client.get("/api/v1/pieces/assigned/student-cello").json()
-    assigned_book = next(piece for piece in assigned if piece["id"] == book["id"])
-    assert assigned_book["title"] == "Raw Book"
-    assert assigned_book["library_status"] == "intake"
+    early_push_response = client.post(
+        f"/api/v1/pieces/{book['id']}/push",
+        json={"profile_ids": ["student-cello"], "mode": "cleaned_pdf"},
+    )
+    assert early_push_response.status_code == 200
+    early_book = early_push_response.json()
+    assert early_book["status"] == "approved"
+    assert early_book["library_status"] == "ready"
+    assert early_book["visible_to_profile_ids"] == ["student-cello"]
+    early_default = next(
+        version for version in early_book["score_versions"] if version["is_default"]
+    )
+    assert early_default["artifact_role"] == "cleaned_pdf"
+    assert early_default["score_version_role"] == "processed_render_pdf"
+
+    assigned_before_review = client.get("/api/v1/pieces/assigned/student-cello").json()
+    assert [piece["id"] for piece in assigned_before_review] == [book["id"]]
 
     child = next(
         piece
         for piece in client.get("/api/v1/pieces/").json()
         if piece["source_book_id"] == book["id"]
     )
-    child_push = client.post(
+    child_push_before_review = client.post(
         f"/api/v1/pieces/{child['id']}/push",
-        json={"profile_ids": ["student-cello"]},
+        json={"profile_ids": ["student-cello"], "mode": "cleaned_pdf"},
     )
-    assert child_push.status_code == 409
+    assert child_push_before_review.status_code == 409
+
+    review_item = _review_item_for_piece(
+        client,
+        child["id"],
+        processing_stage="split_review_needed",
+    )
+    approve_response = client.post(
+        f"/api/v1/review/{review_item['id']}",
+        json={"action": "approve"},
+    )
+    assert approve_response.status_code == 200
+
+    assigned = client.get("/api/v1/pieces/assigned/student-cello").json()
+    assigned_book = next(piece for piece in assigned if piece["id"] == book["id"])
+    assigned_child = next(piece for piece in assigned if piece["id"] == child["id"])
+    assert assigned_book["title"] == "Raw Book"
+    assert assigned_book["library_status"] == "ready"
+    assert assigned_child["title"] == "Raw Book Child"
+    assert assigned_child["source_book_id"] == book["id"]
+
+    reviewed_book = client.get(f"/api/v1/pieces/{book['id']}").json()
+    raw_version = next(
+        version
+        for version in reviewed_book["score_versions"]
+        if version["artifact_role"] == "original_import"
+    )
+    cleaned_version = next(
+        version
+        for version in reviewed_book["score_versions"]
+        if version["artifact_role"] == "cleaned_pdf"
+    )
+    assert raw_version["student_default"] is False
+    assert cleaned_version["student_default"] is True
+    assert cleaned_version["version_type"] == "approved"
+
+
+def test_startup_repair_restores_book_student_pdf_and_child_assignments(
+    api_client,
+) -> None:
+    client, _ = api_client
+    split_hints = [
+        {
+            "title": "Legacy Book Child",
+            "page_start": 1,
+            "page_end": 1,
+            "composer": "Debug Composer",
+            "primary_instrument": "Cello",
+            "confidence": 0.91,
+        }
+    ]
+    import_response = client.post(
+        "/api/v1/pieces/import",
+        data={
+            "title": "Legacy Book",
+            "composer": "Debug Composer",
+            "catalog_mode": "book",
+            "split_hints": json.dumps(split_hints),
+        },
+        files={
+            "file": (
+                "legacy_book.pdf",
+                _valid_pdf_bytes(page_count=1),
+                "application/pdf",
+            )
+        },
+    )
+    assert import_response.status_code == 200
+    book = import_response.json()
+    child = next(
+        piece
+        for piece in client.get("/api/v1/pieces/").json()
+        if piece["source_book_id"] == book["id"]
+    )
+    review_item = _review_item_for_piece(
+        client,
+        child["id"],
+        processing_stage="split_review_needed",
+    )
+    approve_response = client.post(
+        f"/api/v1/review/{review_item['id']}",
+        json={"action": "approve"},
+    )
+    assert approve_response.status_code == 200
+
+    async def corrupt_preserved_book_state() -> None:
+        piece_state = PieceStateService()
+        async with database_module.async_session() as session:
+            book_piece = await session.get(Piece, book["id"])
+            assert book_piece is not None
+            book_piece.status = PieceStatus.approved
+            piece_state.assign_profiles(book["id"], ["student-zora"])
+
+            result = await session.execute(
+                select(ScoreVersion).where(ScoreVersion.piece_id == book["id"])
+            )
+            for score_version in result.scalars().all():
+                metadata = piece_state.score_version_metadata(
+                    book["id"],
+                    score_version.id,
+                )
+                if metadata.get("artifact_role") == "cleaned_pdf":
+                    await session.delete(score_version)
+                elif score_version.version_type == ScoreVersionType.raw:
+                    score_version.is_default = True
+            await session.commit()
+
+    asyncio.run(corrupt_preserved_book_state())
+
+    async def run_repair() -> None:
+        async with database_module.async_session() as session:
+            repaired_count = await repair_missing_book_student_pdfs(session)
+            await session.commit()
+            assert repaired_count == 1
+
+    asyncio.run(run_repair())
+
+    repaired_book = client.get(f"/api/v1/pieces/{book['id']}").json()
+    repaired_child = client.get(f"/api/v1/pieces/{child['id']}").json()
+    assert repaired_book["visible_to_profile_ids"] == ["student-zora"]
+    assert repaired_child["visible_to_profile_ids"] == ["student-zora"]
+    cleaned_version = next(
+        version
+        for version in repaired_book["score_versions"]
+        if version["artifact_role"] == "cleaned_pdf"
+    )
+    assert cleaned_version["version_type"] == "approved"
+    assert cleaned_version["student_default"] is True
 
 
 def test_reimporting_same_book_resumes_existing_children(api_client) -> None:
@@ -3135,9 +3313,7 @@ def test_async_dispatcher_processes_approved_book_split(api_client) -> None:
     detail = client.get(f"/api/v1/pieces/{child['id']}").json()
     assert detail["status"] == "review_pending"
     assert len(detail["score_versions"]) == 4
-    assert any(
-        version["artifact_role"] == "cleaned_pdf" for version in detail["score_versions"]
-    )
+    assert any(version["artifact_role"] == "cleaned_pdf" for version in detail["score_versions"])
 
     pending_reviews = client.get("/api/v1/review/").json()
     candidate_review = next(
@@ -3599,6 +3775,72 @@ def test_job_list_includes_linked_piece_display_fields(api_client) -> None:
     assert listed_job["piece_title"] == "Landler"
     assert listed_job["piece_composer"] == "Rick Mooney"
     assert listed_job["piece_status"] == "imported"
+
+
+def test_job_summary_includes_active_job_display_fields(api_client) -> None:
+    client, _ = api_client
+    running_piece = client.post(
+        "/api/v1/pieces/",
+        json={
+            "title": "The Troubadour",
+            "composer": "Rick Mooney",
+            "file_name": "troubadour.pdf",
+        },
+    ).json()
+    queued_piece = client.post(
+        "/api/v1/pieces/",
+        json={
+            "title": "Hoedown",
+            "composer": "Rick Mooney",
+            "file_name": "hoedown.pdf",
+        },
+    ).json()
+    completed_piece = client.post(
+        "/api/v1/pieces/",
+        json={
+            "title": "Completed Etude",
+            "file_name": "completed.pdf",
+        },
+    ).json()
+
+    running_job = client.post(
+        "/api/v1/jobs/trigger",
+        json={"job_type": "score_processing", "piece_id": running_piece["id"]},
+    ).json()
+    update_running = client.patch(
+        f"/api/v1/jobs/{running_job['id']}",
+        json={"status": "running", "progress": 42.0},
+    )
+    assert update_running.status_code == 200
+    queued_job = client.post(
+        "/api/v1/jobs/trigger",
+        json={"job_type": "score_processing", "piece_id": queued_piece["id"]},
+    ).json()
+    completed_job = client.post(
+        "/api/v1/jobs/trigger",
+        json={"job_type": "score_processing", "piece_id": completed_piece["id"]},
+    ).json()
+    update_completed = client.patch(
+        f"/api/v1/jobs/{completed_job['id']}",
+        json={"status": "succeeded", "progress": 100.0},
+    )
+    assert update_completed.status_code == 200
+
+    summary = client.get("/api/v1/jobs/summary").json()
+    assert summary["running_count"] == 1
+    assert summary["queued_count"] == 1
+    assert summary["succeeded_count"] == 1
+    assert [job["id"] for job in summary["active_jobs"]] == [
+        running_job["id"],
+        queued_job["id"],
+    ]
+    assert summary["active_jobs"][0]["piece_title"] == "The Troubadour"
+    assert summary["active_jobs"][0]["progress"] == 42.0
+    assert summary["active_jobs"][1]["piece_title"] == "Hoedown"
+
+    capabilities = client.get("/api/v1/processing/capabilities").json()
+    capability_titles = [job["piece_title"] for job in capabilities["job_summary"]["active_jobs"]]
+    assert capability_titles == ["The Troubadour", "Hoedown"]
 
 
 def test_retry_failed_score_processing_job_requeues_same_piece(api_client) -> None:
@@ -4320,9 +4562,7 @@ def test_local_llm_score_review_can_salvage_length_finished_tool_call() -> None:
         local_llm_module._chat_response_content(response)
     )
 
-    assert parsed["tool_calls"][0]["arguments"]["new_text"] == (
-        "<part-name>Cello</part-name>"
-    )
+    assert parsed["tool_calls"][0]["arguments"]["new_text"] == ("<part-name>Cello</part-name>")
     assert parsed["warnings"] == []
 
 
@@ -5042,8 +5282,7 @@ def test_rejected_review_keeps_original_pushable(api_client) -> None:
         for version in piece_detail["score_versions"]
     )
     assert any(
-        version["artifact_role"] == "cleaned_pdf"
-        and version["version_type"] == "rejected"
+        version["artifact_role"] == "cleaned_pdf" and version["version_type"] == "rejected"
         for version in piece_detail["score_versions"]
     )
     assert not any(
@@ -5728,9 +5967,7 @@ def test_pdf_import_preserves_raw_when_required_engine_is_missing(api_client) ->
     detail = detail_response.json()
     assert len(detail["score_versions"]) == 2
     assert any(version["version_type"] == "raw" for version in detail["score_versions"])
-    assert any(
-        version["artifact_role"] == "cleaned_pdf" for version in detail["score_versions"]
-    )
+    assert any(version["artifact_role"] == "cleaned_pdf" for version in detail["score_versions"])
     assert (storage_path / "pieces" / piece_id / "raw_source.pdf").exists()
     assert (storage_path / "pieces" / piece_id / "student_cleaned.pdf").exists()
 

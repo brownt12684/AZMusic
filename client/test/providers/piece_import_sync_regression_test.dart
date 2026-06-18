@@ -92,7 +92,7 @@ void main() {
   });
 
   test(
-      'approved remote artifacts replace the default while keeping original fallback visible',
+      'approved cleaned PDF replaces the default without syncing MusicXML to students',
       () async {
     final container = _containerFor(
       tempDir,
@@ -111,6 +111,7 @@ void main() {
               filePath: 'approved-demo.pdf',
               fileUrl: 'https://example.test/files/approved-demo.pdf',
               isDefault: true,
+              artifactRole: 'cleaned_pdf',
             ),
             RemoteScoreVersion(
               id: 'approved-musicxml',
@@ -141,7 +142,7 @@ void main() {
     expect(syncedEntry, isNotNull);
     expect(syncedEntry!.piece.serverPieceId, 'remote-approved-piece');
     expect(syncedEntry.piece.libraryStatus.name, 'ready');
-    expect(syncedEntry.scoreVersions, hasLength(3));
+    expect(syncedEntry.scoreVersions, hasLength(2));
     expect(
       syncedEntry.primaryScore.remoteUrl,
       'https://example.test/files/approved-demo.pdf',
@@ -150,13 +151,14 @@ void main() {
     final rawVersion = syncedEntry.scoreVersions.firstWhere(
       (scoreVersion) => scoreVersion.versionType == 'raw',
     );
-    final musicXmlVersion = syncedEntry.scoreVersions.firstWhere(
-      (scoreVersion) => scoreVersion.format == 'musicxml',
-    );
 
     expect(rawVersion.isStudentVisible, isTrue);
-    expect(musicXmlVersion.isStudentVisible, isFalse);
-    expect(musicXmlVersion.isPrimary, isFalse);
+    expect(
+      syncedEntry.scoreVersions.any(
+        (scoreVersion) => scoreVersion.format == 'musicxml',
+      ),
+      isFalse,
+    );
     expect(
       container.read(studentLibraryEntriesProvider).single.piece.id,
       importedEntry.piece.id,
@@ -205,6 +207,11 @@ class _StubSyncRepository extends ServerPieceSyncRepository {
   @override
   Future<String?> uploadImportedPiece(LibraryEntry entry) async =>
       remotePiece.id;
+
+  @override
+  Future<List<RemotePieceSummary>> fetchAllPieces() async {
+    return const <RemotePieceSummary>[];
+  }
 
   @override
   Future<List<RemotePieceSummary>> fetchAssignedPieces(String profileId) async {

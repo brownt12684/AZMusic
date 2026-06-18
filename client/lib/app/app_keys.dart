@@ -30,9 +30,13 @@ class AppKeys {
   static const parentDebugRefreshJobsButton =
       ValueKey<String>('parent.debugTools.refreshJobs');
   static const parentWorkflowList = ValueKey<String>('parent.workflowList');
+  static const parentProcessingTracker =
+      ValueKey<String>('parent.processing.tracker');
   static const parentIntakeList = ValueKey<String>('parent.intakeList');
   static const parentServerReadyList =
       ValueKey<String>('parent.serverReadyList');
+  static const parentStudentLibraryList =
+      ValueKey<String>('parent.studentLibraryList');
   static const parentAddStudentButton = ValueKey<String>('parent.student.add');
   static const parentStudentNameField = ValueKey<String>('parent.student.name');
   static const parentCreateStudentButton =
@@ -108,8 +112,40 @@ class AppKeys {
     return ValueKey<String>('parent.push.$pieceId.$profileId');
   }
 
+  static ValueKey<String> pushToAllStudentsButton(String pieceId) {
+    return ValueKey<String>('parent.pushAll.$pieceId');
+  }
+
+  static const parentImportIndividualPieceButton =
+      ValueKey<String>('parent.import.individualPiece');
+
+  static const parentImportBookButton = ValueKey<String>('parent.import.book');
+
+  static ValueKey<String> repushToPreviousStudentsButton(String pieceId) {
+    return ValueKey<String>('parent.repushPrevious.$pieceId');
+  }
+
+  static ValueKey<String> pushToSelectedStudentsButton(String pieceId) {
+    return ValueKey<String>('parent.pushSelected.$pieceId');
+  }
+
+  static ValueKey<String> pushStudentSelectionCheckbox(
+    String pieceId,
+    String profileId,
+  ) {
+    return ValueKey<String>('parent.pushSelected.$pieceId.$profileId');
+  }
+
+  static ValueKey<String> pushSelectedStudentsConfirmButton(String pieceId) {
+    return ValueKey<String>('parent.pushSelected.confirm.$pieceId');
+  }
+
   static ValueKey<String> studentDevicePairingButton(String profileId) {
     return ValueKey<String>('parent.studentDevicePair.$profileId');
+  }
+
+  static ValueKey<String> parentStudentLibrarySelector(String profileId) {
+    return ValueKey<String>('parent.studentLibrary.select.$profileId');
   }
 
   static ValueKey<String> noteCard(String noteId) {

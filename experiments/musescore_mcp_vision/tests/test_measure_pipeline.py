@@ -9,7 +9,10 @@ from experiments.musescore_mcp_vision.measure_schema import (
     MeasureFactsValidationError,
     validate_measure_facts,
 )
-from experiments.musescore_mcp_vision.scripts.apply_measure_with_mcp import main as apply_main
+from experiments.musescore_mcp_vision.scripts.apply_measure_with_mcp import (
+    _mcp_apply_error,
+    main as apply_main,
+)
 from experiments.musescore_mcp_vision.sequence import (
     SequenceBuildError,
     build_musescore_sequence,
@@ -125,6 +128,61 @@ def test_apply_measure_dry_run_writes_sequence(tmp_path: Path) -> None:
     assert sequence_path.exists()
     sequence = json.loads(sequence_path.read_text(encoding="utf-8"))
     assert sequence["duration_check"]["matches"] is True
+
+
+def test_mcp_apply_error_detects_tool_payload_error() -> None:
+    result = {
+        "ping": {
+            "content": [
+                {
+                    "type": "text",
+                    "text": json.dumps({"error": "Not connected to MuseScore"}),
+                }
+            ],
+            "isError": False,
+        },
+        "process_sequence": {
+            "content": [
+                {
+                    "type": "text",
+                    "text": json.dumps({"success": True}),
+                }
+            ],
+            "isError": False,
+        },
+    }
+
+    assert _mcp_apply_error(result) == "ping: Not connected to MuseScore"
+
+
+def test_mcp_apply_error_detects_nested_tool_result_error() -> None:
+    result = {
+        "ping": {
+            "content": [
+                {
+                    "type": "text",
+                    "text": json.dumps({"status": "success", "result": "pong"}),
+                }
+            ],
+            "isError": False,
+        },
+        "process_sequence": {
+            "content": [
+                {
+                    "type": "text",
+                    "text": json.dumps(
+                        {
+                            "status": "success",
+                            "result": {"error": "addNote failed"},
+                        }
+                    ),
+                }
+            ],
+            "isError": False,
+        },
+    }
+
+    assert _mcp_apply_error(result) == "process_sequence: addNote failed"
 
 
 def valid_measure_facts() -> dict:

@@ -75,6 +75,14 @@ class ParentReviewQueueNotifier extends AsyncNotifier<List<ReviewQueueEntry>> {
     );
   }
 
+  void restoreItem(ReviewQueueEntry item) {
+    final current = currentItems();
+    if (current.any((existing) => existing.id == item.id)) {
+      return;
+    }
+    state = AsyncValue.data([item, ...current]);
+  }
+
   Future<List<ReviewQueueEntry>> _loadQueue() async {
     if (!AppConfig.isServerPaired) {
       throw const ServerNotPairedException();

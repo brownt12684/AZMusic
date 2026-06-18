@@ -30,8 +30,8 @@ from server.models.orm import (
     ScoreVersionType,
 )
 from server.models.schemas import (
-    MediaAssetResponse,
     JobResponse,
+    MediaAssetResponse,
     PieceCreate,
     PieceDetailResponse,
     PieceHistoryDraftCreate,
@@ -120,6 +120,7 @@ def _piece_to_response(piece: Piece) -> PieceResponse:
         split_confidence=metadata["split_confidence"],
         workflow_closed=metadata["workflow_closed"],
         visible_to_profile_ids=metadata["visible_to_profile_ids"],
+        previous_visible_to_profile_ids=metadata["previous_visible_to_profile_ids"],
         library_status=metadata["library_status"],
         source_content_sha256=metadata["source_content_sha256"],
         source_book_fingerprint=metadata["source_book_fingerprint"],
@@ -292,6 +293,7 @@ def _piece_to_detail_response(request: Request, piece: Piece) -> PieceDetailResp
         split_confidence=metadata["split_confidence"],
         workflow_closed=metadata["workflow_closed"],
         visible_to_profile_ids=metadata["visible_to_profile_ids"],
+        previous_visible_to_profile_ids=metadata["previous_visible_to_profile_ids"],
         library_status=metadata["library_status"],
         source_content_sha256=metadata["source_content_sha256"],
         source_book_fingerprint=metadata["source_book_fingerprint"],
@@ -378,9 +380,39 @@ async def _load_student_default_score_version(
         if metadata.get("artifact_role") == "cleaned_pdf":
             return version
     for version in versions:
-        if version.is_default and Path(version.file_path).suffix.lower() in _SUPPORTED_IMPORT_EXTENSIONS:
+        if (
+            version.is_default
+            and Path(version.file_path).suffix.lower() in _SUPPORTED_IMPORT_EXTENSIONS
+        ):
             return version
     return await _load_raw_score_version(db, piece_id)
+
+
+async def _load_cleaned_student_score_version(
+    db: AsyncSession,
+    piece_id: str,
+) -> ScoreVersion | None:
+    result = await db.execute(
+        select(ScoreVersion)
+        .where(ScoreVersion.piece_id == piece_id)
+        .order_by(ScoreVersion.is_default.desc(), ScoreVersion.created_at.desc())
+    )
+    for version in result.scalars().all():
+        metadata = _piece_state_service.score_version_metadata(piece_id, version.id)
+        if metadata.get("artifact_role") != "cleaned_pdf":
+            continue
+        if Path(version.file_path).suffix.lower() not in {
+            ".pdf",
+            ".png",
+            ".jpg",
+            ".jpeg",
+            ".webp",
+            ".tif",
+            ".tiff",
+        }:
+            continue
+        return version
+    return None
 
 
 async def _load_existing_score_version_file(
@@ -507,8 +539,7 @@ async def _mark_review_human_edited(
                 continue
             updated_option = dict(option)
             if (
-                updated_option.get("canonical_score_version_id")
-                == canonical_score_version_id
+                updated_option.get("canonical_score_version_id") == canonical_score_version_id
                 and updated_option.get("score_version_id") == rendered_score_version_id
             ):
                 updated_option.update(
@@ -610,7 +641,7 @@ async def list_pieces(include_attempts: bool = False, db: AsyncSession = Depends
 
 @router.get("/assigned/{profile_id}")
 async def list_assigned_pieces(profile_id: str, db: AsyncSession = Depends(get_db)):
-    """List student-visible approved pieces and assigned raw books."""
+    """List student-visible approved pieces and cleaned book packages."""
     result = await db.execute(select(Piece).order_by(Piece.updated_at.desc()))
     pieces: list[PieceResponse] = []
     for piece in result.scalars().all():
@@ -619,17 +650,18 @@ async def list_assigned_pieces(profile_id: str, db: AsyncSession = Depends(get_d
             continue
         if profile_id not in metadata["visible_to_profile_ids"]:
             continue
-        can_show_raw = (
-            piece.status
-            in {
-                PieceStatus.imported,
-                PieceStatus.processing,
-                PieceStatus.review_pending,
-                PieceStatus.needs_edits,
-            }
-            and await _piece_has_raw_score_version(db, piece.id)
+        can_show_book_package = (
+            metadata["piece_kind"] == "book"
+            and (await _load_cleaned_student_score_version(db, piece.id)) is not None
         )
-        if piece.status != PieceStatus.approved and not can_show_raw:
+        can_show_raw = (
+            piece.status == PieceStatus.needs_edits
+            and await _piece_has_raw_score_version(
+                db,
+                piece.id,
+            )
+        )
+        if piece.status != PieceStatus.approved and not can_show_book_package and not can_show_raw:
             continue
         pieces.append(_piece_to_response(piece))
     return pieces
@@ -900,7 +932,6 @@ async def push_piece_to_profiles(
     if not piece:
         raise HTTPException(status_code=404, detail="Piece not found")
     metadata = _piece_state_service.metadata_for_piece(piece)
-    can_push_original = await _piece_has_raw_score_version(db, piece_id)
     if body.mode == PiecePushMode.original_pdf:
         raw_version = await _load_raw_score_version(db, piece_id)
         if raw_version is None:
@@ -908,8 +939,11 @@ async def push_piece_to_profiles(
                 status_code=409,
                 detail="No original PDF/image score version is available to push.",
             )
-        if piece.status == PieceStatus.archived:
-            piece.status = PieceStatus.needs_edits
+        if piece.status != PieceStatus.needs_edits:
+            raise HTTPException(
+                status_code=409,
+                detail="Use the cleaned student PDF for approved pieces.",
+            )
         default_result = await db.execute(
             select(ScoreVersion.id)
             .where(
@@ -929,51 +963,39 @@ async def push_piece_to_profiles(
             display_rank=10,
         )
     elif body.mode in {PiecePushMode.processed, PiecePushMode.cleaned_pdf}:
-        student_version = await _load_student_default_score_version(db, piece_id)
+        student_version = await _load_cleaned_student_score_version(db, piece_id)
         if student_version is None:
             raise HTTPException(
                 status_code=409,
                 detail="No student PDF is available to push yet.",
             )
-        if piece.status != PieceStatus.approved and not (
-            metadata["piece_kind"] == "book" and can_push_original
-        ):
+        is_book_package = metadata["piece_kind"] == "book"
+        if piece.status != PieceStatus.approved and not is_book_package:
             raise HTTPException(
                 status_code=409,
-                detail=(
-                    "Approve metadata before pushing the student PDF. "
-                    "Use original_pdf mode only for an explicit fallback push."
-                ),
+                detail="Approve metadata before pushing the student PDF.",
             )
-        await db.execute(
-            update(ScoreVersion)
-            .where(ScoreVersion.piece_id == piece_id)
-            .values(is_default=False)
-        )
-        student_version.is_default = True
         workflow_metadata = _piece_state_service.score_version_metadata(
             piece_id,
             student_version.id,
         )
-        raw_book_fallback = (
-            metadata["piece_kind"] == "book"
-            and student_version.version_type == ScoreVersionType.raw
-            and workflow_metadata.get("artifact_role") != "cleaned_pdf"
+        if workflow_metadata.get("artifact_role") != "cleaned_pdf":
+            raise HTTPException(
+                status_code=409,
+                detail="No cleaned student PDF is available to push yet.",
+            )
+        await db.execute(
+            update(ScoreVersion).where(ScoreVersion.piece_id == piece_id).values(is_default=False)
         )
-        if (
-            student_version.version_type != ScoreVersionType.approved
-            and not raw_book_fallback
-        ):
+        student_version.is_default = True
+        if student_version.version_type != ScoreVersionType.approved:
             student_version.version_type = ScoreVersionType.approved
-        artifact_role = (
-            "original_import"
-            if raw_book_fallback
-            else workflow_metadata.get("artifact_role") or "cleaned_pdf"
-        )
+        if is_book_package and piece.status != PieceStatus.approved:
+            piece.status = PieceStatus.approved
         _piece_state_service.set_score_version_metadata(
             piece_id,
             student_version.id,
-            artifact_role=artifact_role,
+            artifact_role="cleaned_pdf",
             student_default=True,
             approved_by_parent=True,
             display_rank=workflow_metadata.get("display_rank") or 10,
@@ -985,6 +1007,19 @@ async def push_piece_to_profiles(
         )
 
     _piece_state_service.assign_profiles(piece_id, body.profile_ids)
+    if (
+        body.mode in {PiecePushMode.processed, PiecePushMode.cleaned_pdf}
+        and metadata["piece_kind"] == "book"
+    ):
+        child_result = await db.execute(select(Piece))
+        for child_piece in child_result.scalars().all():
+            if child_piece.id == piece_id or child_piece.status != PieceStatus.approved:
+                continue
+            child_metadata = _piece_state_service.metadata_for_piece(child_piece)
+            if child_metadata["source_book_id"] != piece_id:
+                continue
+            _piece_state_service.assign_profiles(child_piece.id, body.profile_ids)
+            child_piece.updated_at = datetime.utcnow()
     piece.updated_at = datetime.utcnow()
     await db.commit()
     refreshed_piece = await _load_piece_with_relations(piece_id, db)
@@ -1023,9 +1058,7 @@ async def start_notation_lab_processing(
             "source_page_start": metadata["source_page_start"],
             "source_page_end": metadata["source_page_end"],
             "primary_instrument": metadata["primary_instrument"],
-            "contained_piece_titles": metadata["catalog_metadata"].get(
-                "contained_piece_titles"
-            )
+            "contained_piece_titles": metadata["catalog_metadata"].get("contained_piece_titles")
             if isinstance(metadata["catalog_metadata"], dict)
             else None,
             "multi_piece_page": metadata["catalog_metadata"].get("multi_piece_page")
@@ -1062,7 +1095,7 @@ async def pull_piece_for_edits(
     request: Request,
     db: AsyncSession = Depends(get_db),
 ):
-    """Return a pushed piece to parent edit workflow without hiding it from students."""
+    """Return a pushed piece to parent edit workflow and remove student assignment."""
     piece = await db.get(Piece, piece_id)
     if not piece:
         raise HTTPException(status_code=404, detail="Piece not found")
@@ -1072,6 +1105,9 @@ async def pull_piece_for_edits(
             status_code=409,
             detail="Only pieces already pushed to at least one profile can be pulled back.",
         )
+    previous_visible_to_profile_ids = sorted(
+        set(metadata["previous_visible_to_profile_ids"]) | set(metadata["visible_to_profile_ids"])
+    )
     piece.status = PieceStatus.needs_edits
     piece.updated_at = datetime.utcnow()
     _piece_state_service.upsert_metadata(
@@ -1080,7 +1116,7 @@ async def pull_piece_for_edits(
         composer=piece.composer,
         primary_instrument=metadata["primary_instrument"],
         book_or_collection=metadata["book_or_collection"],
-        visible_to_profile_ids=metadata["visible_to_profile_ids"],
+        visible_to_profile_ids=[],
         processed_metadata=metadata["processed_metadata"],
         piece_kind=metadata["piece_kind"],
         source_book_id=metadata["source_book_id"],
@@ -1091,11 +1127,15 @@ async def pull_piece_for_edits(
         validation_warnings=sorted(
             set(
                 list(metadata["validation_warnings"])
-                + ["Parent pulled this piece back for edits; students keep the last pushed copy."]
+                + [
+                    "Parent pulled this piece back for edits; it is hidden "
+                    "from student libraries until repushed."
+                ]
             )
         ),
         split_confidence=metadata["split_confidence"],
         workflow_closed=False,
+        previous_visible_to_profile_ids=previous_visible_to_profile_ids,
         notes=metadata["notes"],
     )
     await db.commit()
@@ -1701,6 +1741,25 @@ async def _import_book_piece(
     allow_title_override: bool = False,
     allow_composer_override: bool = False,
 ):
+    if not split_hints:
+        try:
+            artifacts = await ScoreProcessingService().create_queued_book_import(
+                db,
+                title=title,
+                composer=composer,
+                file_name=file_name,
+                file_bytes=file_bytes,
+                source_hash=source_hash,
+                split_hints=split_hints,
+                primary_instrument=primary_instrument,
+                book_or_collection=book_or_collection,
+                allow_title_override=allow_title_override,
+                allow_composer_override=allow_composer_override,
+            )
+        except ProcessingEngineError as exc:
+            raise HTTPException(status_code=409, detail=str(exc)) from exc
+        return _piece_to_response(artifacts.book_piece)
+
     try:
         artifacts = await ScoreProcessingService().import_book_pdf(
             db,

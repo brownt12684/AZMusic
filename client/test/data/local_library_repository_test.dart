@@ -38,6 +38,7 @@ void main() {
 
     expect(reloadedLibrary, hasLength(1));
     expect(reloadedLibrary.single.piece.title, 'sample score');
+    expect(reloadedLibrary.single.piece.sourceContentSha256, hasLength(64));
     expect(File(importedEntry.primaryScore.filePath).existsSync(), isTrue);
     expect(databaseFile.existsSync(), isTrue);
   });

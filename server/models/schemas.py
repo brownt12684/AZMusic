@@ -348,12 +348,28 @@ class JobSummaryFailureResponse(BaseModel):
     updated_at: datetime
 
 
+class JobSummaryActiveJobResponse(BaseModel):
+    id: str
+    piece_id: Optional[str] = None
+    piece_title: Optional[str] = None
+    piece_composer: Optional[str] = None
+    piece_status: Optional[str] = None
+    job_type: str
+    status: JobStatus
+    progress: float = 0.0
+    error_message: Optional[str] = None
+    result_data: Optional[dict] = None
+    created_at: datetime
+    updated_at: datetime
+
+
 class JobSummaryResponse(BaseModel):
     queued_count: int = 0
     running_count: int = 0
     failed_count: int = 0
     succeeded_count: int = 0
     canceled_count: int = 0
+    active_jobs: list[JobSummaryActiveJobResponse] = Field(default_factory=list)
     last_failed_job: Optional[JobSummaryFailureResponse] = None
 
 
@@ -432,6 +448,7 @@ class PieceResponse(BaseModel):
     split_confidence: Optional[float] = None
     workflow_closed: bool = False
     visible_to_profile_ids: list[str] = []
+    previous_visible_to_profile_ids: list[str] = []
     library_status: str = "intake"
     source_content_sha256: Optional[str] = None
     source_book_fingerprint: Optional[str] = None

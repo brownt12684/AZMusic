@@ -171,6 +171,34 @@ void main() {
     expect(container.read(connectionStatusProvider), 'synced');
   });
 
+  test('timed out upload reconciles to accepted server import by source hash',
+      () async {
+    final syncRepository = _AcceptedButTimedOutSyncRepository();
+    final container = _containerFor(
+      tempDir,
+      networkInfo: const _StaticNetworkInfo(true),
+      syncRepository: syncRepository,
+    );
+    addTearDown(container.dispose);
+
+    await container.read(allPiecesProvider.future);
+    final sourceFile = await createSamplePdfFile(name: 'accepted_book.pdf');
+
+    final importedEntry = await container
+        .read(allPiecesProvider.notifier)
+        .importToIntake(sourceFile.path, pieceKind: 'book');
+
+    final reboundEntry = await container
+        .read(libraryRepositoryProvider)
+        .findEntry(importedEntry.piece.id);
+    expect(syncRepository.uploadCalls, 1);
+    expect(syncRepository.fetchAllPiecesCalls, 1);
+    expect(reboundEntry, isNotNull);
+    expect(reboundEntry!.piece.serverPieceId, 'remote-accepted-book');
+    expect(reboundEntry.piece.libraryStatus, LibraryStatus.processing);
+    expect(reboundEntry.piece.sourceContentSha256, hasLength(64));
+  });
+
   test('parent can retry a stale local upload', () async {
     final container = _containerFor(
       tempDir,
@@ -760,6 +788,11 @@ class _UploadBindingSyncRepository extends ServerPieceSyncRepository {
   }
 
   @override
+  Future<List<RemotePieceSummary>> fetchAllPieces() async {
+    return const [];
+  }
+
+  @override
   Future<List<RemotePieceSummary>> fetchAssignedPieces(String profileId) async {
     return const [];
   }
@@ -772,6 +805,49 @@ class _UploadBindingSyncRepository extends ServerPieceSyncRepository {
       status: 'ok',
       libraryStatus: 'intake',
       visibleToProfileIds: const [],
+      scoreVersions: const [],
+    );
+  }
+}
+
+class _AcceptedButTimedOutSyncRepository extends ServerPieceSyncRepository {
+  int uploadCalls = 0;
+  int fetchAllPiecesCalls = 0;
+  String? acceptedHash;
+
+  @override
+  Future<String?> uploadImportedPiece(LibraryEntry entry) async {
+    uploadCalls += 1;
+    acceptedHash = entry.piece.sourceContentSha256;
+    throw Exception('client upload timed out after server accepted import');
+  }
+
+  @override
+  Future<List<RemotePieceSummary>> fetchAllPieces() async {
+    fetchAllPiecesCalls += 1;
+    return [
+      RemotePieceSummary(
+        id: 'remote-accepted-book',
+        title: 'Accepted book import',
+        status: 'processing',
+        libraryStatus: 'processing',
+        visibleToProfileIds: const [],
+        pieceKind: 'book',
+        sourceContentSha256: acceptedHash,
+      ),
+    ];
+  }
+
+  @override
+  Future<RemotePieceDetail> fetchPieceDetail(String serverPieceId) async {
+    return RemotePieceDetail(
+      id: serverPieceId,
+      title: 'Accepted book import',
+      status: 'processing',
+      libraryStatus: 'processing',
+      visibleToProfileIds: const [],
+      pieceKind: 'book',
+      sourceContentSha256: acceptedHash,
       scoreVersions: const [],
     );
   }

@@ -11,6 +11,7 @@ engine = create_async_engine(
     echo=settings.debug,
 )
 
+
 # Enable WAL mode and foreign keys for SQLite.
 # Async SQLAlchemy engines need listeners attached to the underlying sync engine.
 @event.listens_for(engine.sync_engine, "connect")
@@ -32,11 +33,16 @@ async def init_db():
     """Create all tables defined in models."""
     # Import all models so they register with Base.metadata
     import server.models  # noqa: F401, PLC0414
+    from server.services.startup_repairs import repair_missing_book_student_pdfs
 
     settings.storage_path.mkdir(parents=True, exist_ok=True)
 
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+
+    async with async_session() as session:
+        await repair_missing_book_student_pdfs(session)
+        await session.commit()
 
 
 async def get_db():

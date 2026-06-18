@@ -215,12 +215,12 @@ class ParentHomeScreen extends ConsumerWidget {
                       arguments: itemId,
                     );
                   },
-                  onPushToProfile: (entry, profileId) {
+                  onPushToProfiles: (entry, profileIds) {
                     return ref
                         .read(allPiecesProvider.notifier)
-                        .pushToProfile(
+                        .pushToProfiles(
                           pieceId: entry.piece.id,
-                          profileId: profileId,
+                          profileIds: profileIds,
                         )
                         .then((_) {
                       scheduleParentWorkflowRefreshBurst(
@@ -230,10 +230,14 @@ class ParentHomeScreen extends ConsumerWidget {
                       );
                     });
                   },
-                  onPushRemoteToProfile: (piece, profileId) async {
+                  onPushRemoteToProfiles: (piece, profileIds) async {
                     final remotePiece = await ref
                         .read(serverPieceSyncRepositoryProvider)
-                        .pushPieceToProfiles(piece.id, [profileId]);
+                        .pushPieceToProfiles(
+                          piece.id,
+                          profileIds,
+                          mode: 'cleaned_pdf',
+                        );
                     ref
                         .read(parentSyncedPiecesProvider.notifier)
                         .upsert(RemotePieceSummary.fromDetail(remotePiece));
@@ -285,7 +289,7 @@ class ParentHomeScreen extends ConsumerWidget {
                         .pushPieceToProfiles(
                           piece.id,
                           [profileId],
-                          mode: 'original_pdf',
+                          mode: 'cleaned_pdf',
                         );
                     ref
                         .read(parentSyncedPiecesProvider.notifier)
@@ -359,6 +363,13 @@ class ParentHomeScreen extends ConsumerWidget {
 
   Future<void> _importScore(BuildContext context, WidgetRef ref) async {
     try {
+      final importKind = await showDialog<_ParentImportKind>(
+        context: context,
+        builder: (context) => const _ImportKindDialog(),
+      );
+      if (importKind == null || !context.mounted) {
+        return;
+      }
       final selectedPath =
           await ref.read(scoreImportPickerProvider).pickScorePath();
       if (selectedPath == null) {
@@ -366,6 +377,7 @@ class ParentHomeScreen extends ConsumerWidget {
       }
       final entry = await ref.read(allPiecesProvider.notifier).importToIntake(
             selectedPath,
+            pieceKind: importKind.pieceKind,
           );
       scheduleParentWorkflowRefreshBurst(
         ref,
@@ -377,7 +389,10 @@ class ParentHomeScreen extends ConsumerWidget {
       }
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-            content: Text('Imported ${entry.piece.title} into parent intake.')),
+          content: Text(
+            'Imported ${entry.piece.title} as ${importKind.label.toLowerCase()} into parent intake.',
+          ),
+        ),
       );
     } catch (error) {
       if (!context.mounted) {
@@ -568,8 +583,8 @@ class _IntakeAndPushTab extends StatelessWidget {
     required this.onRemoveLocalItem,
     required this.onRepairPairing,
     required this.onOpenReview,
-    required this.onPushToProfile,
-    required this.onPushRemoteToProfile,
+    required this.onPushToProfiles,
+    required this.onPushRemoteToProfiles,
     required this.onCloseWorkflow,
     required this.onCloseRemoteWorkflow,
   });
@@ -595,10 +610,10 @@ class _IntakeAndPushTab extends StatelessWidget {
   final Future<void> Function(LibraryEntry entry) onRemoveLocalItem;
   final VoidCallback onRepairPairing;
   final ValueChanged<String> onOpenReview;
-  final Future<void> Function(LibraryEntry entry, String profileId)
-      onPushToProfile;
-  final Future<void> Function(RemotePieceSummary piece, String profileId)
-      onPushRemoteToProfile;
+  final Future<void> Function(LibraryEntry entry, List<String> profileIds)
+      onPushToProfiles;
+  final Future<void> Function(RemotePieceSummary piece, List<String> profileIds)
+      onPushRemoteToProfiles;
   final Future<void> Function(LibraryEntry entry) onCloseWorkflow;
   final Future<void> Function(RemotePieceSummary piece) onCloseRemoteWorkflow;
 
@@ -612,9 +627,15 @@ class _IntakeAndPushTab extends StatelessWidget {
     );
     final reviewItems = reviewQueue.valueOrNull ?? const <ReviewQueueEntry>[];
     final remotePieceIds = remotePieces.map((piece) => piece.id).toSet();
+    final remoteBookIds = {
+      for (final piece in remotePieces)
+        if (piece.pieceKind == 'book') piece.id,
+    };
     final localServerPieceIds = {
       for (final entry in intakeEntries)
-        if (entry.piece.serverPieceId != null) entry.piece.serverPieceId!,
+        if (entry.piece.serverPieceId != null &&
+            !remoteBookIds.contains(entry.piece.serverPieceId))
+          entry.piece.serverPieceId!,
     };
     final localUploadProblems = intakeEntries.where((entry) {
       if (entry.piece.workflowClosed ||
@@ -632,32 +653,66 @@ class _IntakeAndPushTab extends StatelessWidget {
       if (localUploadProblems.contains(entry)) {
         return false;
       }
+      if (remoteBookIds.contains(entry.piece.serverPieceId)) {
+        return false;
+      }
       return entry.piece.serverPieceId != null;
     }).toList(growable: false);
-    final bookWorkflows = _buildBookWorkflows(
+    final allBookWorkflows = _buildBookWorkflows(
       pieces: remotePieces,
       reviewItems: reviewItems,
     );
+    final bookWorkflowsById = {
+      for (final workflow in allBookWorkflows) workflow.id: workflow,
+    };
+    final reviewBookWorkflows = allBookWorkflows
+        .where((workflow) => workflow.reviewItems.isNotEmpty)
+        .toList(growable: false);
+    final remoteNeedsEditPieces = remotePieces
+        .where(
+          (piece) =>
+              !piece.workflowClosed &&
+              piece.libraryStatus == 'needsEdits' &&
+              !localServerPieceIds.contains(piece.id),
+        )
+        .toList(growable: false);
     final groupedReviewItemIds = {
-      for (final workflow in bookWorkflows)
+      for (final workflow in reviewBookWorkflows)
         for (final item in workflow.reviewItems) item.id,
     };
     final looseReviewItems = reviewItems
         .where((item) => !groupedReviewItemIds.contains(item.id))
         .toList(growable: false);
+    final readyBookIds = {
+      for (final piece in remotePieces)
+        if (!piece.workflowClosed &&
+            piece.pieceKind == 'book' &&
+            piece.visibleToProfileIds.isEmpty &&
+            !localServerPieceIds.contains(piece.id))
+          piece.id,
+    };
     final readyRemotePieces = remotePieces.where((piece) {
       if (piece.workflowClosed ||
-          piece.libraryStatus != 'ready' ||
+          piece.visibleToProfileIds.isNotEmpty ||
           localServerPieceIds.contains(piece.id)) {
+        return false;
+      }
+      final isPushableBookPackage = piece.pieceKind == 'book';
+      if (piece.libraryStatus != 'ready' && !isPushableBookPackage) {
+        return false;
+      }
+      final sourceBookId = piece.sourceBookId;
+      if (sourceBookId != null &&
+          sourceBookId.isNotEmpty &&
+          readyBookIds.contains(sourceBookId)) {
         return false;
       }
       return true;
     }).toList(growable: false);
     final readyLocalEntries = localReviewOrReady
-        .where((entry) => entry.piece.libraryStatus == LibraryStatus.ready)
-        .toList(growable: false);
-    final activeLocalEntries = localReviewOrReady
-        .where((entry) => entry.piece.libraryStatus != LibraryStatus.ready)
+        .where((entry) =>
+            entry.piece.libraryStatus == LibraryStatus.ready &&
+            entry.piece.visibleToProfileIds.isEmpty)
         .toList(growable: false);
 
     return ListView(
@@ -713,38 +768,6 @@ class _IntakeAndPushTab extends StatelessWidget {
               error: (error, _) => _ProcessingTrackerErrorCard(error: error),
               loading: () => const _ProcessingTrackerLoadingCard(),
             ),
-            if (bookWorkflows.isEmpty && activeLocalEntries.isEmpty)
-              const _ParentEmptyState(
-                title: 'No active book processing',
-                body:
-                    'After a book upload, you will see one grouped book workflow instead of dozens of loose pieces.',
-              )
-            else ...[
-              ...bookWorkflows.map(
-                (workflow) => Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: _BookWorkflowCard(
-                    workflow: workflow,
-                    onOpenReview: onOpenReview,
-                  ),
-                ),
-              ),
-              ...activeLocalEntries.map(
-                (entry) => Padding(
-                  padding: const EdgeInsets.only(top: 12),
-                  child: _IntakeEntryCard(
-                    entry: entry,
-                    students: students,
-                    reviewItem: reviewByPieceId[entry.piece.serverPieceId],
-                    onOpenReview: onOpenReview,
-                    onPushToProfile: (profileId) {
-                      return onPushToProfile(entry, profileId);
-                    },
-                    onCloseWorkflow: () => onCloseWorkflow(entry),
-                  ),
-                ),
-              ),
-            ],
             const SizedBox(height: 12),
             _ParentDebugToolsCard(
               state: debugTools,
@@ -773,9 +796,8 @@ class _IntakeAndPushTab extends StatelessWidget {
                 padding: EdgeInsets.all(24),
                 child: Center(child: CircularProgressIndicator()),
               )
-            else if (bookWorkflows
-                    .where((workflow) => workflow.reviewItems.isNotEmpty)
-                    .isEmpty &&
+            else if (remoteNeedsEditPieces.isEmpty &&
+                reviewBookWorkflows.isEmpty &&
                 looseReviewItems.isEmpty)
               const _ParentEmptyState(
                 title: 'No review items ready',
@@ -783,17 +805,24 @@ class _IntakeAndPushTab extends StatelessWidget {
                     'Metadata review cards appear here as student PDFs become ready.',
               )
             else ...[
-              ...bookWorkflows
-                  .where((workflow) => workflow.reviewItems.isNotEmpty)
-                  .map(
-                    (workflow) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _BookReviewGroupCard(
-                        workflow: workflow,
-                        onOpenReview: onOpenReview,
-                      ),
-                    ),
+              ...remoteNeedsEditPieces.map(
+                (piece) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _ServerWorkflowStatusCard(
+                    piece: piece,
+                    students: students,
                   ),
+                ),
+              ),
+              ...reviewBookWorkflows.map(
+                (workflow) => Padding(
+                  padding: const EdgeInsets.only(bottom: 12),
+                  child: _BookReviewGroupCard(
+                    workflow: workflow,
+                    onOpenReview: onOpenReview,
+                  ),
+                ),
+              ),
               ...looseReviewItems.map(
                 (item) => Padding(
                   padding: const EdgeInsets.only(bottom: 12),
@@ -809,7 +838,7 @@ class _IntakeAndPushTab extends StatelessWidget {
         _WorkflowSection(
           title: 'Ready to Push',
           subtitle:
-              'Approved student PDFs stay here until you assign them to a student or close them from the workflow.',
+              'Only metadata-reviewed cleaned PDFs appear here. Books are pushed as one container with reviewed child pieces linked back to their book pages.',
           children: [
             if (syncedPieces.hasError)
               _QueueErrorCard(
@@ -825,7 +854,7 @@ class _IntakeAndPushTab extends StatelessWidget {
               const _ParentEmptyState(
                 title: 'Nothing ready to push',
                 body:
-                    'Approved student PDFs will appear here after parent metadata review is complete.',
+                    'Approved cleaned PDFs will appear here when they still need student assignment.',
               )
             else ...[
               if (readyRemotePieces.isNotEmpty)
@@ -837,9 +866,10 @@ class _IntakeAndPushTab extends StatelessWidget {
                         padding: const EdgeInsets.only(bottom: 12),
                         child: _ServerReadyPushCard(
                           piece: piece,
+                          bookWorkflow: bookWorkflowsById[piece.id],
                           students: students,
-                          onPushToProfile: (profileId) {
-                            return onPushRemoteToProfile(piece, profileId);
+                          onPushToProfiles: (profileIds) {
+                            return onPushRemoteToProfiles(piece, profileIds);
                           },
                           onCloseWorkflow: () => onCloseRemoteWorkflow(piece),
                         ),
@@ -855,8 +885,8 @@ class _IntakeAndPushTab extends StatelessWidget {
                     students: students,
                     reviewItem: reviewByPieceId[entry.piece.serverPieceId],
                     onOpenReview: onOpenReview,
-                    onPushToProfile: (profileId) {
-                      return onPushToProfile(entry, profileId);
+                    onPushToProfiles: (profileIds) {
+                      return onPushToProfiles(entry, profileIds);
                     },
                     onCloseWorkflow: () => onCloseWorkflow(entry),
                   ),
@@ -866,6 +896,53 @@ class _IntakeAndPushTab extends StatelessWidget {
           ],
         ),
       ],
+    );
+  }
+}
+
+enum _ParentImportKind {
+  individualPiece('piece', 'Individual piece'),
+  book('book', 'Book / collection');
+
+  const _ParentImportKind(this.pieceKind, this.label);
+
+  final String pieceKind;
+  final String label;
+}
+
+class _ImportKindDialog extends StatelessWidget {
+  const _ImportKindDialog();
+
+  @override
+  Widget build(BuildContext context) {
+    return AlertDialog(
+      title: const Text('What are you importing?'),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          ListTile(
+            key: AppKeys.parentImportIndividualPieceButton,
+            leading: const Icon(Icons.music_note_outlined),
+            title: const Text('Individual piece'),
+            subtitle: const Text(
+              'Use for one piece or one scan that should be reviewed and pushed by itself.',
+            ),
+            onTap: () => Navigator.of(context).pop(
+              _ParentImportKind.individualPiece,
+            ),
+          ),
+          const SizedBox(height: 8),
+          ListTile(
+            key: AppKeys.parentImportBookButton,
+            leading: const Icon(Icons.menu_book_outlined),
+            title: const Text('Book / collection'),
+            subtitle: const Text(
+              'Use for a full book. AZMusic keeps the cleaned book and links reviewed child pieces back to its pages.',
+            ),
+            onTap: () => Navigator.of(context).pop(_ParentImportKind.book),
+          ),
+        ],
+      ),
     );
   }
 }
@@ -928,7 +1005,7 @@ class _LocalImportProblemCard extends StatelessWidget {
     final theme = Theme.of(context);
     final message = serverMissing
         ? 'This item points to a server record that is no longer present. Re-upload it as a new import or remove the local copy.'
-        : 'Waiting for a server connection before upload. Retry when the server is online, or remove this local-only import.';
+        : 'Upload has not been confirmed by the server yet. The app will retry and reconcile by file hash, or you can retry/remove it here.';
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
@@ -1010,7 +1087,6 @@ class _BookWorkflow {
   final List<RemotePieceSummary> children;
   final List<ReviewQueueEntry> reviewItems;
 
-  int get detectedCount => children.length;
   int get metadataPendingCount => reviewItems
       .where((item) => _reviewProcessingStage(item) == 'split_review_needed')
       .length;
@@ -1021,19 +1097,6 @@ class _BookWorkflow {
             _reviewProcessingStage(item) == 'candidate_review_needed',
       )
       .length;
-  int get approvedCount =>
-      children.where((piece) => piece.libraryStatus == 'ready').length;
-  int get pushedCount =>
-      children.where((piece) => piece.visibleToProfileIds.isNotEmpty).length;
-  int get processingCount => children
-      .where(
-        (piece) =>
-            piece.libraryStatus == 'processing' ||
-            piece.status == 'processing' ||
-            piece.libraryStatus == 'review',
-      )
-      .length;
-
   ReviewQueueEntry? get nextReviewItem {
     final metadataItems = reviewItems
         .where((item) => _reviewProcessingStage(item) == 'split_review_needed')
@@ -1045,97 +1108,6 @@ class _BookWorkflow {
       return reviewItems.first;
     }
     return null;
-  }
-}
-
-class _BookWorkflowCard extends StatelessWidget {
-  const _BookWorkflowCard({
-    required this.workflow,
-    required this.onOpenReview,
-  });
-
-  final _BookWorkflow workflow;
-  final ValueChanged<String> onOpenReview;
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final nextReview = workflow.nextReviewItem;
-    return Container(
-      padding: const EdgeInsets.all(18),
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surface,
-        borderRadius: BorderRadius.circular(22),
-        border: Border.all(color: theme.colorScheme.outlineVariant),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Container(
-                width: 44,
-                height: 44,
-                decoration: BoxDecoration(
-                  color: const Color(0xFFE4F6EE),
-                  borderRadius: BorderRadius.circular(14),
-                ),
-                child: const Icon(
-                  Icons.menu_book_outlined,
-                  color: Color(0xFF126B4A),
-                ),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Text(
-                      workflow.title,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w800,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      _bookWorkflowSummary(workflow),
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: theme.colorScheme.onSurfaceVariant,
-                      ),
-                    ),
-                  ],
-                ),
-              ),
-              _WorkflowStatusChip(label: _bookWorkflowStatus(workflow)),
-            ],
-          ),
-          const SizedBox(height: 12),
-          Wrap(
-            spacing: 8,
-            runSpacing: 8,
-            children: [
-              Chip(label: Text('${workflow.detectedCount} detected')),
-              Chip(label: Text('${workflow.metadataPendingCount} metadata')),
-              Chip(
-                label: Text('${workflow.museScorePendingCount} notation edits'),
-              ),
-              Chip(label: Text('${workflow.approvedCount} approved')),
-              if (workflow.pushedCount > 0)
-                Chip(label: Text('${workflow.pushedCount} pushed')),
-            ],
-          ),
-          if (nextReview != null) ...[
-            const SizedBox(height: 12),
-            FilledButton.tonalIcon(
-              onPressed: () => onOpenReview(nextReview.id),
-              icon: const Icon(Icons.fact_check_outlined),
-              label: const Text('Open next review'),
-            ),
-          ],
-        ],
-      ),
-    );
   }
 }
 
@@ -1299,31 +1271,6 @@ String _bookWorkflowTitle(
   return 'Book import';
 }
 
-String _bookWorkflowSummary(_BookWorkflow workflow) {
-  if (workflow.reviewItems.isEmpty && workflow.processingCount == 0) {
-    return 'Book source uploaded. Waiting for extracted pieces or review output.';
-  }
-  return '${workflow.detectedCount} piece(s) detected, '
-      '${workflow.processingCount} processing/reviewing, '
-      '${workflow.approvedCount} approved.';
-}
-
-String _bookWorkflowStatus(_BookWorkflow workflow) {
-  if (workflow.metadataPendingCount > 0) {
-    return 'metadata review';
-  }
-  if (workflow.museScorePendingCount > 0) {
-    return 'notation edit';
-  }
-  if (workflow.processingCount > 0) {
-    return 'processing';
-  }
-  if (workflow.approvedCount > 0) {
-    return 'ready';
-  }
-  return 'uploaded';
-}
-
 String? _reviewSourceBookId(ReviewQueueEntry item) {
   return _metadataString(item.candidateData['source_book_id']);
 }
@@ -1340,14 +1287,22 @@ class _ProcessingTrackerCard extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final completedCount = summary.succeededCount + summary.failedCount;
-    final totalCount =
-        completedCount + summary.queuedCount + summary.runningCount;
-    final hasJobs = totalCount > 0;
-    final progress = hasJobs ? completedCount / totalCount : null;
-    final activeText = summary.runningCount == 0 && summary.queuedCount == 0
+    final activeJobs = summary.activeJobs
+        .where((job) => job.status == 'running' || job.status == 'queued')
+        .toList(growable: false);
+    final activeCount = summary.runningCount + summary.queuedCount;
+    final currentJob = _currentTrackerJob(activeJobs);
+    final progress = activeJobs.isEmpty
+        ? null
+        : activeJobs
+                .map((job) => job.progress.clamp(0, 100) / 100)
+                .reduce((value, element) => value + element) /
+            activeJobs.length;
+    final activeText = currentJob == null
         ? 'No active server processing jobs.'
-        : '${summary.runningCount} running, ${summary.queuedCount} queued.';
+        : _currentTrackerJobLabel(currentJob);
+    final hiddenActiveCount =
+        activeCount > activeJobs.length ? activeCount - activeJobs.length : 0;
 
     return DecoratedBox(
       decoration: BoxDecoration(
@@ -1355,12 +1310,15 @@ class _ProcessingTrackerCard extends StatelessWidget {
         borderRadius: BorderRadius.circular(18),
         border: Border.all(color: theme.colorScheme.outlineVariant),
       ),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
+      child: ClipRRect(
+        borderRadius: BorderRadius.circular(18),
+        child: Theme(
+          data: theme.copyWith(dividerColor: Colors.transparent),
+          child: ExpansionTile(
+            key: AppKeys.parentProcessingTracker,
+            tilePadding: const EdgeInsets.fromLTRB(16, 12, 12, 12),
+            childrenPadding: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+            title: Row(
               children: [
                 const Icon(Icons.pending_actions_outlined),
                 const SizedBox(width: 10),
@@ -1372,34 +1330,185 @@ class _ProcessingTrackerCard extends StatelessWidget {
                     ),
                   ),
                 ),
+                const SizedBox(width: 8),
                 Chip(
+                  visualDensity: VisualDensity.compact,
                   label: Text(
-                    hasJobs ? '$completedCount / $totalCount done' : 'Idle',
+                    activeCount == 0
+                        ? 'Idle'
+                        : '${summary.runningCount} running / ${summary.queuedCount} queued',
                   ),
                 ),
               ],
             ),
-            const SizedBox(height: 12),
-            LinearProgressIndicator(value: progress),
-            const SizedBox(height: 10),
-            Text(
-              activeText,
-              style: theme.textTheme.bodySmall?.copyWith(
-                color: theme.colorScheme.onSurfaceVariant,
+            subtitle: Padding(
+              padding: const EdgeInsets.only(top: 10),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  LinearProgressIndicator(value: progress),
+                  const SizedBox(height: 10),
+                  Text(
+                    activeText,
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                  if (summary.failedCount > 0) ...[
+                    const SizedBox(height: 8),
+                    Text(
+                      '${summary.failedCount} job(s) failed. Check Server for details.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.error,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ],
+                ],
               ),
             ),
-            if (summary.failedCount > 0) ...[
-              const SizedBox(height: 8),
-              Text(
-                '${summary.failedCount} job(s) failed. Check Server for details.',
-                style: theme.textTheme.bodySmall?.copyWith(
-                  color: theme.colorScheme.error,
-                  fontWeight: FontWeight.w600,
+            children: [
+              Align(
+                alignment: Alignment.centerLeft,
+                child: Text(
+                  'Remaining server tasks',
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w800,
+                  ),
                 ),
               ),
+              const SizedBox(height: 8),
+              if (activeJobs.isEmpty)
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    'No queued or running server tasks.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.onSurfaceVariant,
+                    ),
+                  ),
+                )
+              else ...[
+                ...activeJobs.map(
+                  (job) => Padding(
+                    padding: const EdgeInsets.only(bottom: 8),
+                    child: _ProcessingTrackerJobRow(job: job),
+                  ),
+                ),
+                if (hiddenActiveCount > 0)
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      '+ $hiddenActiveCount more queued on the server.',
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                        fontWeight: FontWeight.w600,
+                      ),
+                    ),
+                  ),
+              ],
+              if (summary.failedCount > 0) ...[
+                const SizedBox(height: 8),
+                Align(
+                  alignment: Alignment.centerLeft,
+                  child: Text(
+                    '${summary.failedCount} failed job(s) are not retried automatically.',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      color: theme.colorScheme.error,
+                      fontWeight: FontWeight.w600,
+                    ),
+                  ),
+                ),
+              ],
             ],
-          ],
+          ),
         ),
+      ),
+    );
+  }
+}
+
+ServerJob? _currentTrackerJob(List<ServerJob> activeJobs) {
+  if (activeJobs.isEmpty) {
+    return null;
+  }
+  for (final job in activeJobs) {
+    if (job.status == 'running') {
+      return job;
+    }
+  }
+  return activeJobs.first;
+}
+
+String _currentTrackerJobLabel(ServerJob job) {
+  final jobType = job.jobType.replaceAll('_', ' ');
+  if (job.status == 'running') {
+    return 'Processing ${job.pieceLabel} - $jobType, ${job.progress.toStringAsFixed(0)}%.';
+  }
+  return 'Waiting to process ${job.pieceLabel} - $jobType.';
+}
+
+class _ProcessingTrackerJobRow extends StatelessWidget {
+  const _ProcessingTrackerJobRow({required this.job});
+
+  final ServerJob job;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final statusColor = switch (job.status) {
+      'running' => const Color(0xFF126B4A),
+      'queued' => const Color(0xFF854F0B),
+      _ => theme.colorScheme.onSurfaceVariant,
+    };
+    final statusLabel = job.status == 'running'
+        ? '${job.progress.toStringAsFixed(0)}%'
+        : 'Waiting';
+    return Container(
+      padding: const EdgeInsets.all(10),
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(14),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      child: Row(
+        children: [
+          Icon(Icons.music_note_outlined, color: statusColor, size: 18),
+          const SizedBox(width: 10),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  job.pieceLabel,
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.labelLarge?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                const SizedBox(height: 2),
+                Text(
+                  job.jobType.replaceAll('_', ' '),
+                  maxLines: 1,
+                  overflow: TextOverflow.ellipsis,
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 8),
+          Chip(
+            visualDensity: VisualDensity.compact,
+            label: Text(statusLabel),
+            labelStyle: TextStyle(
+              color: statusColor,
+              fontWeight: FontWeight.w700,
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -1996,7 +2105,7 @@ class _ProcessingTrackerErrorCard extends StatelessWidget {
   }
 }
 
-class _StudentsTab extends StatelessWidget {
+class _StudentsTab extends StatefulWidget {
   const _StudentsTab({
     required this.syncedPieces,
     required this.students,
@@ -2019,15 +2128,42 @@ class _StudentsTab extends StatelessWidget {
   final Future<void> Function(RemotePieceSummary piece) onPullForEdits;
 
   @override
+  State<_StudentsTab> createState() => _StudentsTabState();
+}
+
+class _StudentsTabState extends State<_StudentsTab> {
+  String? _selectedStudentId;
+
+  @override
+  void didUpdateWidget(covariant _StudentsTab oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (_selectedStudentId == null) {
+      return;
+    }
+    final stillExists = _libraryStudents(
+      widget.students,
+      widget.syncedPieces.valueOrNull ?? const [],
+    ).any((student) => student.id == _selectedStudentId);
+    if (!stillExists) {
+      _selectedStudentId = null;
+    }
+  }
+
+  @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final syncedPieceValue = widget.syncedPieces.valueOrNull ?? const [];
+    final libraryStudents = _libraryStudents(
+      widget.students,
+      syncedPieceValue,
+    );
     return ListView(
       padding: const EdgeInsets.all(16),
       children: [
         _StudentDevicePairingCard(
-          students: students,
-          onAddStudent: onAddStudent,
-          onCreatePairing: onCreatePairing,
+          students: widget.students,
+          onAddStudent: widget.onAddStudent,
+          onCreatePairing: widget.onCreatePairing,
         ),
         const SizedBox(height: 20),
         Text(
@@ -2037,44 +2173,191 @@ class _StudentsTab extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 8),
-        syncedPieces.when(
-          data: (pieces) {
-            if (pieces.isEmpty) {
-              return const _ParentEmptyState(
-                title: 'No synced pieces yet',
-                body:
-                    'Once imports reach the server, parent-managed metadata, student PDFs, and assignments will appear here.',
-              );
-            }
+        if (libraryStudents.isEmpty)
+          const _ParentEmptyState(
+            title: 'No student libraries yet',
+            body:
+                'Add a student profile, pair the device, then pushed pieces will appear under that student.',
+          )
+        else ...[
+          Builder(builder: (context) {
+            final selectedStudent = _selectedStudent(libraryStudents);
             return Column(
-              children: pieces
-                  .map(
-                    (piece) => Padding(
-                      padding: const EdgeInsets.only(bottom: 12),
-                      child: _SyncedPieceCard(
-                        piece: piece,
-                        students: students,
-                        onEditMetadata: () => onEditMetadata(piece),
-                        onPushOriginal: (profileId) =>
-                            onPushOriginal(piece, profileId),
-                        onPullForEdits: () => onPullForEdits(piece),
-                      ),
-                    ),
-                  )
-                  .toList(growable: false),
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                _StudentLibrarySelector(
+                  students: libraryStudents,
+                  selectedStudentId: selectedStudent.id,
+                  pieces: syncedPieceValue,
+                  onSelected: (studentId) {
+                    setState(() {
+                      _selectedStudentId = studentId;
+                    });
+                  },
+                ),
+                const SizedBox(height: 12),
+                widget.syncedPieces.when(
+                  data: (pieces) {
+                    final assignedPieces = pieces
+                        .where(
+                          (piece) => piece.visibleToProfileIds.contains(
+                            selectedStudent.id,
+                          ),
+                        )
+                        .toList(growable: false);
+                    if (assignedPieces.isEmpty) {
+                      return _ParentEmptyState(
+                        title:
+                            '${selectedStudent.displayName} has no pieces yet',
+                        body:
+                            'Push a cleaned student PDF or book package to ${selectedStudent.displayName}, then it will appear here.',
+                      );
+                    }
+                    return Column(
+                      key: AppKeys.parentStudentLibraryList,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
+                      children: [
+                        Padding(
+                          padding: const EdgeInsets.only(bottom: 12),
+                          child: Text(
+                            '${selectedStudent.displayName} library '
+                            '(${assignedPieces.length})',
+                            style: theme.textTheme.titleMedium?.copyWith(
+                              fontWeight: FontWeight.w700,
+                            ),
+                          ),
+                        ),
+                        ...assignedPieces.map(
+                          (piece) => Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _SyncedPieceCard(
+                              piece: piece,
+                              students: libraryStudents,
+                              focusedStudentId: selectedStudent.id,
+                              onEditMetadata: () =>
+                                  widget.onEditMetadata(piece),
+                              onPushOriginal: (profileId) =>
+                                  widget.onPushOriginal(piece, profileId),
+                              onPullForEdits: () =>
+                                  widget.onPullForEdits(piece),
+                            ),
+                          ),
+                        ),
+                      ],
+                    );
+                  },
+                  error: (error, _) => _QueueErrorCard(
+                    error: error,
+                    onRepairPairing: widget.onRepairPairing,
+                  ),
+                  loading: () => const Padding(
+                    padding: EdgeInsets.all(24),
+                    child: Center(child: CircularProgressIndicator()),
+                  ),
+                ),
+              ],
             );
-          },
-          error: (error, _) => _QueueErrorCard(
-            error: error,
-            onRepairPairing: onRepairPairing,
-          ),
-          loading: () => const Padding(
-            padding: EdgeInsets.all(24),
-            child: Center(child: CircularProgressIndicator()),
-          ),
-        ),
+          }),
+        ],
       ],
     );
+  }
+
+  Profile _selectedStudent(List<Profile> students) {
+    if (students.isEmpty) {
+      throw StateError('Cannot select a student from an empty list.');
+    }
+    final selectedStudentId = _selectedStudentId;
+    if (selectedStudentId != null) {
+      for (final student in students) {
+        if (student.id == selectedStudentId) {
+          return student;
+        }
+      }
+    }
+    return students.first;
+  }
+}
+
+List<Profile> _libraryStudents(
+  List<Profile> localStudents,
+  List<RemotePieceSummary> pieces,
+) {
+  final byId = <String, Profile>{
+    for (final student in localStudents) student.id: student,
+  };
+  final now = DateTime.now().toUtc();
+  for (final piece in pieces) {
+    for (final profileId in piece.visibleToProfileIds) {
+      if (byId.containsKey(profileId)) {
+        continue;
+      }
+      byId[profileId] = Profile(
+        id: profileId,
+        displayName: _profileLabelFromId(profileId),
+        role: ProfileRole.student,
+        subtitle: 'Synced student library',
+        createdAt: now,
+        updatedAt: now,
+      );
+    }
+  }
+  return byId.values.toList(growable: false)
+    ..sort((left, right) => left.displayName.compareTo(right.displayName));
+}
+
+String _profileLabelFromId(String profileId) {
+  final normalized = profileId
+      .replaceFirst(RegExp(r'^student[-_]*', caseSensitive: false), '')
+      .replaceAll(RegExp(r'[-_]+'), ' ')
+      .trim();
+  if (normalized.isEmpty) {
+    return 'Student';
+  }
+  return normalized.split(RegExp(r'\s+')).map((part) {
+    if (part.isEmpty) {
+      return part;
+    }
+    return '${part[0].toUpperCase()}${part.substring(1)}';
+  }).join(' ');
+}
+
+class _StudentLibrarySelector extends StatelessWidget {
+  const _StudentLibrarySelector({
+    required this.students,
+    required this.selectedStudentId,
+    required this.pieces,
+    required this.onSelected,
+  });
+
+  final List<Profile> students;
+  final String selectedStudentId;
+  final List<RemotePieceSummary> pieces;
+  final ValueChanged<String> onSelected;
+
+  @override
+  Widget build(BuildContext context) {
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        for (final student in students)
+          ChoiceChip(
+            key: AppKeys.parentStudentLibrarySelector(student.id),
+            selected: student.id == selectedStudentId,
+            label: Text(
+              '${student.displayName} (${_assignedCount(student.id)})',
+            ),
+            onSelected: (_) => onSelected(student.id),
+          ),
+      ],
+    );
+  }
+
+  int _assignedCount(String studentId) {
+    return pieces
+        .where((piece) => piece.visibleToProfileIds.contains(studentId))
+        .length;
   }
 }
 
@@ -2149,7 +2432,7 @@ class _IntakeEntryCard extends StatelessWidget {
     required this.students,
     required this.reviewItem,
     required this.onOpenReview,
-    required this.onPushToProfile,
+    required this.onPushToProfiles,
     required this.onCloseWorkflow,
   });
 
@@ -2157,7 +2440,7 @@ class _IntakeEntryCard extends StatelessWidget {
   final List<Profile> students;
   final ReviewQueueEntry? reviewItem;
   final ValueChanged<String> onOpenReview;
-  final Future<void> Function(String profileId) onPushToProfile;
+  final Future<void> Function(List<String> profileIds) onPushToProfiles;
   final Future<void> Function() onCloseWorkflow;
 
   @override
@@ -2230,39 +2513,24 @@ class _IntakeEntryCard extends StatelessWidget {
                 label: const Text('Review metadata'),
               ),
             ],
-          ] else
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ...students.map((student) {
-                  final alreadyVisible =
-                      piece.visibleToProfileIds.contains(student.id);
-                  return FilledButton.tonalIcon(
-                    key: AppKeys.pushToProfileButton(piece.id, student.id),
-                    onPressed: alreadyVisible
-                        ? null
-                        : () => onPushToProfile(student.id),
-                    icon: Icon(
-                      alreadyVisible
-                          ? Icons.check_circle_outline
-                          : Icons.send_outlined,
-                    ),
-                    label: Text(
-                      alreadyVisible
-                          ? '${student.displayName} added'
-                          : 'Push to ${student.displayName}',
-                    ),
-                  );
-                }),
-                if (canCloseWorkflow)
-                  OutlinedButton.icon(
-                    onPressed: onCloseWorkflow,
-                    icon: const Icon(Icons.done_all_outlined),
-                    label: const Text('Close workflow'),
-                  ),
-              ],
+          ] else ...[
+            _PushDestinationActions(
+              pieceId: piece.id,
+              title: piece.title,
+              students: students,
+              alreadyAssignedProfileIds: piece.visibleToProfileIds,
+              previousAssignedProfileIds: piece.previousVisibleToProfileIds,
+              onPushToProfiles: onPushToProfiles,
             ),
+            if (canCloseWorkflow) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: onCloseWorkflow,
+                icon: const Icon(Icons.done_all_outlined),
+                label: const Text('Close workflow'),
+              ),
+            ],
+          ],
         ],
       ),
     );
@@ -2289,14 +2557,16 @@ class _IntakeEntryCard extends StatelessWidget {
 class _ServerReadyPushCard extends StatelessWidget {
   const _ServerReadyPushCard({
     required this.piece,
+    this.bookWorkflow,
     required this.students,
-    required this.onPushToProfile,
+    required this.onPushToProfiles,
     required this.onCloseWorkflow,
   });
 
   final RemotePieceSummary piece;
+  final _BookWorkflow? bookWorkflow;
   final List<Profile> students;
-  final Future<void> Function(String profileId) onPushToProfile;
+  final Future<void> Function(List<String> profileIds) onPushToProfiles;
   final Future<void> Function() onCloseWorkflow;
 
   @override
@@ -2316,6 +2586,11 @@ class _ServerReadyPushCard extends StatelessWidget {
       else
         'Assigned to ${assignedNames.join(', ')}',
     ].join(' - ');
+    final isBook = piece.pieceKind == 'book';
+    final reviewedChildCount = bookWorkflow?.children
+            .where((child) => child.libraryStatus == 'ready')
+            .length ??
+        0;
     final canCloseWorkflow = piece.visibleToProfileIds.isNotEmpty;
 
     return Container(
@@ -2354,52 +2629,272 @@ class _ServerReadyPushCard extends StatelessWidget {
                   ],
                 ),
               ),
-              const Chip(label: Text('Ready')),
+              Chip(label: Text(isBook ? 'Book / collection' : 'Ready')),
             ],
           ),
+          if (isBook) ...[
+            const SizedBox(height: 8),
+            Text(
+              reviewedChildCount == 0
+                  ? 'Pushes the cleaned full-book PDF. Reviewed child pieces will sync to assigned students as they become ready.'
+                  : 'Pushes the cleaned full-book PDF plus $reviewedChildCount reviewed child piece${reviewedChildCount == 1 ? '' : 's'}.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+          ],
           const SizedBox(height: 12),
           if (students.isEmpty)
             Text(
-              'Create a student profile before pushing this approved piece.',
+              isBook
+                  ? 'Create a student profile before pushing this cleaned book.'
+                  : 'Create a student profile before pushing this approved piece.',
               style: theme.textTheme.bodySmall?.copyWith(
                 color: theme.colorScheme.onSurfaceVariant,
               ),
             )
-          else
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: [
-                ...students.map((student) {
-                  final alreadyVisible =
-                      piece.visibleToProfileIds.contains(student.id);
-                  return FilledButton.tonalIcon(
-                    key: AppKeys.pushToProfileButton(piece.id, student.id),
-                    onPressed: alreadyVisible
-                        ? null
-                        : () => onPushToProfile(student.id),
-                    icon: Icon(
-                      alreadyVisible
-                          ? Icons.check_circle_outline
-                          : Icons.send_outlined,
-                    ),
-                    label: Text(
-                      alreadyVisible
-                          ? '${student.displayName} added'
-                          : 'Push to ${student.displayName}',
-                    ),
-                  );
-                }),
-                if (canCloseWorkflow)
-                  OutlinedButton.icon(
-                    onPressed: onCloseWorkflow,
-                    icon: const Icon(Icons.done_all_outlined),
-                    label: const Text('Close workflow'),
-                  ),
-              ],
+          else ...[
+            _PushDestinationActions(
+              pieceId: piece.id,
+              title: piece.title,
+              students: students,
+              alreadyAssignedProfileIds: piece.visibleToProfileIds,
+              previousAssignedProfileIds: piece.previousVisibleToProfileIds,
+              packageLabel: isBook ? 'book' : 'piece',
+              onPushToProfiles: onPushToProfiles,
             ),
+            if (canCloseWorkflow) ...[
+              const SizedBox(height: 8),
+              OutlinedButton.icon(
+                onPressed: onCloseWorkflow,
+                icon: const Icon(Icons.done_all_outlined),
+                label: const Text('Close workflow'),
+              ),
+            ],
+          ],
         ],
       ),
+    );
+  }
+}
+
+class _ServerWorkflowStatusCard extends StatelessWidget {
+  const _ServerWorkflowStatusCard({
+    required this.piece,
+    required this.students,
+  });
+
+  final RemotePieceSummary piece;
+  final List<Profile> students;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final previousNames = students
+        .where(
+          (student) => piece.previousVisibleToProfileIds.contains(student.id),
+        )
+        .map((student) => student.displayName)
+        .toList(growable: false);
+    final subtitle = <String>[
+      if (piece.composer?.isNotEmpty ?? false) piece.composer!,
+      if (piece.primaryInstrument?.isNotEmpty ?? false)
+        piece.primaryInstrument!,
+      if (previousNames.isNotEmpty)
+        'Pulled back from ${previousNames.join(', ')}',
+    ].join(' - ');
+
+    return Container(
+      decoration: BoxDecoration(
+        color: theme.colorScheme.surface,
+        borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: theme.colorScheme.outlineVariant),
+      ),
+      padding: const EdgeInsets.all(18),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  piece.title,
+                  style: theme.textTheme.titleMedium?.copyWith(
+                    fontWeight: FontWeight.w700,
+                  ),
+                ),
+                if (subtitle.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.only(top: 4),
+                    child: Text(
+                      subtitle,
+                      style: theme.textTheme.bodySmall?.copyWith(
+                        color: theme.colorScheme.onSurfaceVariant,
+                      ),
+                    ),
+                  ),
+                const SizedBox(height: 8),
+                Text(
+                  'Hidden from student libraries until edits are accepted and the piece is repushed.',
+                  style: theme.textTheme.bodySmall?.copyWith(
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(width: 12),
+          const Chip(label: Text('Needs edits')),
+        ],
+      ),
+    );
+  }
+}
+
+class _PushDestinationActions extends StatelessWidget {
+  const _PushDestinationActions({
+    required this.pieceId,
+    required this.title,
+    required this.students,
+    required this.alreadyAssignedProfileIds,
+    this.previousAssignedProfileIds = const <String>[],
+    required this.onPushToProfiles,
+    this.packageLabel = 'piece',
+  });
+
+  final String pieceId;
+  final String title;
+  final List<Profile> students;
+  final List<String> alreadyAssignedProfileIds;
+  final List<String> previousAssignedProfileIds;
+  final Future<void> Function(List<String> profileIds) onPushToProfiles;
+  final String packageLabel;
+
+  @override
+  Widget build(BuildContext context) {
+    final unassignedStudents = students
+        .where((student) => !alreadyAssignedProfileIds.contains(student.id))
+        .toList(growable: false);
+    final previousUnassignedStudentIds = students
+        .where(
+          (student) =>
+              previousAssignedProfileIds.contains(student.id) &&
+              !alreadyAssignedProfileIds.contains(student.id),
+        )
+        .map((student) => student.id)
+        .toList(growable: false);
+
+    if (unassignedStudents.isEmpty) {
+      return Text(
+        'Already assigned to all students.',
+        style: Theme.of(context).textTheme.bodySmall?.copyWith(
+              color: Theme.of(context).colorScheme.onSurfaceVariant,
+            ),
+      );
+    }
+
+    return Wrap(
+      spacing: 8,
+      runSpacing: 8,
+      children: [
+        if (previousUnassignedStudentIds.isNotEmpty)
+          FilledButton.icon(
+            key: AppKeys.repushToPreviousStudentsButton(pieceId),
+            onPressed: () async {
+              await onPushToProfiles(previousUnassignedStudentIds);
+            },
+            icon: const Icon(Icons.restore_outlined),
+            label: const Text('Repush to previous students'),
+          ),
+        FilledButton.icon(
+          key: AppKeys.pushToAllStudentsButton(pieceId),
+          onPressed: () async {
+            await onPushToProfiles(
+              unassignedStudents.map((student) => student.id).toList(
+                    growable: false,
+                  ),
+            );
+          },
+          icon: const Icon(Icons.groups_outlined),
+          label: Text('Push $packageLabel to all students'),
+        ),
+        OutlinedButton.icon(
+          key: AppKeys.pushToSelectedStudentsButton(pieceId),
+          onPressed: () async {
+            final selectedProfileIds = await _selectPushStudents(context);
+            if (selectedProfileIds == null || selectedProfileIds.isEmpty) {
+              return;
+            }
+            await onPushToProfiles(selectedProfileIds);
+          },
+          icon: const Icon(Icons.checklist_outlined),
+          label: const Text('Push to select students'),
+        ),
+      ],
+    );
+  }
+
+  Future<List<String>?> _selectPushStudents(BuildContext context) {
+    final selectedProfileIds = <String>{};
+    return showDialog<List<String>>(
+      context: context,
+      builder: (context) {
+        return StatefulBuilder(
+          builder: (context, setState) {
+            return AlertDialog(
+              title: Text('Push $title'),
+              content: SingleChildScrollView(
+                child: Column(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    for (final student in students)
+                      CheckboxListTile(
+                        key: AppKeys.pushStudentSelectionCheckbox(
+                          pieceId,
+                          student.id,
+                        ),
+                        value: selectedProfileIds.contains(student.id),
+                        enabled:
+                            !alreadyAssignedProfileIds.contains(student.id),
+                        title: Text(student.displayName),
+                        subtitle: alreadyAssignedProfileIds.contains(student.id)
+                            ? const Text('Already assigned')
+                            : null,
+                        onChanged: (checked) {
+                          setState(() {
+                            if (checked ?? false) {
+                              selectedProfileIds.add(student.id);
+                            } else {
+                              selectedProfileIds.remove(student.id);
+                            }
+                          });
+                        },
+                      ),
+                  ],
+                ),
+              ),
+              actions: [
+                TextButton(
+                  onPressed: () => Navigator.of(context).pop(),
+                  child: const Text('Cancel'),
+                ),
+                FilledButton(
+                  key: AppKeys.pushSelectedStudentsConfirmButton(pieceId),
+                  onPressed: selectedProfileIds.isEmpty
+                      ? null
+                      : () {
+                          Navigator.of(context).pop(
+                            selectedProfileIds.toList(growable: false),
+                          );
+                        },
+                  child: const Text('Push selected'),
+                ),
+              ],
+            );
+          },
+        );
+      },
     );
   }
 }
@@ -3106,6 +3601,7 @@ class _SyncedPieceCard extends StatelessWidget {
   const _SyncedPieceCard({
     required this.piece,
     required this.students,
+    this.focusedStudentId,
     required this.onEditMetadata,
     required this.onPushOriginal,
     required this.onPullForEdits,
@@ -3113,6 +3609,7 @@ class _SyncedPieceCard extends StatelessWidget {
 
   final RemotePieceSummary piece;
   final List<Profile> students;
+  final String? focusedStudentId;
   final VoidCallback onEditMetadata;
   final ValueChanged<String> onPushOriginal;
   final VoidCallback onPullForEdits;
@@ -3124,9 +3621,12 @@ class _SyncedPieceCard extends StatelessWidget {
         .where((student) => piece.visibleToProfileIds.contains(student.id))
         .map((student) => student.displayName)
         .toList(growable: false);
-    final unassignedStudents = students
-        .where((student) => !piece.visibleToProfileIds.contains(student.id))
-        .toList(growable: false);
+    final showAssignmentActions = focusedStudentId == null;
+    final unassignedStudents = showAssignmentActions
+        ? students
+            .where((student) => !piece.visibleToProfileIds.contains(student.id))
+            .toList(growable: false)
+        : const <Profile>[];
     final subtitle = <String>[
       if (piece.composer?.isNotEmpty ?? false) piece.composer!,
       if (piece.bookOrCollection?.isNotEmpty ?? false) piece.bookOrCollection!,
@@ -3183,7 +3683,7 @@ class _SyncedPieceCard extends StatelessWidget {
                   children: [
                     Chip(label: Text(piece.libraryStatus)),
                     if (piece.pieceKind == 'book')
-                      const Chip(label: Text('Book source')),
+                      const Chip(label: Text('Book package')),
                     OutlinedButton.icon(
                       onPressed: onEditMetadata,
                       icon: const Icon(Icons.edit_note_outlined),
@@ -3199,7 +3699,8 @@ class _SyncedPieceCard extends StatelessWidget {
                       OutlinedButton.icon(
                         onPressed: () => onPushOriginal(student.id),
                         icon: const Icon(Icons.picture_as_pdf_outlined),
-                        label: Text('Push original to ${student.displayName}'),
+                        label:
+                            Text('Push cleaned copy to ${student.displayName}'),
                       ),
                   ],
                 ),

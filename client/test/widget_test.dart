@@ -1,8 +1,10 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:azmusic/app/app.dart';
 import 'package:azmusic/app/app_keys.dart';
 import 'package:azmusic/app/launch_options.dart';
+import 'package:azmusic/app/routes/app_router.dart';
 import 'package:azmusic/core/config/app_config.dart';
 import 'package:azmusic/core/network/network_info.dart';
 import 'package:azmusic/data/repositories/server_piece_sync_repository.dart';
@@ -84,8 +86,11 @@ void main() {
 
   Future<void> pumpReviewCompareScreen(
     WidgetTester tester,
-    ReviewQueueEntry reviewItem,
-  ) async {
+    ReviewQueueEntry reviewItem, {
+    _FakeServerPieceSyncRepository? repository,
+  }) async {
+    final fakeRepository =
+        repository ?? _FakeServerPieceSyncRepository(reviewItem: reviewItem);
     await AppConfig.applyServerPairing(
       serverUrl: 'http://test-server',
       serverId: 'test-server',
@@ -94,12 +99,34 @@ void main() {
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          appDirectoryProvider.overrideWith((ref) => tempDir),
           serverPieceSyncRepositoryProvider.overrideWith(
-            (ref) => _FakeServerPieceSyncRepository(reviewItem: reviewItem),
+            (ref) => fakeRepository,
+          ),
+          networkInfoProvider.overrideWith((ref) => _FakeNetworkInfo()),
+          serverHealthProvider.overrideWith(
+            (ref) async => const ServerHealthState(
+              status: ServerHealthStatus.online,
+              serverUrl: 'http://test-server',
+              message: 'AZMusic server',
+            ),
           ),
         ],
         child: MaterialApp(
           home: ReviewCompareScreen(itemId: reviewItem.id),
+          onGenerateRoute: (settings) {
+            if (settings.name == AppRouter.reviewCompare) {
+              final itemId = settings.arguments as String?;
+              return MaterialPageRoute<void>(
+                builder: (_) => ReviewCompareScreen(itemId: itemId),
+              );
+            }
+            return MaterialPageRoute<void>(
+              builder: (_) => Scaffold(
+                body: Center(child: Text('Page not found: ${settings.name}')),
+              ),
+            );
+          },
         ),
       ),
     );
@@ -318,7 +345,7 @@ void main() {
     expect(find.text('Ready Server Etude'), findsOneWidget);
 
     final pushButton = find.byKey(
-      AppKeys.pushToProfileButton('server-ready-piece', 'student-alyse'),
+      AppKeys.pushToAllStudentsButton('server-ready-piece'),
     );
     await scrollParentWorkflowUntilFound(tester, pushButton);
     await tester.tap(pushButton);
@@ -326,8 +353,392 @@ void main() {
 
     expect(repository.pushCalls, hasLength(1));
     expect(repository.pushCalls.single.pieceId, 'server-ready-piece');
-    expect(repository.pushCalls.single.profileIds, ['student-alyse']);
+    expect(
+      repository.pushCalls.single.profileIds,
+      ['student-alyse', 'student-zora'],
+    );
+    expect(repository.pushCalls.single.mode, 'cleaned_pdf');
+
+    await tester.pump(const Duration(milliseconds: 500));
+    expect(find.text('Ready Server Etude'), findsNothing);
+    expect(find.text('Nothing ready to push'), findsOneWidget);
   });
+
+  testWidgets('parent can push a ready piece to selected students', (
+    WidgetTester tester,
+  ) async {
+    await AppConfig.setParentPin('2468');
+    await AppConfig.applyServerPairing(
+      serverUrl: 'http://test-server',
+      serverId: 'test-server',
+      pairingToken: 'test-token',
+    );
+    final repository = _FakeServerPieceSyncRepository(
+      allPieces: const [
+        RemotePieceSummary(
+          id: 'server-select-piece',
+          title: 'Selective Etude',
+          status: 'approved',
+          libraryStatus: 'ready',
+          visibleToProfileIds: [],
+          primaryInstrument: 'Cello',
+        ),
+      ],
+    );
+    await pumpApp(
+      tester,
+      repository: repository,
+    );
+    await tester.tap(find.byKey(AppKeys.profileButton('parent-main')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(AppKeys.parentPinEntryField), '2468');
+    await tester.tap(find.text('Unlock'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
+    await scrollParentWorkflowUntilFound(tester, find.text('Ready to Push'));
+    await pumpUntilFound(tester, find.byKey(AppKeys.parentServerReadyList));
+
+    final selectButton = find.byKey(
+      AppKeys.pushToSelectedStudentsButton('server-select-piece'),
+    );
+    await scrollParentWorkflowUntilFound(tester, selectButton);
+    await tester.tap(selectButton);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 250));
+    await tester.tap(
+      find.byKey(
+        AppKeys.pushStudentSelectionCheckbox(
+          'server-select-piece',
+          'student-zora',
+        ),
+      ),
+    );
+    await tester.pump();
+    await tester.tap(
+      find.byKey(
+        AppKeys.pushSelectedStudentsConfirmButton('server-select-piece'),
+      ),
+    );
+    await tester.pump();
+
+    expect(repository.pushCalls, hasLength(1));
+    expect(repository.pushCalls.single.pieceId, 'server-select-piece');
+    expect(repository.pushCalls.single.profileIds, ['student-zora']);
+    expect(repository.pushCalls.single.mode, 'cleaned_pdf');
+  });
+
+  testWidgets('parent shows book packages before child metadata review', (
+    WidgetTester tester,
+  ) async {
+    await AppConfig.setParentPin('2468');
+    await AppConfig.applyServerPairing(
+      serverUrl: 'http://test-server',
+      serverId: 'test-server',
+      pairingToken: 'test-token',
+    );
+    final repository = _FakeServerPieceSyncRepository(
+      allPieces: const [
+        RemotePieceSummary(
+          id: 'server-book',
+          title: 'Position Pieces for Cello, Book 1',
+          status: 'imported',
+          libraryStatus: 'intake',
+          visibleToProfileIds: [],
+          pieceKind: 'book',
+          primaryInstrument: 'Cello',
+        ),
+      ],
+    );
+    await pumpApp(
+      tester,
+      repository: repository,
+    );
+    await tester.tap(find.byKey(AppKeys.profileButton('parent-main')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(AppKeys.parentPinEntryField), '2468');
+    await tester.tap(find.text('Unlock'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
+    await scrollParentWorkflowUntilFound(tester, find.text('Ready to Push'));
+    await pumpUntilFound(tester, find.byKey(AppKeys.parentServerReadyList));
+
+    expect(find.text('Position Pieces for Cello, Book 1'), findsOneWidget);
+    expect(find.text('Book / collection'), findsOneWidget);
+
+    final pushButton = find.byKey(
+      AppKeys.pushToAllStudentsButton('server-book'),
+    );
+    await scrollParentWorkflowUntilFound(tester, pushButton);
+    expect(find.text('Push book to all students'), findsOneWidget);
+    await tester.tap(pushButton);
+    await tester.pump();
+
+    expect(repository.pushCalls, hasLength(1));
+    expect(repository.pushCalls.single.pieceId, 'server-book');
+    expect(repository.pushCalls.single.mode, 'cleaned_pdf');
+  });
+
+  testWidgets('parent ready shows reviewed book packages as pushable', (
+    WidgetTester tester,
+  ) async {
+    await AppConfig.setParentPin('2468');
+    await AppConfig.applyServerPairing(
+      serverUrl: 'http://test-server',
+      serverId: 'test-server',
+      pairingToken: 'test-token',
+    );
+    final repository = _FakeServerPieceSyncRepository(
+      allPieces: const [
+        RemotePieceSummary(
+          id: 'server-book',
+          title: 'Position Pieces for Cello, Book 1',
+          status: 'approved',
+          libraryStatus: 'ready',
+          visibleToProfileIds: [],
+          pieceKind: 'book',
+          primaryInstrument: 'Cello',
+        ),
+      ],
+    );
+    await pumpApp(
+      tester,
+      repository: repository,
+    );
+    await tester.tap(find.byKey(AppKeys.profileButton('parent-main')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(AppKeys.parentPinEntryField), '2468');
+    await tester.tap(find.text('Unlock'));
+    await tester.pump(const Duration(milliseconds: 500));
+    await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
+    await scrollParentWorkflowUntilFound(tester, find.text('Ready to Push'));
+    await pumpUntilFound(tester, find.byKey(AppKeys.parentServerReadyList));
+
+    expect(find.text('Position Pieces for Cello, Book 1'), findsOneWidget);
+    expect(find.text('Book / collection'), findsOneWidget);
+
+    final pushButton = find.byKey(
+      AppKeys.pushToAllStudentsButton('server-book'),
+    );
+    await scrollParentWorkflowUntilFound(tester, pushButton);
+    expect(find.text('Push book to all students'), findsOneWidget);
+    await tester.tap(pushButton);
+    await tester.pump();
+
+    expect(repository.pushCalls, hasLength(1));
+    expect(repository.pushCalls.single.pieceId, 'server-book');
+    expect(
+      repository.pushCalls.single.profileIds,
+      ['student-alyse', 'student-zora'],
+    );
+    expect(repository.pushCalls.single.mode, 'cleaned_pdf');
+  });
+
+  testWidgets(
+    'parent workflow hides completed book processing after child push',
+    (WidgetTester tester) async {
+      await AppConfig.setParentPin('2468');
+      await AppConfig.applyServerPairing(
+        serverUrl: 'http://test-server',
+        serverId: 'test-server',
+        pairingToken: 'test-token',
+      );
+
+      final repository = _FakeServerPieceSyncRepository(
+        allPieces: const [
+          RemotePieceSummary(
+            id: 'server-child-pushed',
+            title: 'Child Already Pushed',
+            status: 'approved',
+            libraryStatus: 'ready',
+            visibleToProfileIds: ['student-zora'],
+            sourceBookId: 'server-book-complete',
+            primaryInstrument: 'Cello',
+          ),
+          RemotePieceSummary(
+            id: 'server-book-complete',
+            title: 'Completed Book Source',
+            status: 'approved',
+            libraryStatus: 'ready',
+            visibleToProfileIds: [],
+            pieceKind: 'book',
+            primaryInstrument: 'Cello',
+          ),
+        ],
+      );
+
+      await pumpApp(tester, repository: repository);
+      await tester.tap(find.byKey(AppKeys.profileButton('parent-main')));
+      await tester.pump();
+      await pumpUntilFound(tester, find.byKey(AppKeys.parentPinEntryField));
+      await tester.enterText(find.byKey(AppKeys.parentPinEntryField), '2468');
+      await tester.tap(find.text('Unlock'));
+      await tester.pump(const Duration(milliseconds: 500));
+      await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
+
+      await scrollParentWorkflowUntilFound(
+        tester,
+        find.text('Processing tracker'),
+      );
+      expect(find.text('No active processing'), findsNothing);
+      expect(find.text('Child Already Pushed'), findsNothing);
+
+      await scrollParentWorkflowUntilFound(tester, find.text('Ready to Push'));
+      await scrollParentWorkflowUntilFound(
+        tester,
+        find.byKey(AppKeys.pushToAllStudentsButton('server-book-complete')),
+      );
+
+      expect(find.text('Completed Book Source'), findsOneWidget);
+      expect(find.text('Book / collection'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'parent workflow keeps completed book reviews out of processing',
+    (WidgetTester tester) async {
+      await AppConfig.setParentPin('2468');
+      await AppConfig.applyServerPairing(
+        serverUrl: 'http://test-server',
+        serverId: 'test-server',
+        pairingToken: 'test-token',
+      );
+
+      final repository = _FakeServerPieceSyncRepository(
+        allPieces: const [
+          RemotePieceSummary(
+            id: 'review-child',
+            title: 'The Troubadour / Hoedown',
+            status: 'review_pending',
+            libraryStatus: 'review',
+            visibleToProfileIds: [],
+            sourceBookId: 'review-book',
+            primaryInstrument: 'Cello',
+          ),
+          RemotePieceSummary(
+            id: 'review-book',
+            title:
+                'Position Pieces two song page 38 The Troubadour and Hoedown',
+            status: 'imported',
+            libraryStatus: 'intake',
+            visibleToProfileIds: [],
+            pieceKind: 'book',
+            primaryInstrument: 'Cello',
+          ),
+        ],
+        reviewItems: [
+          ReviewQueueEntry(
+            id: 'review-split',
+            pieceId: 'review-child',
+            itemType: 'score_candidate',
+            title: 'Review book split for The Troubadour / Hoedown',
+            description: 'Review the extracted piece metadata.',
+            status: 'pending',
+            createdAt: DateTime(2026, 6, 17),
+            candidateData: const {
+              'source_book_id': 'review-book',
+              'processing_stage': 'split_review_needed',
+            },
+          ),
+        ],
+      );
+
+      await pumpApp(tester, repository: repository);
+      await tester.tap(find.byKey(AppKeys.profileButton('parent-main')));
+      await tester.pump();
+      await pumpUntilFound(tester, find.byKey(AppKeys.parentPinEntryField));
+      await tester.enterText(find.byKey(AppKeys.parentPinEntryField), '2468');
+      await tester.tap(find.text('Unlock'));
+      await tester.pump(const Duration(milliseconds: 500));
+      await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
+
+      await scrollParentWorkflowUntilFound(
+        tester,
+        find.text('Processing tracker'),
+      );
+      expect(find.text('No active processing'), findsNothing);
+      expect(find.text('metadata review'), findsNothing);
+
+      await scrollParentWorkflowUntilFound(
+        tester,
+        find.text('1 metadata review(s), 0 notation edit item(s).'),
+      );
+      expect(
+        find.text('1 metadata review(s), 0 notation edit item(s).'),
+        findsOneWidget,
+      );
+      expect(find.text('1 open'), findsOneWidget);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
+
+  testWidgets(
+    'parent workflow shows pulled back pieces and repushes previous students',
+    (WidgetTester tester) async {
+      await AppConfig.setParentPin('2468');
+      await AppConfig.applyServerPairing(
+        serverUrl: 'http://test-server',
+        serverId: 'test-server',
+        pairingToken: 'test-token',
+      );
+
+      final repository = _FakeServerPieceSyncRepository(
+        allPieces: const [
+          RemotePieceSummary(
+            id: 'pulled-back-piece',
+            title: 'Pulled Back Etude',
+            status: 'needs_edits',
+            libraryStatus: 'needsEdits',
+            visibleToProfileIds: [],
+            previousVisibleToProfileIds: ['student-zora'],
+            primaryInstrument: 'Cello',
+          ),
+          RemotePieceSummary(
+            id: 'ready-after-edits',
+            title: 'Ready After Edits',
+            status: 'approved',
+            libraryStatus: 'ready',
+            visibleToProfileIds: [],
+            previousVisibleToProfileIds: ['student-zora'],
+            primaryInstrument: 'Cello',
+          ),
+        ],
+      );
+
+      await pumpApp(tester, repository: repository);
+      await tester.tap(find.byKey(AppKeys.profileButton('parent-main')));
+      await tester.pump();
+      await pumpUntilFound(tester, find.byKey(AppKeys.parentPinEntryField));
+      await tester.enterText(find.byKey(AppKeys.parentPinEntryField), '2468');
+      await tester.tap(find.text('Unlock'));
+      await tester.pump(const Duration(milliseconds: 500));
+      await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
+
+      await scrollParentWorkflowUntilFound(
+        tester,
+        find.text('Pulled Back Etude'),
+      );
+      expect(find.textContaining('Pulled back from Zora'), findsOneWidget);
+      expect(find.text('Needs edits'), findsOneWidget);
+
+      final repushButton = find.byKey(
+        AppKeys.repushToPreviousStudentsButton('ready-after-edits'),
+      );
+      await scrollParentWorkflowUntilFound(tester, repushButton);
+      expect(find.text('Ready After Edits'), findsOneWidget);
+      expect(find.text('Repush to previous students'), findsOneWidget);
+      await tester.tap(repushButton);
+      await tester.pump();
+
+      expect(repository.pushCalls, hasLength(1));
+      expect(repository.pushCalls.single.pieceId, 'ready-after-edits');
+      expect(repository.pushCalls.single.profileIds, ['student-zora']);
+
+      await tester.pumpWidget(const SizedBox.shrink());
+    },
+  );
 
   testWidgets('parent workflow polls while server processing jobs are active', (
     WidgetTester tester,
@@ -338,23 +749,36 @@ void main() {
       serverId: 'test-server',
       pairingToken: 'test-token',
     );
-    final repository = _FakeServerPieceSyncRepository(
-      jobSummaries: const [
-        ProcessingJobSummary(
-          queuedCount: 2,
-          runningCount: 1,
-          failedCount: 0,
-          succeededCount: 0,
-          canceledCount: 0,
-        ),
-        ProcessingJobSummary(
-          queuedCount: 1,
-          runningCount: 1,
-          failedCount: 0,
-          succeededCount: 1,
-          canceledCount: 0,
+    final now = DateTime(2026, 6, 17, 12);
+    final activeSummary = ProcessingJobSummary(
+      queuedCount: 2,
+      runningCount: 1,
+      failedCount: 0,
+      succeededCount: 0,
+      canceledCount: 0,
+      activeJobs: [
+        ServerJob(
+          id: 'active-troubadour',
+          pieceId: 'piece-troubadour',
+          pieceTitle: 'The Troubadour',
+          jobType: 'score_processing',
+          status: 'running',
+          progress: 40,
+          resultData: const {},
+          createdAt: now,
+          updatedAt: now,
         ),
       ],
+    );
+    const idleSummary = ProcessingJobSummary(
+      queuedCount: 0,
+      runningCount: 0,
+      failedCount: 0,
+      succeededCount: 3,
+      canceledCount: 0,
+    );
+    final repository = _FakeServerPieceSyncRepository(
+      jobSummaries: [activeSummary],
     );
 
     await pumpApp(tester, repository: repository);
@@ -363,10 +787,30 @@ void main() {
     await tester.enterText(find.byKey(AppKeys.parentPinEntryField), '2468');
     await tester.tap(find.text('Unlock'));
     await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
+    await scrollParentWorkflowUntilFound(
+      tester,
+      find.textContaining('Processing The Troubadour'),
+    );
+    expect(find.textContaining('Processing The Troubadour'), findsOneWidget);
+    expect(find.textContaining('40%'), findsOneWidget);
+    expect(find.text('Remaining server tasks'), findsNothing);
+
+    final trackerTile = find.byKey(AppKeys.parentProcessingTracker);
+    await tester.ensureVisible(trackerTile);
+    await tester.drag(
+      find.byKey(AppKeys.parentWorkflowList),
+      const Offset(0, 250),
+    );
+    await tester.pump();
+    await tester.tap(trackerTile);
+    await tester.pumpAndSettle();
+    expect(find.text('Remaining server tasks'), findsOneWidget);
+    expect(find.text('The Troubadour'), findsOneWidget);
 
     final initialReviewFetches = repository.fetchReviewQueueCalls;
     final initialCapabilityFetches =
         repository.fetchProcessingCapabilitiesCalls;
+    repository.jobSummaries[0] = idleSummary;
     await tester.pump(const Duration(seconds: 5));
     await tester.pump(const Duration(milliseconds: 300));
 
@@ -375,6 +819,8 @@ void main() {
       repository.fetchProcessingCapabilitiesCalls,
       greaterThan(initialCapabilityFetches),
     );
+    expect(find.text('The Troubadour'), findsNothing);
+    expect(find.text('No active server processing jobs.'), findsOneWidget);
 
     await tester.pumpWidget(const SizedBox.shrink());
   });
@@ -418,6 +864,114 @@ void main() {
     expect(find.byKey(AppKeys.studentDevicePairingButton('student-kai')),
         findsOneWidget);
     expect(find.text('Pair Kai device'), findsOneWidget);
+  });
+
+  testWidgets('parent student libraries filter pushed pieces by student', (
+    WidgetTester tester,
+  ) async {
+    await AppConfig.setParentPin('2468');
+    await AppConfig.applyServerPairing(
+      serverUrl: 'http://test-server',
+      serverId: 'test-server',
+      pairingToken: 'test-token',
+    );
+    final repository = _FakeServerPieceSyncRepository(
+      allPieces: const [
+        RemotePieceSummary(
+          id: 'alyse-piece',
+          title: 'Alyse Etude',
+          status: 'approved',
+          libraryStatus: 'ready',
+          visibleToProfileIds: ['student-alyse'],
+          primaryInstrument: 'Cello',
+        ),
+        RemotePieceSummary(
+          id: 'kai-piece',
+          title: 'Kai March',
+          status: 'approved',
+          libraryStatus: 'ready',
+          visibleToProfileIds: ['student-kai'],
+          primaryInstrument: 'Cello',
+        ),
+      ],
+    );
+
+    await pumpApp(tester, repository: repository);
+    await tester.tap(find.byKey(AppKeys.profileButton('parent-main')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(AppKeys.parentPinEntryField), '2468');
+    await tester.tap(find.text('Unlock'));
+    await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
+
+    await tester.tap(find.text('Students'));
+    await tester.pumpAndSettle();
+    await tester.tap(find.byKey(AppKeys.parentAddStudentButton));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(AppKeys.parentStudentNameField), 'Kai');
+    await tester.tap(find.byKey(AppKeys.parentCreateStudentButton));
+    await tester.pumpAndSettle();
+
+    await pumpUntilFound(
+      tester,
+      find.byKey(AppKeys.parentStudentLibrarySelector('student-alyse')),
+    );
+    expect(find.text('Alyse library (1)'), findsOneWidget);
+    expect(find.text('Alyse Etude'), findsOneWidget);
+    expect(find.text('Kai March'), findsNothing);
+
+    await tester.tap(
+      find.byKey(AppKeys.parentStudentLibrarySelector('student-kai')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Kai library (1)'), findsOneWidget);
+    expect(find.text('Kai March'), findsOneWidget);
+    expect(find.text('Alyse Etude'), findsNothing);
+  });
+
+  testWidgets('parent student libraries infer students from pushed assignments',
+      (
+    WidgetTester tester,
+  ) async {
+    await AppConfig.setParentPin('2468');
+    await AppConfig.applyServerPairing(
+      serverUrl: 'http://test-server',
+      serverId: 'test-server',
+      pairingToken: 'test-token',
+    );
+    final repository = _FakeServerPieceSyncRepository(
+      allPieces: const [
+        RemotePieceSummary(
+          id: 'mira-piece',
+          title: 'Mira Minuet',
+          status: 'approved',
+          libraryStatus: 'ready',
+          visibleToProfileIds: ['student-mira'],
+          primaryInstrument: 'Cello',
+        ),
+      ],
+    );
+
+    await pumpApp(tester, repository: repository);
+    await tester.tap(find.byKey(AppKeys.profileButton('parent-main')));
+    await tester.pumpAndSettle();
+    await tester.enterText(find.byKey(AppKeys.parentPinEntryField), '2468');
+    await tester.tap(find.text('Unlock'));
+    await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
+
+    await tester.tap(find.text('Students'));
+    await tester.pumpAndSettle();
+    await pumpUntilFound(
+      tester,
+      find.byKey(AppKeys.parentStudentLibrarySelector('student-mira')),
+    );
+    await tester.tap(
+      find.byKey(AppKeys.parentStudentLibrarySelector('student-mira')),
+    );
+    await tester.pumpAndSettle();
+
+    expect(find.text('Mira library (1)'), findsOneWidget);
+    expect(find.text('Mira Minuet'), findsOneWidget);
   });
 
   testWidgets('shows sandbox launcher actions', (WidgetTester tester) async {
@@ -525,6 +1079,130 @@ void main() {
     expect(find.text('Send to local LLM for metadata review'), findsNothing);
     expect(find.text('Send to LLM'), findsNothing);
     expect(find.text('Edit metadata'), findsOneWidget);
+  });
+
+  testWidgets('metadata review approval action is labeled Approve Metadata', (
+    WidgetTester tester,
+  ) async {
+    debugUseReviewPdfPlaceholder = true;
+    final reviewItem = _reviewEntry(
+      candidateData: const {
+        'piece_title': 'Canon',
+        'summary': 'Review extracted metadata.',
+        'raw_file_url': 'http://test-server/raw.pdf',
+        'raw_content_type': 'application/pdf',
+        'processing_stage': 'metadata_review_needed',
+      },
+    );
+
+    await pumpReviewCompareScreen(tester, reviewItem);
+    await pumpUntilFound(tester, find.text('Canon'));
+    await scrollFirstListViewUntilFound(tester, find.text('Approve Metadata'));
+
+    expect(find.text('Approve Metadata'), findsOneWidget);
+    expect(find.text('Approve student PDF'), findsNothing);
+  });
+
+  testWidgets('metadata review advances while server approval is pending', (
+    WidgetTester tester,
+  ) async {
+    debugUseReviewPdfPlaceholder = true;
+    final approvalGate = Completer<void>();
+    final firstItem = _reviewEntry(
+      id: 'review-first',
+      pieceId: 'piece-first',
+      candidateData: const {
+        'piece_title': 'First Etude',
+        'summary': 'Review extracted metadata.',
+        'raw_file_url': 'http://test-server/first.pdf',
+        'raw_content_type': 'application/pdf',
+        'processing_stage': 'metadata_review_needed',
+      },
+    );
+    final secondItem = _reviewEntry(
+      id: 'review-second',
+      pieceId: 'piece-second',
+      candidateData: const {
+        'piece_title': 'Second Etude',
+        'summary': 'Review extracted metadata.',
+        'raw_file_url': 'http://test-server/second.pdf',
+        'raw_content_type': 'application/pdf',
+        'processing_stage': 'metadata_review_needed',
+      },
+    );
+    final repository = _FakeServerPieceSyncRepository(
+      reviewItems: [firstItem, secondItem],
+      approveReviewGate: approvalGate,
+    );
+
+    await pumpReviewCompareScreen(tester, firstItem, repository: repository);
+    await pumpUntilFound(tester, find.text('First Etude'));
+    await tester.pump(const Duration(milliseconds: 200));
+    await scrollFirstListViewUntilFound(tester, find.text('Approve Metadata'));
+    await tester.tap(find.text('Approve Metadata'));
+    await tester.pump();
+
+    await pumpUntilFound(tester, find.text('Second Etude'));
+    await tester.pumpAndSettle();
+
+    expect(find.text('Second Etude'), findsOneWidget);
+    expect(find.text('First Etude'), findsNothing);
+    expect(repository.approvedReviewItemIds, ['review-first']);
+    expect(approvalGate.isCompleted, isFalse);
+
+    approvalGate.complete();
+    await tester.pump(const Duration(milliseconds: 300));
+  });
+
+  testWidgets('metadata review restore reports server approval failure', (
+    WidgetTester tester,
+  ) async {
+    debugUseReviewPdfPlaceholder = true;
+    final firstItem = _reviewEntry(
+      id: 'review-first',
+      pieceId: 'piece-first',
+      candidateData: const {
+        'piece_title': 'First Etude',
+        'summary': 'Review extracted metadata.',
+        'raw_file_url': 'http://test-server/first.pdf',
+        'raw_content_type': 'application/pdf',
+        'processing_stage': 'metadata_review_needed',
+      },
+    );
+    final secondItem = _reviewEntry(
+      id: 'review-second',
+      pieceId: 'piece-second',
+      candidateData: const {
+        'piece_title': 'Second Etude',
+        'summary': 'Review extracted metadata.',
+        'raw_file_url': 'http://test-server/second.pdf',
+        'raw_content_type': 'application/pdf',
+        'processing_stage': 'metadata_review_needed',
+      },
+    );
+    final repository = _FakeServerPieceSyncRepository(
+      reviewItems: [firstItem, secondItem],
+      approveReviewError: StateError('approval failed'),
+    );
+
+    await pumpReviewCompareScreen(tester, firstItem, repository: repository);
+    await pumpUntilFound(tester, find.text('First Etude'));
+    await tester.pump(const Duration(milliseconds: 200));
+    await scrollFirstListViewUntilFound(tester, find.text('Approve Metadata'));
+    await tester.tap(find.text('Approve Metadata'));
+    await tester.pump();
+    await pumpUntilFound(tester, find.text('Second Etude'));
+    await tester.pumpAndSettle();
+    await pumpUntilFound(
+      tester,
+      find.textContaining('Unable to approve metadata'),
+    );
+
+    expect(repository.approvedReviewItemIds, ['review-first']);
+    expect(
+      find.textContaining('Unable to approve metadata'),
+      findsOneWidget,
+    );
   });
 
   testWidgets('review screen exposes human notation edit actions', (
@@ -713,15 +1391,21 @@ void main() {
 }
 
 ReviewQueueEntry _reviewEntry({
+  String id = 'review-1',
+  String pieceId = 'piece-1',
+  String itemType = 'score_candidate',
+  String title = 'Review reconstructed score',
+  String description = 'Compare candidates.',
+  String status = 'pending',
   required Map<String, dynamic> candidateData,
 }) {
   return ReviewQueueEntry(
-    id: 'review-1',
-    pieceId: 'piece-1',
-    itemType: 'score_candidate',
-    title: 'Review reconstructed score',
-    description: 'Compare candidates.',
-    status: 'pending',
+    id: id,
+    pieceId: pieceId,
+    itemType: itemType,
+    title: title,
+    description: description,
+    status: status,
     createdAt: DateTime(2026, 6, 7),
     candidateData: candidateData,
   );
@@ -740,7 +1424,10 @@ class _FakeServerPieceSyncRepository extends ServerPieceSyncRepository {
         canceledCount: 0,
       ),
     ],
+    this.reviewItems = const <ReviewQueueEntry>[],
     this.reviewItem,
+    this.approveReviewGate,
+    this.approveReviewError,
     ProcessingSettings? processingSettings,
   }) : processingSettings = processingSettings ??
             ProcessingSettings(
@@ -750,15 +1437,21 @@ class _FakeServerPieceSyncRepository extends ServerPieceSyncRepository {
               updatedAt: DateTime(2026, 6, 11),
             );
 
-  final List<RemotePieceSummary> allPieces;
+  List<RemotePieceSummary> allPieces;
   final List<ServerJob> jobs;
   final List<ProcessingJobSummary> jobSummaries;
+  final List<ReviewQueueEntry> reviewItems;
   final ReviewQueueEntry? reviewItem;
+  final Completer<void>? approveReviewGate;
+  final Object? approveReviewError;
   ProcessingSettings processingSettings;
   ProcessingSettings? savedProcessingSettings;
   final List<_PushCall> pushCalls = [];
+  final List<String> approvedReviewItemIds = [];
+  final List<String> downloadedUrls = [];
   int fetchAllPiecesCalls = 0;
   int fetchReviewQueueCalls = 0;
+  int fetchReviewItemCalls = 0;
   int fetchProcessingCapabilitiesCalls = 0;
 
   @override
@@ -775,7 +1468,7 @@ class _FakeServerPieceSyncRepository extends ServerPieceSyncRepository {
   @override
   Future<List<ReviewQueueEntry>> fetchReviewQueue() async {
     fetchReviewQueueCalls += 1;
-    return const [];
+    return reviewItems;
   }
 
   @override
@@ -854,9 +1547,15 @@ class _FakeServerPieceSyncRepository extends ServerPieceSyncRepository {
 
   @override
   Future<ReviewQueueEntry> fetchReviewItem(String itemId) async {
+    fetchReviewItemCalls += 1;
     final item = reviewItem;
     if (item != null && item.id == itemId) {
       return item;
+    }
+    for (final queuedItem in reviewItems) {
+      if (queuedItem.id == itemId) {
+        return queuedItem;
+      }
     }
     throw UnimplementedError('No fake review item was provided for $itemId.');
   }
@@ -865,7 +1564,17 @@ class _FakeServerPieceSyncRepository extends ServerPieceSyncRepository {
   Future<void> approveReviewItem(
     String itemId, {
     String? selectedCandidateId,
-  }) async {}
+  }) async {
+    approvedReviewItemIds.add(itemId);
+    final gate = approveReviewGate;
+    if (gate != null) {
+      await gate.future;
+    }
+    final error = approveReviewError;
+    if (error != null) {
+      throw error;
+    }
+  }
 
   @override
   Future<void> rejectReviewItem(String itemId) async {}
@@ -891,15 +1600,64 @@ class _FakeServerPieceSyncRepository extends ServerPieceSyncRepository {
     List<String> profileIds, {
     String mode = 'processed',
   }) async {
-    pushCalls.add(_PushCall(serverPieceId, profileIds));
-    return RemotePieceDetail(
-      id: serverPieceId,
-      title: 'Ready Server Etude',
-      status: 'approved',
-      libraryStatus: 'ready',
-      visibleToProfileIds: profileIds,
+    pushCalls.add(_PushCall(serverPieceId, profileIds, mode));
+    final existingPiece = allPieces.firstWhere(
+      (piece) => piece.id == serverPieceId,
+      orElse: () => RemotePieceSummary(
+        id: serverPieceId,
+        title: 'Ready Server Etude',
+        status: 'approved',
+        libraryStatus: 'ready',
+        visibleToProfileIds: const [],
+      ),
+    );
+    final visibleToProfileIds = {
+      ...existingPiece.visibleToProfileIds,
+      ...profileIds,
+    }.toList(growable: false);
+    final previousVisibleToProfileIds = existingPiece
+        .previousVisibleToProfileIds
+        .where((profileId) => !profileIds.contains(profileId))
+        .toList(growable: false);
+    final remotePiece = RemotePieceDetail(
+      id: existingPiece.id,
+      title: existingPiece.title,
+      composer: existingPiece.composer,
+      primaryInstrument: existingPiece.primaryInstrument,
+      bookOrCollection: existingPiece.bookOrCollection,
+      keySignature: existingPiece.keySignature,
+      tempo: existingPiece.tempo,
+      difficultyLevel: existingPiece.difficultyLevel,
+      notes: existingPiece.notes,
+      processedMetadata: existingPiece.processedMetadata,
+      pieceKind: existingPiece.pieceKind,
+      sourceBookId: existingPiece.sourceBookId,
+      sourcePageStart: existingPiece.sourcePageStart,
+      sourcePageEnd: existingPiece.sourcePageEnd,
+      catalogMetadata: existingPiece.catalogMetadata,
+      catalogSuggestions: existingPiece.catalogSuggestions,
+      validationWarnings: existingPiece.validationWarnings,
+      splitConfidence: existingPiece.splitConfidence,
+      workflowClosed: existingPiece.workflowClosed,
+      sourceContentSha256: existingPiece.sourceContentSha256,
+      sourceBookFingerprint: existingPiece.sourceBookFingerprint,
+      logicalPieceKey: existingPiece.logicalPieceKey,
+      canonicalPieceId: existingPiece.canonicalPieceId,
+      attemptStatus: existingPiece.attemptStatus,
+      duplicateAttemptCount: existingPiece.duplicateAttemptCount,
+      duplicateReason: existingPiece.duplicateReason,
+      isDuplicateAttempt: existingPiece.isDuplicateAttempt,
+      status: existingPiece.status,
+      libraryStatus: existingPiece.libraryStatus,
+      visibleToProfileIds: visibleToProfileIds,
+      previousVisibleToProfileIds: previousVisibleToProfileIds,
       scoreVersions: const [],
     );
+    allPieces = [
+      RemotePieceSummary.fromDetail(remotePiece),
+      ...allPieces.where((piece) => piece.id != serverPieceId),
+    ];
+    return remotePiece;
   }
 
   @override
@@ -933,13 +1691,20 @@ class _FakeServerPieceSyncRepository extends ServerPieceSyncRepository {
   Future<Map<String, dynamic>> clearServerWorkflowData() async {
     return const {'status': 'cleared'};
   }
+
+  @override
+  Future<List<int>> downloadBytes(String url) async {
+    downloadedUrls.add(url);
+    return const [37, 80, 68, 70];
+  }
 }
 
 class _PushCall {
-  const _PushCall(this.pieceId, this.profileIds);
+  const _PushCall(this.pieceId, this.profileIds, this.mode);
 
   final String pieceId;
   final List<String> profileIds;
+  final String mode;
 }
 
 class _FakeNetworkInfo implements NetworkInfo {

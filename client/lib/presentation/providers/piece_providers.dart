@@ -128,6 +128,7 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
     String? composer,
     String? primaryInstrument,
     String? bookOrCollection,
+    String pieceKind = 'piece',
   }) async {
     return _guardDuplicateImport(sourcePath, () async {
       var entry = await _libraryRepository.importScoreForProfile(
@@ -136,6 +137,7 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
         composer: composer,
         primaryInstrument: primaryInstrument,
         bookOrCollection: bookOrCollection,
+        pieceKind: pieceKind,
       );
       entry = await _markProcessingIfServerUploadable(entry);
       await _uploadEntryToServer(entry);
@@ -150,6 +152,7 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
     String? composer,
     String? primaryInstrument,
     String? bookOrCollection,
+    String pieceKind = 'piece',
   }) async {
     return _guardDuplicateImport(sourcePath, () async {
       var entry = await _libraryRepository.importScoreToIntake(
@@ -158,6 +161,7 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
         composer: composer,
         primaryInstrument: primaryInstrument,
         bookOrCollection: bookOrCollection,
+        pieceKind: pieceKind,
       );
       entry = await _markProcessingIfServerUploadable(entry);
       await _uploadEntryToServer(entry);
@@ -200,6 +204,18 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
     required String pieceId,
     required String profileId,
     String mode = 'processed',
+  }) {
+    return pushToProfiles(
+      pieceId: pieceId,
+      profileIds: [profileId],
+      mode: mode,
+    );
+  }
+
+  Future<void> pushToProfiles({
+    required String pieceId,
+    required List<String> profileIds,
+    String mode = 'processed',
   }) async {
     final entry = await _libraryRepository.findEntry(pieceId);
     if (entry == null) {
@@ -208,12 +224,13 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
 
     final visibleToProfileIds = {
       ...entry.piece.visibleToProfileIds,
-      profileId,
+      ...profileIds,
     }.toList(growable: false);
 
     await _libraryRepository.updatePiece(
       entry.piece.copyWith(
         visibleToProfileIds: visibleToProfileIds,
+        previousVisibleToProfileIds: const <String>[],
         libraryStatus: LibraryStatus.ready,
         updatedAt: DateTime.now(),
       ),
@@ -224,7 +241,7 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
       try {
         final remotePiece = await ref
             .read(serverPieceSyncRepositoryProvider)
-            .pushPieceToProfiles(serverPieceId, [profileId], mode: mode);
+            .pushPieceToProfiles(serverPieceId, profileIds, mode: mode);
         await _mergeRemotePiece(entry, remotePiece);
         ref
             .read(parentSyncedPiecesProvider.notifier)
@@ -482,10 +499,6 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
     LibraryEntry localEntry,
     RemotePieceDetail remotePiece,
   ) async {
-    final mergedVisibleToProfileIds = {
-      ...localEntry.piece.visibleToProfileIds,
-      ...remotePiece.visibleToProfileIds,
-    }.toList(growable: false);
     await _libraryRepository.updatePiece(
       localEntry.piece.copyWith(
         title: remotePiece.title,
@@ -515,6 +528,8 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
             ? localEntry.piece.validationWarnings
             : remotePiece.validationWarnings,
         splitConfidence: remotePiece.splitConfidence,
+        sourceContentSha256: remotePiece.sourceContentSha256 ??
+            localEntry.piece.sourceContentSha256,
         workflowClosed: remotePiece.workflowClosed,
         clearComposer: remotePiece.composer == null,
         clearPrimaryInstrument: remotePiece.primaryInstrument == null,
@@ -527,7 +542,13 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
         clearSourcePageStart: remotePiece.sourcePageStart == null,
         clearSourcePageEnd: remotePiece.sourcePageEnd == null,
         clearSplitConfidence: remotePiece.splitConfidence == null,
-        visibleToProfileIds: mergedVisibleToProfileIds,
+        visibleToProfileIds: _mergedVisibleProfileIds(
+          localVisibleProfileIds: localEntry.piece.visibleToProfileIds,
+          remoteVisibleProfileIds: remotePiece.visibleToProfileIds,
+          remotePreviousVisibleProfileIds:
+              remotePiece.previousVisibleToProfileIds,
+        ),
+        previousVisibleToProfileIds: remotePiece.previousVisibleToProfileIds,
         libraryStatus: _libraryStatusFromRemote(remotePiece.libraryStatus),
         updatedAt: DateTime.now(),
       ),
@@ -598,6 +619,8 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
           catalogSuggestions: remotePiece.catalogSuggestions,
           validationWarnings: remotePiece.validationWarnings,
           splitConfidence: remotePiece.splitConfidence,
+          sourceContentSha256: remotePiece.sourceContentSha256 ??
+              entry.piece.sourceContentSha256,
           workflowClosed: remotePiece.workflowClosed,
           clearComposer: remotePiece.composer == null,
           clearPrimaryInstrument: remotePiece.primaryInstrument == null,
@@ -610,9 +633,13 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
           clearSourcePageStart: remotePiece.sourcePageStart == null,
           clearSourcePageEnd: remotePiece.sourcePageEnd == null,
           clearSplitConfidence: remotePiece.splitConfidence == null,
-          visibleToProfileIds: remotePiece.visibleToProfileIds.isEmpty
-              ? entry.piece.visibleToProfileIds
-              : remotePiece.visibleToProfileIds,
+          visibleToProfileIds: _mergedVisibleProfileIds(
+            localVisibleProfileIds: entry.piece.visibleToProfileIds,
+            remoteVisibleProfileIds: remotePiece.visibleToProfileIds,
+            remotePreviousVisibleProfileIds:
+                remotePiece.previousVisibleToProfileIds,
+          ),
+          previousVisibleToProfileIds: remotePiece.previousVisibleToProfileIds,
           libraryStatus: _libraryStatusFromRemote(remotePiece.libraryStatus),
           updatedAt: DateTime.now(),
         ),
@@ -643,6 +670,7 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
       visibleToProfileIds: remotePiece.visibleToProfileIds.isEmpty
           ? <String>[profileId]
           : remotePiece.visibleToProfileIds,
+      previousVisibleToProfileIds: remotePiece.previousVisibleToProfileIds,
       primaryInstrument: remotePiece.primaryInstrument,
       bookOrCollection: remotePiece.bookOrCollection,
       keySignature: remotePiece.keySignature,
@@ -697,40 +725,16 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
     final approvedVersions = remotePiece.scoreVersions
         .where((version) => version.versionType == 'approved')
         .toList(growable: false);
-    final originalVersion = remotePiece.scoreVersions.firstWhereOrNull(
-      (version) =>
-          (version.artifactRole == 'original_import' ||
-              version.scoreVersionRole == 'original_pdf') &&
-          (version.format == 'pdf' || version.format == 'image'),
-    );
-    if (approvedVersions.isEmpty && originalVersion == null) {
+    if (approvedVersions.isEmpty) {
       return const <_RemoteArtifactImport>[];
     }
 
     final imports = <_RemoteArtifactImport>[];
     final approvedReaderVersion = approvedVersions.firstWhereOrNull(
-          (version) =>
-              version.studentDefault &&
-              (version.format == 'pdf' || version.format == 'image'),
-        ) ??
-        approvedVersions.firstWhereOrNull(
-          (version) =>
-              version.artifactRole == 'cleaned_pdf' &&
-              (version.format == 'pdf' || version.format == 'image'),
-        ) ??
-        approvedVersions.firstWhereOrNull(
-          (version) =>
-              version.artifactRole == 'corrected_render_pdf' &&
-              (version.format == 'pdf' || version.format == 'image'),
-        ) ??
-        approvedVersions.firstWhereOrNull(
-          (version) =>
-              version.scoreVersionRole == 'processed_render_pdf' &&
-              (version.format == 'pdf' || version.format == 'image'),
-        ) ??
-        approvedVersions.firstWhereOrNull(
-          (version) => version.format == 'pdf' || version.format == 'image',
-        );
+      (version) =>
+          version.artifactRole == 'cleaned_pdf' &&
+          (version.format == 'pdf' || version.format == 'image'),
+    );
     if (approvedReaderVersion != null) {
       imports.add(
         _RemoteArtifactImport(
@@ -738,37 +742,6 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
           title: _titleForRemoteVersion(approvedReaderVersion),
           makePrimary: true,
           isStudentVisible: true,
-          hideExistingStudentVisible: false,
-        ),
-      );
-    }
-
-    if (originalVersion != null &&
-        originalVersion.fileUrl != approvedReaderVersion?.fileUrl) {
-      imports.add(
-        _RemoteArtifactImport(
-          version: originalVersion,
-          title: _titleForRemoteVersion(originalVersion),
-          makePrimary: approvedReaderVersion == null,
-          isStudentVisible: true,
-          hideExistingStudentVisible: false,
-        ),
-      );
-    }
-
-    final approvedMusicXml = approvedVersions.firstWhereOrNull(
-      (version) =>
-          version.artifactRole == 'corrected_musicxml' ||
-          version.scoreVersionRole == 'canonical_musicxml' ||
-          version.format == 'musicxml',
-    );
-    if (approvedMusicXml != null) {
-      imports.add(
-        _RemoteArtifactImport(
-          version: approvedMusicXml,
-          title: _titleForRemoteVersion(approvedMusicXml),
-          makePrimary: false,
-          isStudentVisible: false,
           hideExistingStudentVisible: false,
         ),
       );
@@ -805,6 +778,18 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
     }
   }
 
+  List<String> _mergedVisibleProfileIds({
+    required List<String> localVisibleProfileIds,
+    required List<String> remoteVisibleProfileIds,
+    required List<String> remotePreviousVisibleProfileIds,
+  }) {
+    if (remoteVisibleProfileIds.isNotEmpty ||
+        remotePreviousVisibleProfileIds.isNotEmpty) {
+      return remoteVisibleProfileIds;
+    }
+    return localVisibleProfileIds;
+  }
+
   LibraryStatus _libraryStatusFromRemote(String libraryStatus) {
     if (libraryStatus == 'needs_edits' || libraryStatus == 'needsEdits') {
       return LibraryStatus.needsEdits;
@@ -818,6 +803,14 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
   Future<LibraryEntry> _bindPendingUpload(LibraryEntry entry) async {
     if (entry.piece.serverPieceId != null) {
       return entry;
+    }
+
+    if (!_activeUploadKeys.contains(_activeUploadKey(entry))) {
+      final reconciledServerPieceId =
+          await _reconcilePendingUploadBySourceHash(entry);
+      if (reconciledServerPieceId != null) {
+        return await _libraryRepository.findEntry(entry.piece.id) ?? entry;
+      }
     }
 
     final serverPieceId = await _uploadEntryToServer(entry);
@@ -845,7 +838,7 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
           .uploadImportedPiece(entry);
       if (serverPieceId == null) {
         await _markUploadPending(entry);
-        return null;
+        return _reconcilePendingUploadBySourceHash(entry);
       }
       await _libraryRepository.bindServerPieceId(
         localPieceId: entry.piece.id,
@@ -856,9 +849,42 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
     } catch (_) {
       // Local import remains the source of truth when the server is unavailable.
       await _markUploadPending(entry);
-      return null;
+      return _reconcilePendingUploadBySourceHash(entry);
     } finally {
       _activeUploadKeys.remove(uploadKey);
+    }
+  }
+
+  Future<String?> _reconcilePendingUploadBySourceHash(
+    LibraryEntry entry,
+  ) async {
+    final sourceHash = entry.piece.sourceContentSha256;
+    if (sourceHash == null || sourceHash.trim().isEmpty) {
+      return null;
+    }
+
+    try {
+      final remotePieces =
+          await ref.read(serverPieceSyncRepositoryProvider).fetchAllPieces();
+      final remotePiece = remotePieces.firstWhereOrNull(
+        (piece) =>
+            piece.sourceContentSha256 == sourceHash &&
+            piece.pieceKind == entry.piece.pieceKind &&
+            !piece.isDuplicateAttempt,
+      );
+      if (remotePiece == null) {
+        return null;
+      }
+
+      await _libraryRepository.bindServerPieceId(
+        localPieceId: entry.piece.id,
+        serverPieceId: remotePiece.id,
+        libraryStatus: _libraryStatusFromRemote(remotePiece.libraryStatus),
+      );
+      await _mergeRemoteSummaryIntoLocalEntries(remotePiece);
+      return remotePiece.id;
+    } catch (_) {
+      return null;
     }
   }
 

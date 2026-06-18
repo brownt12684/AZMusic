@@ -34,6 +34,12 @@ from server.services.book_preprocessing import (
     _analyze_page_image,
 )
 from server.services.ocr_metadata import OcrMetadataExtractor
+from server.services.piece_identity import (
+    find_active_piece_by_logical_key,
+    logical_piece_key,
+    sha256_bytes,
+    source_book_fingerprint,
+)
 from server.services.piece_state import PieceStateService
 from server.services.processing_engines import (
     MuseScoreRenderEngine,
@@ -94,6 +100,7 @@ class BookSplitHint(BaseModel):
 class ImportedBookArtifacts:
     book_piece: Piece
     raw_score_version: ScoreVersion
+    cleaned_score_version: ScoreVersion
     child_artifacts: list[ImportedPieceArtifacts]
     child_split_hints: list[BookSplitHint]
     job: BackgroundJob
@@ -699,6 +706,144 @@ class ScoreProcessingService:
             ocr_catalog_suggestions=ocr_result.catalog_suggestions,
         )
 
+    async def create_queued_book_import(
+        self,
+        db: AsyncSession,
+        *,
+        title: str,
+        composer: str | None,
+        file_name: str,
+        file_bytes: bytes,
+        source_hash: str,
+        split_hints: list[BookSplitHint],
+        primary_instrument: str | None = None,
+        book_or_collection: str | None = None,
+        allow_title_override: bool = False,
+        allow_composer_override: bool = False,
+    ) -> ImportedBookArtifacts:
+        """Persist a full-book upload quickly and defer slow splitting/OCR."""
+        now = datetime.utcnow()
+        book_id = str(uuid.uuid4())
+        book_dir = settings.storage_path / "pieces" / book_id
+        book_dir.mkdir(parents=True, exist_ok=True)
+        raw_path = book_dir / f"raw_source{(Path(file_name).suffix or '.pdf').lower()}"
+        raw_path.write_bytes(file_bytes)
+        cleaned_path = book_dir / "student_cleaned.pdf"
+        _write_cleaned_student_score(raw_path=raw_path, output_path=cleaned_path)
+
+        book_piece = Piece(
+            id=book_id,
+            title=title,
+            composer=composer,
+            file_name=file_name,
+            status=PieceStatus.processing,
+            created_at=now,
+            updated_at=now,
+        )
+        raw_score_version = ScoreVersion(
+            id=str(uuid.uuid4()),
+            piece_id=book_id,
+            version_type=ScoreVersionType.raw,
+            file_path=str(raw_path),
+            is_default=False,
+            created_at=now,
+        )
+        cleaned_score_version = ScoreVersion(
+            id=str(uuid.uuid4()),
+            piece_id=book_id,
+            version_type=ScoreVersionType.reconstructed_candidate,
+            file_path=str(cleaned_path),
+            is_default=True,
+            created_at=now,
+        )
+        book_fingerprint = source_book_fingerprint(source_hash)
+        job = BackgroundJob(
+            id=str(uuid.uuid4()),
+            piece_id=book_id,
+            job_type="book_import",
+            status=JobStatus.queued,
+            progress=0.0,
+            result_data={
+                "piece_title": title,
+                "source_file_name": file_name,
+                "source_content_sha256": source_hash,
+                "source_book_fingerprint": book_fingerprint,
+                "requested_title": title,
+                "requested_composer": composer,
+                "primary_instrument": primary_instrument,
+                "book_or_collection": book_or_collection,
+                "split_hints": [hint.model_dump() for hint in split_hints],
+                "allow_title_override": allow_title_override,
+                "allow_composer_override": allow_composer_override,
+                "raw_score_version_id": raw_score_version.id,
+                "cleaned_score_version_id": cleaned_score_version.id,
+                "student_default_score_version_id": cleaned_score_version.id,
+                "student_artifact": "cleaned_pdf",
+                "processing_stage": "book_import_queued",
+            },
+            created_at=now,
+            updated_at=now,
+        )
+        db.add(book_piece)
+        db.add(raw_score_version)
+        db.add(cleaned_score_version)
+        db.add(job)
+        await db.commit()
+        await db.refresh(book_piece)
+        await db.refresh(raw_score_version)
+        await db.refresh(cleaned_score_version)
+        await db.refresh(job)
+
+        piece_state = PieceStateService()
+        piece_state.upsert_metadata(
+            book_id,
+            title=book_piece.title,
+            composer=book_piece.composer,
+            primary_instrument=primary_instrument,
+            book_or_collection=book_or_collection or book_piece.title,
+            processed_metadata={
+                "processing_stage": "book_import_queued",
+                "student_artifact": "cleaned_pdf",
+            },
+            piece_kind="book",
+            catalog_metadata={
+                "title": book_piece.title,
+                "composer": book_piece.composer,
+                "primary_instrument": primary_instrument,
+                "book_or_collection": book_or_collection or book_piece.title,
+                "source_file_name": file_name,
+            },
+            catalog_suggestions=[],
+            validation_warnings=[],
+            visible_to_profile_ids=[],
+        )
+        piece_state.update_identity(
+            book_id,
+            source_content_sha256=source_hash,
+            source_book_fingerprint=book_fingerprint,
+            logical_piece_key=f"book|{book_fingerprint}" if book_fingerprint else None,
+            canonical_piece_id=book_id,
+            attempt_status="canonical",
+        )
+        _record_pdf_first_score_versions(
+            piece_id=book_id,
+            raw_score_version_id=raw_score_version.id,
+            cleaned_score_version_id=cleaned_score_version.id,
+        )
+
+        return ImportedBookArtifacts(
+            book_piece=book_piece,
+            raw_score_version=raw_score_version,
+            cleaned_score_version=cleaned_score_version,
+            child_artifacts=[],
+            child_split_hints=[],
+            job=job,
+            validation_warnings=[],
+            ocr_metadata={},
+            ocr_catalog_suggestions=[],
+            preprocessing_result=None,
+        )
+
     async def import_book_pdf(
         self,
         db: AsyncSession,
@@ -761,6 +906,8 @@ class ScoreProcessingService:
         book_dir.mkdir(parents=True, exist_ok=True)
         raw_path = book_dir / f"raw_source{(Path(file_name).suffix or '.pdf').lower()}"
         raw_path.write_bytes(file_bytes)
+        cleaned_path = book_dir / "student_cleaned.pdf"
+        _write_cleaned_student_score(raw_path=raw_path, output_path=cleaned_path)
 
         book_piece = Piece(
             id=book_id,
@@ -776,6 +923,14 @@ class ScoreProcessingService:
             piece_id=book_id,
             version_type=ScoreVersionType.raw,
             file_path=str(raw_path),
+            is_default=False,
+            created_at=now,
+        )
+        cleaned_score_version = ScoreVersion(
+            id=str(uuid.uuid4()),
+            piece_id=book_id,
+            version_type=ScoreVersionType.reconstructed_candidate,
+            file_path=str(cleaned_path),
             is_default=True,
             created_at=now,
         )
@@ -790,11 +945,18 @@ class ScoreProcessingService:
         )
         db.add(book_piece)
         db.add(raw_score_version)
+        db.add(cleaned_score_version)
         db.add(job)
         await db.commit()
         await db.refresh(book_piece)
         await db.refresh(raw_score_version)
+        await db.refresh(cleaned_score_version)
         await db.refresh(job)
+        _record_pdf_first_score_versions(
+            piece_id=book_id,
+            raw_score_version_id=raw_score_version.id,
+            cleaned_score_version_id=cleaned_score_version.id,
+        )
 
         validation_warnings = list(ocr_result.warnings)
         if preprocessing_result is not None:
@@ -852,6 +1014,315 @@ class ScoreProcessingService:
         return ImportedBookArtifacts(
             book_piece=book_piece,
             raw_score_version=raw_score_version,
+            cleaned_score_version=cleaned_score_version,
+            child_artifacts=child_artifacts,
+            child_split_hints=child_split_hints,
+            job=job,
+            validation_warnings=validation_warnings,
+            ocr_metadata=ocr_metadata,
+            ocr_catalog_suggestions=ocr_result.catalog_suggestions,
+            preprocessing_result=preprocessing_result,
+        )
+
+    async def process_book_import_job(
+        self,
+        db: AsyncSession,
+        *,
+        job: BackgroundJob,
+    ) -> ImportedBookArtifacts:
+        await _raise_if_job_canceled(db, job)
+        if not job.piece_id:
+            raise ProcessingEngineError("Queued book import job has no piece_id.")
+
+        book_piece = await db.get(Piece, job.piece_id)
+        if not book_piece:
+            raise ProcessingEngineError("Queued book import job references a missing book.")
+
+        result_data = dict(job.result_data or {})
+        raw_score_version = await _load_raw_score_version(
+            db,
+            piece_id=book_piece.id,
+            raw_score_version_id=result_data.get("raw_score_version_id"),
+        )
+        if not raw_score_version:
+            raise ProcessingEngineError("Queued book import job has no raw PDF version.")
+
+        raw_path = Path(raw_score_version.file_path)
+        if not raw_path.exists():
+            raise ProcessingEngineError(f"Raw book file is missing: {raw_path}")
+        if raw_path.suffix.lower() != ".pdf":
+            raise ProcessingEngineError("Queued book import job requires a PDF raw source.")
+
+        file_bytes = raw_path.read_bytes()
+        file_name = str(result_data.get("source_file_name") or book_piece.file_name)
+        title = str(result_data.get("requested_title") or book_piece.title)
+        composer = _optional_metadata_string(result_data.get("requested_composer"))
+        primary_instrument = _optional_metadata_string(result_data.get("primary_instrument"))
+        book_or_collection = _optional_metadata_string(result_data.get("book_or_collection"))
+        allow_title_override = bool(result_data.get("allow_title_override"))
+        allow_composer_override = bool(result_data.get("allow_composer_override"))
+        source_hash = _optional_metadata_string(result_data.get("source_content_sha256")) or (
+            sha256_bytes(file_bytes)
+        )
+        book_fingerprint = source_book_fingerprint(source_hash)
+
+        processing_settings = ProcessingSettingsStore().load()
+        _ensure_production_processing_ready(processing_settings)
+        job.progress = max(job.progress or 0.0, 10.0)
+        job.updated_at = datetime.utcnow()
+        await db.flush()
+
+        ocr_result = OcrMetadataExtractor(processing_settings).extract(
+            file_name=file_name,
+            file_bytes=file_bytes,
+        )
+        ocr_metadata = dict(ocr_result.metadata)
+        ocr_title = _metadata_string(ocr_metadata, "title")
+        ocr_composer = _metadata_string(ocr_metadata, "composer")
+        if allow_title_override and ocr_title:
+            title = ocr_title
+        if allow_composer_override and ocr_composer:
+            composer = ocr_composer
+
+        split_hints = _book_split_hints_from_job(result_data)
+        preprocessing_result: BookPreprocessingResult | None = None
+        if not split_hints:
+            preprocessing_result = await asyncio.to_thread(
+                partial(
+                    BookPreprocessor(processing_settings).preprocess,
+                    file_name=file_name,
+                    file_bytes=file_bytes,
+                )
+            )
+            preprocessed_title = _metadata_string(preprocessing_result.book_metadata, "title")
+            preprocessed_composer = _metadata_string(preprocessing_result.book_metadata, "composer")
+            if allow_title_override and preprocessed_title:
+                title = preprocessed_title
+            if allow_composer_override and preprocessed_composer:
+                composer = preprocessed_composer
+            split_hints = [
+                BookSplitHint(
+                    title=proposal.title,
+                    page_start=proposal.page_start,
+                    page_end=proposal.page_end,
+                    composer=proposal.composer or composer,
+                    primary_instrument=proposal.primary_instrument,
+                    contained_piece_titles=proposal.contained_piece_titles,
+                    multi_piece_page=proposal.multi_piece_page,
+                    confidence=proposal.confidence,
+                    validation_warnings=proposal.validation_warnings,
+                )
+                for proposal in preprocessing_result.split_proposals
+            ]
+
+        book_piece.title = title
+        book_piece.composer = composer
+        book_piece.status = PieceStatus.imported
+        book_piece.updated_at = datetime.utcnow()
+
+        validation_warnings = list(ocr_result.warnings)
+        if preprocessing_result is not None:
+            validation_warnings.extend(preprocessing_result.warnings)
+            if not split_hints:
+                validation_warnings.append(
+                    "No confident child-piece splits were detected from full-book OCR."
+                )
+
+        book_catalog_metadata = {
+            key: value
+            for key, value in {
+                "title": title,
+                "composer": composer,
+                "primary_instrument": primary_instrument,
+                "book_or_collection": book_or_collection or title,
+                "source_file_name": file_name,
+                **ocr_metadata,
+            }.items()
+            if value not in (None, "", [])
+        }
+        book_processed_metadata = dict(ocr_metadata)
+        if preprocessing_result is not None:
+            book_processed_metadata["book_preprocessing"] = preprocessing_result.to_dict()
+            book_catalog_metadata.update(preprocessing_result.book_metadata)
+        book_primary_instrument = (
+            primary_instrument or _metadata_string(book_catalog_metadata, "primary_instrument")
+        )
+        book_title = (
+            book_or_collection
+            or _metadata_string(book_catalog_metadata, "book_or_collection")
+            or title
+        )
+        piece_state = PieceStateService()
+        piece_state.upsert_metadata(
+            book_piece.id,
+            title=title,
+            composer=composer,
+            primary_instrument=book_primary_instrument,
+            book_or_collection=book_title,
+            piece_kind="book",
+            processed_metadata=book_processed_metadata,
+            catalog_metadata=book_catalog_metadata,
+            catalog_suggestions=ocr_result.catalog_suggestions,
+            validation_warnings=validation_warnings,
+            visible_to_profile_ids=[],
+        )
+        piece_state.update_identity(
+            book_piece.id,
+            source_content_sha256=source_hash,
+            source_book_fingerprint=book_fingerprint,
+            logical_piece_key=f"book|{book_fingerprint}" if book_fingerprint else None,
+            canonical_piece_id=book_piece.id,
+            attempt_status="canonical",
+        )
+
+        child_artifacts: list[ImportedPieceArtifacts] = []
+        child_split_hints: list[BookSplitHint] = []
+        split_count = max(len(split_hints), 1)
+        for index, split_hint in enumerate(split_hints, start=1):
+            await _raise_if_job_canceled(db, job)
+            child_primary_instrument = (
+                split_hint.primary_instrument or book_primary_instrument
+            )
+            child_key = logical_piece_key(
+                source_book_fingerprint=book_fingerprint,
+                book_or_collection=book_title,
+                source_page_start=split_hint.page_start,
+                source_page_end=split_hint.page_end,
+                title=split_hint.title,
+                composer=split_hint.composer or composer,
+                primary_instrument=child_primary_instrument,
+            )
+            if await find_active_piece_by_logical_key(db, child_key):
+                continue
+
+            try:
+                child_bytes = _extract_pdf_page_range(
+                    file_bytes,
+                    start_page=split_hint.page_start,
+                    end_page=split_hint.page_end,
+                )
+            except ProcessingEngineError as exc:
+                validation_warnings.append(
+                    f"{split_hint.title}: could not extract pages "
+                    f"{split_hint.page_start}-{split_hint.page_end}: {exc}"
+                )
+                continue
+
+            child_artifact = await self.create_book_child_proposal(
+                db,
+                title=split_hint.title,
+                composer=split_hint.composer or composer,
+                file_name=_child_file_name(file_name, split_hint),
+                file_bytes=child_bytes,
+                source_book_id=book_piece.id,
+                source_page_start=split_hint.page_start,
+                source_page_end=split_hint.page_end,
+                split_confidence=split_hint.confidence,
+                validation_warnings=split_hint.validation_warnings,
+                primary_instrument=child_primary_instrument,
+                contained_piece_titles=split_hint.contained_piece_titles,
+                multi_piece_page=split_hint.multi_piece_page,
+            )
+            child_catalog_metadata = _catalog_metadata_for_split_hint(
+                split_hint,
+                book_title=book_title,
+                file_name=file_name,
+                primary_instrument=child_primary_instrument,
+            )
+            child_processed_metadata = dict(
+                child_artifact.job.result_data.get("processed_metadata", {})
+                if child_artifact.job.result_data
+                else {}
+            )
+            if child_primary_instrument:
+                child_processed_metadata["primary_instrument"] = child_primary_instrument
+            child_suggestions = _catalog_suggestions_for_metadata(
+                child_catalog_metadata,
+                source="book_split_hint",
+                confidence=split_hint.confidence,
+            )
+            piece_state.upsert_metadata(
+                child_artifact.piece.id,
+                title=child_artifact.piece.title,
+                composer=child_artifact.piece.composer,
+                primary_instrument=child_primary_instrument,
+                book_or_collection=book_title,
+                processed_metadata=child_processed_metadata,
+                piece_kind="piece",
+                source_book_id=book_piece.id,
+                source_page_start=split_hint.page_start,
+                source_page_end=split_hint.page_end,
+                catalog_metadata=child_catalog_metadata,
+                catalog_suggestions=child_suggestions,
+                validation_warnings=split_hint.validation_warnings,
+                split_confidence=split_hint.confidence,
+                visible_to_profile_ids=[],
+            )
+            piece_state.update_identity(
+                child_artifact.piece.id,
+                source_content_sha256=sha256_bytes(child_bytes),
+                source_book_fingerprint=book_fingerprint,
+                logical_piece_key=child_key,
+                canonical_piece_id=child_artifact.piece.id,
+                attempt_status="canonical",
+            )
+            if child_artifact.review_item:
+                candidate_data = dict(child_artifact.review_item.candidate_data or {})
+                candidate_data.update(
+                    {
+                        "catalog_metadata": child_catalog_metadata,
+                        "catalog_suggestions": child_suggestions,
+                        "source_book_id": book_piece.id,
+                        "source_book_fingerprint": book_fingerprint,
+                        "logical_piece_key": child_key,
+                        "source_page_start": split_hint.page_start,
+                        "source_page_end": split_hint.page_end,
+                        "split_confidence": split_hint.confidence,
+                        "contained_piece_titles": split_hint.contained_piece_titles,
+                        "multi_piece_page": split_hint.multi_piece_page,
+                        "validation_warnings": split_hint.validation_warnings,
+                    }
+                )
+                child_artifact.review_item.candidate_data = candidate_data
+            child_artifacts.append(child_artifact)
+            child_split_hints.append(split_hint)
+            job.progress = min(95.0, 20.0 + (70.0 * index / split_count))
+            job.updated_at = datetime.utcnow()
+            await db.flush()
+
+        job.status = JobStatus.succeeded
+        job.progress = 100.0
+        result_data.update(
+            {
+                "piece_title": title,
+                "source_book_id": book_piece.id,
+                "child_piece_ids": [artifact.piece.id for artifact in child_artifacts],
+                "split_count": len(child_artifacts),
+                "validation_warnings": validation_warnings,
+                "book_preprocessing": preprocessing_result.to_dict()
+                if preprocessing_result
+                else None,
+                "processed_metadata": book_processed_metadata,
+                "catalog_suggestions": ocr_result.catalog_suggestions,
+                "processing_stage": "book_import_complete",
+            }
+        )
+        job.result_data = result_data
+        job.updated_at = datetime.utcnow()
+        await db.commit()
+        await db.refresh(job)
+        await db.refresh(book_piece)
+
+        cleaned_score_version = await db.get(
+            ScoreVersion,
+            result_data.get("cleaned_score_version_id"),
+        )
+        if cleaned_score_version is None:
+            cleaned_score_version = raw_score_version
+        return ImportedBookArtifacts(
+            book_piece=book_piece,
+            raw_score_version=raw_score_version,
+            cleaned_score_version=cleaned_score_version,
             child_artifacts=child_artifacts,
             child_split_hints=child_split_hints,
             job=job,
@@ -2019,6 +2490,89 @@ def _record_pdf_first_score_versions(
     )
 
 
+def _book_split_hints_from_job(result_data: dict[str, object]) -> list[BookSplitHint]:
+    raw_hints = result_data.get("split_hints")
+    if not isinstance(raw_hints, list):
+        return []
+    hints: list[BookSplitHint] = []
+    for item in raw_hints:
+        try:
+            hints.append(BookSplitHint.model_validate(item))
+        except Exception:
+            continue
+    return hints
+
+
+def _catalog_metadata_for_split_hint(
+    split_hint: BookSplitHint,
+    *,
+    book_title: str,
+    file_name: str,
+    primary_instrument: str | None,
+) -> dict[str, object]:
+    return {
+        key: value
+        for key, value in {
+            "title": split_hint.title,
+            "composer": split_hint.composer,
+            "primary_instrument": primary_instrument,
+            "book_or_collection": book_title,
+            "key_signature": split_hint.key_signature,
+            "tempo": split_hint.tempo,
+            "aliases": split_hint.aliases,
+            "source_page_start": split_hint.page_start,
+            "source_page_end": split_hint.page_end,
+            "source_file_name": file_name,
+            "contained_piece_titles": split_hint.contained_piece_titles,
+            "multi_piece_page": split_hint.multi_piece_page,
+        }.items()
+        if value not in (None, "", [])
+    }
+
+
+def _catalog_suggestions_for_metadata(
+    metadata: dict[str, object],
+    *,
+    source: str,
+    confidence: float | None = None,
+) -> list[dict[str, object]]:
+    if not metadata:
+        return []
+    return [
+        {
+            "source": source,
+            "confidence": confidence,
+            "fields": {
+                key: value
+                for key, value in metadata.items()
+                if key
+                in {
+                    "title",
+                    "composer",
+                    "primary_instrument",
+                    "book_or_collection",
+                    "key_signature",
+                    "tempo",
+                    "aliases",
+                    "source_page_start",
+                    "source_page_end",
+                    "source_file_name",
+                    "contained_piece_titles",
+                    "multi_piece_page",
+                    "notes",
+                }
+                and value not in (None, "", [])
+            },
+        }
+    ]
+
+
+def _optional_metadata_string(value: object) -> str | None:
+    if isinstance(value, str) and value.strip():
+        return value.strip()
+    return None
+
+
 def _blocked_render_result(rendered_path: Path, exc: Exception) -> RenderResult:
     message = str(exc)
     diagnostics = getattr(exc, "diagnostics", None)
@@ -2552,9 +3106,7 @@ def _render_alternative_omr_candidate_artifacts(
                 raw_pdf_path=raw_path,
                 raw_page_count=raw_page_count,
                 render_result=render_result,
-                musicxml_provenance=str(
-                    attempt.get("provenance") or f"{engine_name.lower()}_omr"
-                ),
+                musicxml_provenance=str(attempt.get("provenance") or f"{engine_name.lower()}_omr"),
                 contained_piece_titles=contained_piece_titles,
                 multi_piece_page=multi_piece_page,
             )

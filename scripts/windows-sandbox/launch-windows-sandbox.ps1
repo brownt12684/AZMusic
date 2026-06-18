@@ -11,7 +11,9 @@ param(
     [switch]$RefreshServerPackage,
     [switch]$RefreshClientPackage,
     [switch]$UseExistingPackages,
-    [switch]$NoAutoSmoke
+    [switch]$NoAutoSmoke,
+    [switch]$Wait,
+    [int]$TimeoutMinutes = 10
 )
 
 $ErrorActionPreference = "Stop"
@@ -22,7 +24,8 @@ $DevScript = Join-Path $RepoRoot "scripts\dev.ps1"
 $SandboxScriptsDir = Join-Path $RepoRoot "scripts\windows-sandbox"
 $GeneratedDir = Join-Path $DistDir "windows-sandbox"
 $ResultsDir = Join-Path $RepoRoot "sandbox-results\windows-sandbox"
-$WsbPath = Join-Path $GeneratedDir ("AZMusicReleaseSandbox-{0}.wsb" -f (Get-Date -Format "yyyyMMdd-HHmmss"))
+$LaunchId = Get-Date -Format "yyyyMMdd-HHmmss"
+$WsbPath = Join-Path $GeneratedDir ("AZMusicReleaseSandbox-{0}.wsb" -f $LaunchId)
 
 function Escape-Xml {
     param([string]$Value)
@@ -97,6 +100,54 @@ function Assert-ReleaseAssets {
     }
 }
 
+function Get-StatusPayload {
+    $latestPath = Join-Path $ResultsDir "latest.json"
+    if (-not (Test-Path $latestPath)) {
+        return $null
+    }
+
+    try {
+        return Get-Content -LiteralPath $latestPath -Raw | ConvertFrom-Json
+    }
+    catch {
+        Write-Warning "Unable to parse sandbox latest.json: $($_.Exception.Message)"
+        return $null
+    }
+}
+
+function Assert-FreshSandboxResult {
+    $deadline = (Get-Date).AddMinutes($TimeoutMinutes)
+    $lastLine = $null
+
+    while ((Get-Date) -lt $deadline) {
+        $status = Get-StatusPayload
+        if ($null -ne $status -and $status.run_id -ge $LaunchId) {
+            $line = "Sandbox run $($status.run_id): $($status.status) / $($status.step) - $($status.message)"
+            if ($line -ne $lastLine) {
+                Write-Host $line
+                $lastLine = $line
+            }
+
+            if ($status.status -eq "passed") {
+                return
+            }
+            if ($status.status -eq "failed") {
+                throw "Windows Sandbox release smoke failed: $($status.message). Logs: $($status.run_dir)"
+            }
+        }
+
+        Start-Sleep -Seconds 5
+    }
+
+    $sandboxProcesses = Get-Process -Name "WindowsSandbox", "WindowsSandboxClient", "vmwp" -ErrorAction SilentlyContinue
+    if ($sandboxProcesses.Count -eq 0) {
+        throw "Windows Sandbox did not start a fresh smoke run for launch $LaunchId."
+    }
+
+    $processSummary = ($sandboxProcesses | ForEach-Object { "$($_.ProcessName):$($_.Id)" }) -join ", "
+    throw "Windows Sandbox did not publish a fresh smoke result for launch $LaunchId before timeout. Active sandbox-related processes: $processSummary"
+}
+
 Assert-WindowsSandboxEnabled
 Ensure-WindowsSandboxFileAssociation
 Assert-ReleaseAssets
@@ -138,4 +189,9 @@ $wsb = @"
 Set-Content -LiteralPath $WsbPath -Value $wsb -Encoding utf8
 
 Write-Host "Generated $WsbPath"
-Start-Process -FilePath $WsbPath
+$sandboxExe = (Get-Command WindowsSandbox.exe).Source
+Start-Process -FilePath $sandboxExe -ArgumentList @($WsbPath) | Out-Null
+
+if ($Wait.IsPresent) {
+    Assert-FreshSandboxResult
+}

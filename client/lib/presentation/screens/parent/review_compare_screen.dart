@@ -1,3 +1,4 @@
+import 'dart:async';
 import 'dart:io';
 
 import 'package:file_picker/file_picker.dart';
@@ -11,10 +12,12 @@ import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
 import '../../../app/app_keys.dart';
 import '../../../app/routes/app_router.dart';
 import '../../../core/config/app_config.dart';
+import '../../../data/repositories/server_piece_sync_repository.dart';
 import '../../../domain/entities/review_candidate_package.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/parent_workflow_refresh.dart';
 import '../../providers/piece_providers.dart';
+import '../../providers/processing_settings_providers.dart';
 import '../../providers/review_providers.dart';
 
 @visibleForTesting
@@ -50,6 +53,15 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
   int _renderRefreshToken = 0;
   String? _selectedCandidateId;
   bool _submitting = false;
+  final Set<String> _prefetchedReviewItemIds = <String>{};
+
+  @override
+  void didUpdateWidget(covariant ReviewCompareScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (oldWidget.itemId != widget.itemId) {
+      _submitting = false;
+    }
+  }
 
   @override
   void dispose() {
@@ -85,6 +97,7 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
   }
 
   Widget _buildLoadedState(BuildContext context, ReviewQueueEntry item) {
+    _prefetchNextReviewItem(item.id);
     final theme = Theme.of(context);
     final baseCandidateData = item.candidateData;
     final candidateOptions = _omrCandidateOptionsFrom(baseCandidateData);
@@ -623,9 +636,9 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
         label: const Text('Reject'),
       ),
       FilledButton.icon(
-        onPressed: _submitting ? null : () => _submitDecision(true),
+        onPressed: _submitting ? null : () => _approveMetadataReviewItem(item),
         icon: const Icon(Icons.check_outlined),
-        label: const Text('Approve student PDF'),
+        label: Text(_submitting ? 'Approving...' : 'Approve Metadata'),
       ),
     ];
     return _spacedReviewActions(actions);
@@ -1000,6 +1013,126 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
     );
   }
 
+  void _prefetchNextReviewItem(String currentItemId) {
+    final nextReviewItem =
+        ref.read(parentReviewQueueProvider.notifier).nextAfterRemoving(
+      {currentItemId},
+      currentItemId: currentItemId,
+    );
+    if (nextReviewItem == null ||
+        _prefetchedReviewItemIds.contains(nextReviewItem.id)) {
+      return;
+    }
+    _prefetchedReviewItemIds.add(nextReviewItem.id);
+    unawaited(_prefetchReviewItemDetailAndPdf(nextReviewItem.id));
+  }
+
+  Future<void> _prefetchReviewItemDetailAndPdf(String itemId) async {
+    try {
+      final item = await ref.read(reviewItemDetailProvider(itemId).future);
+      final rawUrl = _metadataText(item.candidateData['raw_file_url']);
+      if (rawUrl == null || rawUrl.isEmpty || debugUseReviewPdfPlaceholder) {
+        return;
+      }
+      await ref.read(serverPieceSyncRepositoryProvider).downloadBytes(rawUrl);
+    } catch (_) {
+      // Prefetching is only a latency optimization. The normal screen load remains authoritative.
+    }
+  }
+
+  void _approveMetadataReviewItem(ReviewQueueEntry item) {
+    if (_submitting || widget.itemId == null) {
+      return;
+    }
+
+    setState(() {
+      _submitting = true;
+    });
+
+    final repository = ref.read(serverPieceSyncRepositoryProvider);
+    final queueNotifier = ref.read(parentReviewQueueProvider.notifier);
+    final container = ProviderScope.containerOf(context, listen: false);
+    final messenger = ScaffoldMessenger.of(context);
+    final nextReviewItem = queueNotifier.nextAfterRemoving(
+      {item.id},
+      currentItemId: item.id,
+    );
+
+    queueNotifier.removeItems({item.id});
+    ref.invalidate(reviewItemDetailProvider(item.id));
+    unawaited(
+      _completeOptimisticMetadataApproval(
+        repository: repository,
+        queueNotifier: queueNotifier,
+        container: container,
+        messenger: messenger,
+        item: item,
+      ),
+    );
+
+    if (nextReviewItem != null) {
+      Navigator.of(context).pushReplacementNamed(
+        AppRouter.reviewCompare,
+        arguments: nextReviewItem.id,
+      );
+    } else {
+      Navigator.of(context).pop();
+    }
+  }
+
+  Future<void> _completeOptimisticMetadataApproval({
+    required ServerPieceSyncRepository repository,
+    required ParentReviewQueueNotifier queueNotifier,
+    required ProviderContainer container,
+    required ScaffoldMessengerState messenger,
+    required ReviewQueueEntry item,
+  }) async {
+    try {
+      await repository.approveReviewItem(item.id);
+      _refreshParentWorkflowFromContainer(
+        container,
+        trigger: SyncTrigger.reviewApproval,
+      );
+      messenger.showSnackBar(
+        const SnackBar(content: Text('Metadata approved.')),
+      );
+    } catch (error) {
+      queueNotifier.restoreItem(item);
+      container.invalidate(reviewItemDetailProvider(item.id));
+      _refreshParentWorkflowFromContainer(
+        container,
+        trigger: SyncTrigger.reviewApproval,
+      );
+      messenger.showSnackBar(
+        SnackBar(content: Text('Unable to approve metadata: $error')),
+      );
+    }
+  }
+
+  void _refreshParentWorkflowFromContainer(
+    ProviderContainer container, {
+    required SyncTrigger trigger,
+  }) {
+    unawaited(
+      Future.wait([
+        container
+            .read(allPiecesProvider.notifier)
+            .refreshInBackground(trigger: trigger),
+        container
+            .read(processingCapabilitiesProvider.notifier)
+            .refreshInBackground(),
+        container
+            .read(parentReviewQueueProvider.notifier)
+            .refreshInBackground(),
+        container
+            .read(parentSyncedPiecesProvider.notifier)
+            .refreshInBackground(),
+      ]).whenComplete(() {
+        container.invalidate(serverHealthProvider);
+      }),
+    );
+  }
+
   Future<void> _submitDecision(bool approve) async {
     if (_submitting || widget.itemId == null) {
       return;
@@ -1211,7 +1344,6 @@ class _ReviewCompareScreenState extends ConsumerState<ReviewCompareScreen> {
       }
     }
   }
-
 }
 
 class _OmrCandidateOption {

@@ -1,3 +1,5 @@
+import 'server_job.dart';
+
 class ProcessingSettings {
   const ProcessingSettings({
     this.audiverisCliPath,
@@ -451,6 +453,7 @@ class ProcessingJobSummary {
     required this.failedCount,
     required this.succeededCount,
     required this.canceledCount,
+    this.activeJobs = const <ServerJob>[],
     this.lastFailedJob,
   });
 
@@ -459,6 +462,7 @@ class ProcessingJobSummary {
   final int failedCount;
   final int succeededCount;
   final int canceledCount;
+  final List<ServerJob> activeJobs;
   final ProcessingJobFailure? lastFailedJob;
 
   factory ProcessingJobSummary.fromJson(Map<String, dynamic> json) {
@@ -469,6 +473,9 @@ class ProcessingJobSummary {
       failedCount: json['failed_count'] as int? ?? 0,
       succeededCount: json['succeeded_count'] as int? ?? 0,
       canceledCount: json['canceled_count'] as int? ?? 0,
+      activeJobs: (json['active_jobs'] as List<dynamic>? ?? const [])
+          .map((item) => ServerJob.fromJson(item as Map<String, dynamic>))
+          .toList(growable: false),
       lastFailedJob: lastFailed is Map<String, dynamic>
           ? ProcessingJobFailure.fromJson(lastFailed)
           : null,

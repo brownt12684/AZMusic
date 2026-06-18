@@ -15,18 +15,41 @@ $ServerDir = Join-Path $PackageRoot "server"
 $ServerExe = Join-Path $PackageRoot "azmusic-server.exe"
 $EnvFile = Join-Path $ServerDir ".env"
 $EnvExample = Join-Path $ServerDir ".env.example"
+$VcRuntimeFileName = "vc_redist.x64.exe"
+$VcRuntimeUrl = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
+$VcDownloadTimeoutSeconds = 60
+$VcInstallTimeoutSeconds = 240
+
+function Find-BundledVcRuntimeInstaller {
+    $candidates = @(
+        (Join-Path $PackageRoot $VcRuntimeFileName),
+        (Join-Path (Join-Path $PackageRoot "vendor") $VcRuntimeFileName)
+    )
+
+    foreach ($candidate in $candidates) {
+        if (Test-Path $candidate) {
+            return $candidate
+        }
+    }
+
+    return $null
+}
 
 function Install-VcRuntime {
-    $installerUrl = "https://aka.ms/vs/17/release/vc_redist.x64.exe"
-    $installerPath = Join-Path $env:TEMP "vc_redist.x64.exe"
-
     Write-Host "Installing Microsoft Visual C++ runtime required by bundled native components..."
-    try {
-        Invoke-WebRequest -Uri $installerUrl -OutFile $installerPath -UseBasicParsing
-    }
-    catch {
-        Write-Warning "Unable to download Microsoft Visual C++ runtime installer: $_"
-        return $false
+    $installerPath = Find-BundledVcRuntimeInstaller
+    if ([string]::IsNullOrWhiteSpace($installerPath)) {
+        $installerPath = Join-Path $env:TEMP $VcRuntimeFileName
+        Write-Host "Downloading Microsoft Visual C++ runtime from $VcRuntimeUrl..."
+        try {
+            Invoke-WebRequest -Uri $VcRuntimeUrl -OutFile $installerPath -UseBasicParsing -TimeoutSec $VcDownloadTimeoutSeconds
+        }
+        catch {
+            Write-Warning "Unable to download Microsoft Visual C++ runtime installer: $_"
+            return $false
+        }
+    } else {
+        Write-Host "Using bundled Microsoft Visual C++ runtime installer: $installerPath"
     }
 
     $process = Start-Process `
@@ -36,8 +59,15 @@ function Install-VcRuntime {
             "/quiet",
             "/norestart"
         ) `
-        -Wait `
         -PassThru
+
+    if (-not $process.WaitForExit($VcInstallTimeoutSeconds * 1000)) {
+        Stop-Process -Id $process.Id -Force -ErrorAction SilentlyContinue
+        Write-Warning "Microsoft Visual C++ runtime installer timed out after $VcInstallTimeoutSeconds seconds."
+        return $false
+    }
+
+    $process.Refresh()
 
     return $process.ExitCode -in @(0, 1638, 3010)
 }

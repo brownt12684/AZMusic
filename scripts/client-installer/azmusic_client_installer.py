@@ -55,12 +55,17 @@ def stop_running_client_processes() -> None:
     if os.name != "nt":
         return
 
-    subprocess.run(
-        ["taskkill", "/F", "/IM", "azmusic.exe"],
-        check=False,
-        stdout=subprocess.DEVNULL,
-        stderr=subprocess.DEVNULL,
-    )
+    print("Checking for running AZMusic client processes.")
+    try:
+        subprocess.run(
+            ["taskkill", "/F", "/IM", "azmusic.exe"],
+            check=False,
+            stdout=subprocess.DEVNULL,
+            stderr=subprocess.DEVNULL,
+            timeout=10,
+        )
+    except subprocess.TimeoutExpired:
+        print("Timed out while checking for running client processes; continuing install.")
 
 
 def system_vc_runtime_dll_paths() -> list[Path]:

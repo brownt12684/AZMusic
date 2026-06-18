@@ -21,20 +21,26 @@ if (-not (Test-Administrator)) {
 }
 
 $displayName = "AZMusic Server (TCP $Port)"
-$existing = Get-NetFirewallRule -DisplayName $displayName -ErrorAction SilentlyContinue
-if ($existing) {
-    Set-NetFirewallRule -DisplayName $displayName -Enabled True -Action Allow | Out-Null
-    Write-Host "Verified Windows Firewall rule: $displayName"
-    return
+try {
+    $existing = Get-NetFirewallRule -DisplayName $displayName -ErrorAction SilentlyContinue
+    if ($existing) {
+        Set-NetFirewallRule -DisplayName $displayName -Enabled True -Action Allow | Out-Null
+        Write-Host "Verified Windows Firewall rule: $displayName"
+        return
+    }
+
+    New-NetFirewallRule `
+        -DisplayName $displayName `
+        -Direction Inbound `
+        -Action Allow `
+        -Protocol TCP `
+        -LocalPort $Port `
+        -Profile Domain,Private `
+        | Out-Null
+
+    Write-Host "Added Windows Firewall rule: $displayName"
 }
-
-New-NetFirewallRule `
-    -DisplayName $displayName `
-    -Direction Inbound `
-    -Action Allow `
-    -Protocol TCP `
-    -LocalPort $Port `
-    -Profile Domain,Private `
-    | Out-Null
-
-Write-Host "Added Windows Firewall rule: $displayName"
+catch {
+    Write-Warning "Unable to configure the Windows Firewall rule automatically: $($_.Exception.Message)"
+    Write-Warning "If pairing times out from another device, allow inbound TCP port $Port manually."
+}
