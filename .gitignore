@@ -133,3 +133,4 @@ sandbox-results/
 # Local experiment outputs
 experiments/*/runs/
 experiments/*/config.local.json
+tmp-*.png
