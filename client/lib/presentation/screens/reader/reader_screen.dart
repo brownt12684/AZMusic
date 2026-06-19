@@ -1,8 +1,8 @@
 import 'dart:async';
 import 'dart:io';
-import 'dart:typed_data';
 
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:printing/printing.dart';
 import 'package:syncfusion_flutter_pdfviewer/pdfviewer.dart';
@@ -18,6 +18,7 @@ import '../../providers/annotation_providers.dart';
 import '../../providers/note_providers.dart';
 import '../../providers/piece_providers.dart';
 import '../../providers/profile_providers.dart';
+import '../../providers/toc_providers.dart';
 import 'reader_page_layout.dart';
 
 enum _ReaderModule {
@@ -25,6 +26,7 @@ enum _ReaderModule {
   media,
   tuner,
   notes,
+  toc,
 }
 
 typedef _ReaderAnnotationRequest = ({
@@ -141,6 +143,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
           format: scoreVersion.format,
           isLandscape: mediaQuery.orientation == Orientation.landscape,
           viewportWidth: mediaQuery.size.width,
+          viewportHeight: mediaQuery.size.height,
           pageCount: _pageCount,
         ) &&
         !isWriteModeActive;
@@ -156,127 +159,203 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     return Scaffold(
       key: AppKeys.readerScreen,
       backgroundColor: Theme.of(context).colorScheme.surface,
-      body: Stack(
-        children: [
-          Positioned.fill(
-            child: _buildCanvas(
+      bottomNavigationBar: _isTouchDevice()
+          ? null
+          : _buildBottomBar(
               context,
-              entry: entry,
-              scoreVersion: scoreVersion,
-              scoreFile: scoreFile,
-              activeProfile: activeProfile,
-              annotationRequest: annotationRequest,
-              annotationState: annotationState,
-              spreadMode: spreadMode,
-            ),
-          ),
-          Positioned(
-            left: 0,
-            top: 0,
-            bottom: 0,
-            width: 34,
-            child: _ReaderEdgeReveal(
-              onReveal: _showChromeTransient,
-            ),
-          ),
-          if (chromeVisible) ...[
-            Positioned(
-              left: 12,
-              top: safePadding.top + 12,
-              bottom: safePadding.bottom + 12,
-              child: _ReaderChromeSurface(
-                child: _ReaderRail(
-                  activeModule: _activeModule,
-                  onSelect: (module) {
-                    _handleModuleSelection(module, annotationRequest);
-                  },
-                  onBack: () => _handleBack(annotationRequest),
-                ),
-              ),
-            ),
-            Positioned(
-              left: 88,
-              right: 12,
-              top: safePadding.top + 12,
-              child: _ReaderChromeSurface(
-                child: _ReaderTopBar(
-                  entry: entry,
-                  scoreVersion: scoreVersion,
-                  readableScoreVersions:
-                      _readableScoreVersions(entry, scoreVersion),
-                  onSelectScoreVersion: (scoreVersionId) {
-                    if (scoreVersionId == scoreVersion.id) {
-                      return;
+              currentPage: _currentPage,
+              pageCount: _pageCount,
+              onPreviousPage: _currentPage > 1
+                  ? () {
+                      _showChromeTransient();
+                      _jumpToPage(
+                        previousReaderTarget(
+                          currentPage: _currentPage,
+                          spreadMode: spreadMode,
+                        ),
+                        spreadMode: spreadMode,
+                      );
                     }
-                    Navigator.of(context).pushReplacementNamed(
-                      AppRouter.reader,
-                      arguments: {
-                        'pieceId': entry.piece.id,
-                        'scoreVersionId': scoreVersionId,
-                      },
-                    );
-                  },
-                  pagePositionLabel: pagePositionLabel,
-                  isWriteModeActive: isWriteModeActive,
-                  canToggleWriteMode:
-                      activeProfile.role == ProfileRole.student &&
-                          annotationRequest != null,
-                  onToggleWriteMode: annotationRequest == null
-                      ? null
-                      : () => _toggleWriteMode(
-                            annotationRequest,
-                            annotationPageState,
+                  : null,
+              onNextPage: _currentPage < _pageCount
+                  ? () {
+                      _showChromeTransient();
+                      _jumpToPage(
+                        nextReaderTarget(
+                          currentPage: _currentPage,
+                          pageCount: _pageCount,
+                          spreadMode: spreadMode,
+                        ),
+                        spreadMode: spreadMode,
+                      );
+                    }
+                  : null,
+              onGoToPage: (text) {
+                final page = int.tryParse(text.trim());
+                if (page != null && page >= 1 && page <= _pageCount) {
+                  _jumpToPage(page, spreadMode: false);
+                }
+              },
+            ),
+      body: Shortcuts(
+              shortcuts: <LogicalKeySet, Intent>{
+                LogicalKeySet(LogicalKeyboardKey.arrowLeft):
+                    const _PageNavigationIntent(-1),
+                LogicalKeySet(LogicalKeyboardKey.arrowRight):
+                    const _PageNavigationIntent(1),
+                LogicalKeySet(LogicalKeyboardKey.pageUp):
+                    const _PageNavigationIntent(-1),
+                LogicalKeySet(LogicalKeyboardKey.pageDown):
+                    const _PageNavigationIntent(1),
+                LogicalKeySet(LogicalKeyboardKey.home):
+                    const _PageNavigationIntent(-999),
+                LogicalKeySet(LogicalKeyboardKey.end):
+                    const _PageNavigationIntent(999),
+              },
+              child: Actions(
+                actions: {
+                  _PageNavigationIntent: CallbackAction<_PageNavigationIntent>(
+                    onInvoke: (intent) {
+                      if (isWriteModeActive) return null;
+                      final delta = intent.delta;
+                      if (delta < 0) {
+                        _handleKeyboardPageNav(-1);
+                      } else if (delta > 0) {
+                        _handleKeyboardPageNav(1);
+                      } else {
+                        _jumpToPage(1, spreadMode: false);
+                      }
+                      return null;
+                    },
+                  ),
+                },
+                child: Stack(
+                  children: [
+                    Positioned.fill(
+                      child: _buildCanvas(
+                        context,
+                        entry: entry,
+                        scoreVersion: scoreVersion,
+                        scoreFile: scoreFile,
+                        activeProfile: activeProfile,
+                        annotationRequest: annotationRequest,
+                        annotationState: annotationState,
+                        spreadMode: spreadMode,
+                      ),
+                    ),
+                    Positioned(
+                      left: 0,
+                      top: 0,
+                      bottom: 0,
+                      width: 34,
+                      child: _ReaderEdgeReveal(
+                        onReveal: _showChromeTransient,
+                      ),
+                    ),
+                    if (chromeVisible) ...[
+                      Positioned(
+                        left: 12,
+                        top: safePadding.top + 12,
+                        bottom: safePadding.bottom + 12,
+                        child: _ReaderChromeSurface(
+                          child: _ReaderRail(
+                            activeModule: _activeModule,
+                            onSelect: (module) {
+                              _handleModuleSelection(
+                                  module, annotationRequest);
+                            },
+                            onBack: () => _handleBack(annotationRequest),
                           ),
-                  onPreviousPage: _currentPage > 1
-                      ? () {
-                          _showChromeTransient();
-                          _jumpToPage(
-                            previousReaderTarget(
-                              currentPage: _currentPage,
-                              spreadMode: spreadMode,
-                            ),
-                            spreadMode: spreadMode,
-                          );
-                        }
-                      : null,
-                  onNextPage: _currentPage < _pageCount
-                      ? () {
-                          _showChromeTransient();
-                          _jumpToPage(
-                            nextReaderTarget(
+                        ),
+                      ),
+                      Positioned(
+                        left: 88,
+                        right: 12,
+                        top: safePadding.top + 12,
+                        child: _ReaderChromeSurface(
+                          child: _ReaderTopBar(
+                            entry: entry,
+                            scoreVersion: scoreVersion,
+                            readableScoreVersions:
+                                _readableScoreVersions(
+                                    entry, scoreVersion),
+                            onSelectScoreVersion: (scoreVersionId) {
+                              if (scoreVersionId == scoreVersion.id) {
+                                return;
+                              }
+                              Navigator.of(context)
+                                  .pushReplacementNamed(
+                                AppRouter.reader,
+                                arguments: {
+                                  'pieceId': entry.piece.id,
+                                  'scoreVersionId': scoreVersionId,
+                                },
+                              );
+                            },
+                            pagePositionLabel: pagePositionLabel,
+                            isWriteModeActive: isWriteModeActive,
+                            canToggleWriteMode:
+                                activeProfile.role ==
+                                        ProfileRole.student &&
+                                    annotationRequest != null,
+                            onToggleWriteMode: annotationRequest == null
+                                ? null
+                                : () => _toggleWriteMode(
+                                      annotationRequest,
+                                      annotationPageState,
+                                    ),
+                            onPreviousPage: _currentPage > 1
+                                ? () {
+                                    _showChromeTransient();
+                                    _jumpToPage(
+                                      previousReaderTarget(
+                                        currentPage: _currentPage,
+                                        spreadMode: spreadMode,
+                                      ),
+                                      spreadMode: spreadMode,
+                                    );
+                                  }
+                                : null,
+                            onNextPage: _currentPage < _pageCount
+                                ? () {
+                                    _showChromeTransient();
+                                    _jumpToPage(
+                                      nextReaderTarget(
+                                        currentPage: _currentPage,
+                                        pageCount: _pageCount,
+                                        spreadMode: spreadMode,
+                                      ),
+                                      spreadMode: spreadMode,
+                                    );
+                                  }
+                                : null,
+                          ),
+                        ),
+                      ),
+                      if (_activeModule != null)
+                        Positioned(
+                          left: 88,
+                          top: safePadding.top + 112,
+                          bottom: safePadding.bottom + 12,
+                          width: 340,
+                          child: _ReaderChromeSurface(
+                            child: _ReaderModulePanel(
+                              module: _activeModule!,
+                              entry: entry,
+                              scoreVersion: scoreVersion,
                               currentPage: _currentPage,
                               pageCount: _pageCount,
-                              spreadMode: spreadMode,
+                              activeProfile: activeProfile,
+                              annotationRequest: annotationRequest,
+                              annotationState: annotationState,
                             ),
-                            spreadMode: spreadMode,
-                          );
-                        }
-                      : null,
+                          ),
+                        ),
+                    ],
+                  ],
                 ),
               ),
             ),
-            if (_activeModule != null)
-              Positioned(
-                left: 88,
-                top: safePadding.top + 112,
-                bottom: safePadding.bottom + 12,
-                width: 340,
-                child: _ReaderChromeSurface(
-                  child: _ReaderModulePanel(
-                    module: _activeModule!,
-                    entry: entry,
-                    scoreVersion: scoreVersion,
-                    currentPage: _currentPage,
-                    pageCount: _pageCount,
-                    activeProfile: activeProfile,
-                    annotationRequest: annotationRequest,
-                    annotationState: annotationState,
-                  ),
-                ),
-              ),
-          ],
-        ],
-      ),
     );
   }
 
@@ -381,6 +460,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
 
     return LayoutBuilder(
       builder: (context, constraints) {
+        if (!isDrawing) {
+          return baseCanvas;
+        }
         final canvasSize = constraints.biggest;
         return Stack(
           fit: StackFit.expand,
@@ -400,7 +482,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
             ),
             Positioned.fill(
               child: IgnorePointer(
-                ignoring: !isDrawing,
+                ignoring: isDrawing,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onPanStart: (details) {
@@ -474,8 +556,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
               if (!mounted) {
                 return;
               }
-              setState(() {
-                _currentPage = pageNumber;
+              WidgetsBinding.instance.addPostFrameCallback((_) {
+                if (mounted) {
+                  setState(() {
+                    _currentPage = pageNumber;
+                  });
+                }
               });
             },
           );
@@ -508,8 +594,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
             if (!mounted) {
               return;
             }
-            setState(() {
-              _currentPage = details.newPageNumber;
+            WidgetsBinding.instance.addPostFrameCallback((_) {
+              if (mounted) {
+                setState(() {
+                  _currentPage = details.newPageNumber;
+                });
+              }
             });
           },
           onDocumentLoadFailed: (details) {
@@ -588,6 +678,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     }
   }
 
+  void _handleKeyboardPageNav(int delta) {
+    final target = _currentPage + delta;
+    if (target < 1 || target > _pageCount) return;
+    _jumpToPage(target, spreadMode: false);
+  }
+
   OffsetPoint _normalizeOffset(Offset localPosition, Size size) {
     if (size.width <= 0 || size.height <= 0) {
       return const OffsetPoint(x: 0, y: 0);
@@ -661,11 +757,6 @@ class _ReaderEdgeReveal extends StatelessWidget {
     return GestureDetector(
       behavior: HitTestBehavior.translucent,
       onTap: onReveal,
-      onHorizontalDragEnd: (details) {
-        if ((details.primaryVelocity ?? 0) > 120) {
-          onReveal();
-        }
-      },
       child: const SizedBox.expand(),
     );
   }
@@ -749,6 +840,17 @@ class _ReaderRail extends StatelessWidget {
             icon: Icons.note_alt_outlined,
             selected: activeModule == _ReaderModule.notes,
             onTap: () => onSelect(_ReaderModule.notes),
+          ),
+          const SizedBox(height: 8),
+          SizedBox(
+            width: 28,
+            child: Divider(color: theme.colorScheme.outlineVariant),
+          ),
+          _RailButton(
+            key: AppKeys.tocModuleButton,
+            icon: Icons.menu_book_outlined,
+            selected: activeModule == _ReaderModule.toc,
+            onTap: () => onSelect(_ReaderModule.toc),
           ),
           const Spacer(),
           _RailButton(
@@ -1039,6 +1141,11 @@ class _ReaderModulePanel extends StatelessWidget {
                 annotationRequest: annotationRequest,
                 annotationState: annotationState,
               ),
+            _ReaderModule.toc => _TocModule(
+                scoreVersionId: scoreVersion.id,
+                currentPage: currentPage,
+                pageCount: pageCount,
+              ),
           },
         ],
       ),
@@ -1094,7 +1201,11 @@ class _PdfSpreadCanvasState extends ConsumerState<_PdfSpreadCanvas> {
     final targetPage = spreadIndexForPage(widget.currentPage);
     if (_pageController.hasClients &&
         (_pageController.page?.round() ?? targetPage) != targetPage) {
-      _pageController.jumpToPage(targetPage);
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted && _pageController.hasClients) {
+          _pageController.jumpToPage(targetPage);
+        }
+      });
     }
   }
 
@@ -1869,4 +1980,181 @@ class _ReaderMessage extends StatelessWidget {
       ),
     );
   }
+}
+
+class _TocModule extends ConsumerWidget {
+  const _TocModule({
+    required this.scoreVersionId,
+    required this.currentPage,
+    required this.pageCount,
+  });
+
+  final String scoreVersionId;
+  final int currentPage;
+  final int pageCount;
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final theme = Theme.of(context);
+    final tocAsync = ref.watch(tocProvider(scoreVersionId));
+
+    return tocAsync.when(
+      data: (tocResult) {
+        if (tocResult.entries.isEmpty) {
+          return _PlaceholderModule(
+            title: 'Table of contents',
+            icon: Icons.menu_book_outlined,
+            body: tocResult.source == 'none'
+                ? 'No table of contents found in this score.'
+                : 'No chapters detected. The score may not have a TOC.',
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Table of contents',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 12),
+            Text(
+              'Source: ${tocResult.source}',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            Expanded(
+              child: ListView.separated(
+                itemCount: tocResult.entries.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 4),
+                itemBuilder: (context, index) {
+                  final entry = tocResult.entries[index];
+                  final indent = entry.depth * 16.0;
+                  final isSelected = entry.page == currentPage;
+                  return InkWell(
+                    borderRadius: BorderRadius.circular(8),
+                    onTap: () {
+                      if (entry.page >= 1 && entry.page <= pageCount) {
+                        Navigator.of(context).pop();
+                        WidgetsBinding.instance.addPostFrameCallback((_) {
+                          final readerState = context.findAncestorStateOfType<_ReaderScreenState>();
+                          readerState?._jumpToPage(entry.page, spreadMode: false);
+                        });
+                      }
+                    },
+                    child: Container(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: 12 + indent,
+                        vertical: 8,
+                      ),
+                      decoration: BoxDecoration(
+                        color: isSelected
+                            ? theme.colorScheme.primaryContainer
+                            : null,
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                      child: Text(
+                        entry.title,
+                        style: theme.textTheme.bodyMedium?.copyWith(
+                          fontWeight: isSelected
+                              ? FontWeight.w600
+                              : FontWeight.w400,
+                        ),
+                      ),
+                    ),
+                  );
+                },
+              ),
+            ),
+          ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (error, _) => _PlaceholderModule(
+        title: 'Table of contents',
+        icon: Icons.error_outline,
+        body: 'Unable to load TOC: $error',
+      ),
+    );
+  }
+}
+
+// -- Desktop navigation helpers --
+
+/// Returns true if the current platform is a touch device (Android tablet, etc.).
+bool _isTouchDevice() {
+  if (Platform.isAndroid) return true;
+  if (Platform.isWindows) return true;
+  if (Platform.isIOS) return true;
+  return false;
+}
+
+class _PageNavigationIntent extends Intent {
+  const _PageNavigationIntent(this.delta);
+  final int delta;
+}
+
+Widget _buildBottomBar(
+  BuildContext context, {
+  required int currentPage,
+  required int pageCount,
+  required VoidCallback? onPreviousPage,
+  required VoidCallback? onNextPage,
+  required ValueChanged<String> onGoToPage,
+}) {
+  final theme = Theme.of(context);
+  return Container(
+    padding: const EdgeInsets.fromLTRB(16, 8, 16, 12),
+    decoration: BoxDecoration(
+      color: theme.colorScheme.surfaceContainerLow,
+      border: Border(
+        top: BorderSide(color: theme.colorScheme.outlineVariant),
+      ),
+    ),
+    child: Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          tooltip: 'Previous page',
+          icon: const Icon(Icons.chevron_left),
+          onPressed: onPreviousPage,
+        ),
+        const SizedBox(width: 8),
+        SizedBox(
+          width: 50,
+          child: TextField(
+            keyboardType: TextInputType.number,
+            textAlign: TextAlign.center,
+            decoration: InputDecoration(
+              contentPadding: const EdgeInsets.symmetric(
+                horizontal: 8,
+                vertical: 8,
+              ),
+              border: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(8),
+              ),
+              isDense: true,
+              hintText: '$currentPage',
+            ),
+            onSubmitted: onGoToPage,
+          ),
+        ),
+        const SizedBox(width: 8),
+        Text(
+          'of $pageCount',
+          style: theme.textTheme.bodySmall,
+        ),
+        const SizedBox(width: 8),
+        IconButton(
+          tooltip: 'Next page',
+          icon: const Icon(Icons.chevron_right),
+          onPressed: onNextPage,
+        ),
+      ],
+    ),
+  );
 }

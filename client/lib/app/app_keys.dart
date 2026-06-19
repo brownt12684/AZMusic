@@ -64,6 +64,7 @@ class AppKeys {
   static const mediaModuleButton = ValueKey<String>('reader.module.media');
   static const tunerModuleButton = ValueKey<String>('reader.module.tuner');
   static const notesModuleButton = ValueKey<String>('reader.module.notes');
+  static const tocModuleButton = ValueKey<String>('reader.module.toc');
   static const notesLayerVisibilityToggle = ValueKey<String>(
     'reader.notes.layerVisibility',
   );

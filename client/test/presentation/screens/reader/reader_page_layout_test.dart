@@ -8,6 +8,7 @@ void main() {
         format: 'pdf',
         isLandscape: true,
         viewportWidth: 1200,
+        viewportHeight: 800,
         pageCount: 6,
       ),
       isTrue,
@@ -17,6 +18,7 @@ void main() {
         format: 'image',
         isLandscape: true,
         viewportWidth: 1200,
+        viewportHeight: 800,
         pageCount: 6,
       ),
       isFalse,
@@ -26,6 +28,18 @@ void main() {
         format: 'pdf',
         isLandscape: false,
         viewportWidth: 1200,
+        viewportHeight: 800,
+        pageCount: 6,
+      ),
+      isFalse,
+    );
+    // Portrait mode (taller than wide) never spreads.
+    expect(
+      isLandscapeSpreadEligible(
+        format: 'pdf',
+        isLandscape: true,
+        viewportWidth: 800,
+        viewportHeight: 1200,
         pageCount: 6,
       ),
       isFalse,

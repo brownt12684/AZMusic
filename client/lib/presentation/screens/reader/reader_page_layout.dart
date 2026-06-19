@@ -6,8 +6,12 @@ bool isLandscapeSpreadEligible({
   required String format,
   required bool isLandscape,
   required double viewportWidth,
+  required double viewportHeight,
   required int pageCount,
 }) {
+  // Portrait mode (height > width) never spreads — always single page.
+  if (viewportWidth <= 0 || viewportHeight <= 0) return false;
+  if (viewportHeight > viewportWidth) return false;
   return format.toLowerCase() == 'pdf' &&
       isLandscape &&
       viewportWidth >= kReaderSpreadMinWidth &&

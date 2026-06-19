@@ -19,6 +19,7 @@ from server.routers import (
     review,
     setup,
     sync,
+    toc,
 )
 from server.services.auth import require_paired_device
 
@@ -101,6 +102,12 @@ app.include_router(
     annotations.router,
     prefix="/api/v1/annotations",
     tags=["annotations"],
+    dependencies=_protected_dependencies,
+)
+app.include_router(
+    toc.router,
+    prefix="/api/v1",
+    tags=["toc"],
     dependencies=_protected_dependencies,
 )
 app.include_router(pairing.router, prefix="/api/v1/pairing", tags=["pairing"])

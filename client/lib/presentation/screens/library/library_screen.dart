@@ -324,6 +324,12 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
     final query = _searchController.text.trim();
     final filtered =
         entries.where((entry) => entry.piece.matchesQuery(query)).toList();
+
+    // Book mode: show only pieces whose pieceKind is 'book'.
+    if (_browseMode == _LibraryBrowseMode.book) {
+      filtered.removeWhere((entry) => entry.piece.pieceKind != 'book');
+    }
+
     filtered.sort((left, right) {
       switch (_browseMode) {
         case _LibraryBrowseMode.title:
@@ -388,6 +394,24 @@ class _LibraryScreenState extends ConsumerState<LibraryScreen> {
   }
 
   void _openPieceDetail(BuildContext context, LibraryEntry entry) {
+    // Quick-open: if there's exactly one readable score version, skip the
+    // piece detail screen and go straight to the reader.
+    final readable = entry.scoreVersions.where((sv) {
+      return (sv.format == 'pdf' || sv.format == 'image') &&
+          sv.isStudentVisible;
+    }).toList();
+
+    if (readable.length == 1) {
+      ref.read(scoreReaderLauncherProvider).open(
+        context,
+        ScoreReaderLaunchRequest(
+          pieceId: entry.piece.id,
+          scoreVersionId: readable.first.id,
+        ),
+      );
+      return;
+    }
+
     Navigator.of(context).pushNamed(
       AppRouter.pieceDetail,
       arguments: entry.piece.id,
