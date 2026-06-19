@@ -326,6 +326,24 @@ class Piece {
         assignedProfileId == profileId;
   }
 
+  /// Remove attribution to the given profile ID.
+  /// Clears [assignedProfileId] and removes from [visibleToProfileIds],
+  /// moving the ID to [previousVisibleToProfileIds] for later re-assignment.
+  Piece unattributeFromProfile(String profileId) {
+    final newAssigned = assignedProfileId == profileId ? null : assignedProfileId;
+    final wasVisible = visibleToProfileIds.contains(profileId);
+    final newVisible = visibleToProfileIds.where((id) => id != profileId).toList();
+    final prevSet = previousVisibleToProfileIds.toSet();
+    if (wasVisible && !prevSet.contains(profileId)) {
+      prevSet.add(profileId);
+    }
+    return copyWith(
+      assignedProfileId: newAssigned,
+      visibleToProfileIds: newVisible,
+      previousVisibleToProfileIds: prevSet.toList(),
+    );
+  }
+
   bool matchesQuery(String query) {
     final normalizedQuery = _normalizeForSearch(query);
     if (normalizedQuery.isEmpty) {

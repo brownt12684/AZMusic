@@ -310,6 +310,16 @@ class ParentHomeScreen extends ConsumerWidget {
                       isActive: () => context.mounted,
                     );
                   },
+                  onEditStudent: (context, student) {
+                    _showStudentEditSheet(context, ref, student);
+                  },
+                  onRemoveStudent: (student) async {
+                    await _removeStudentWithUnattribution(
+                      context,
+                      ref,
+                      student,
+                    );
+                  },
                 ),
               ),
               RefreshIndicator(
@@ -330,9 +340,11 @@ class ParentHomeScreen extends ConsumerWidget {
     BuildContext context,
     WidgetRef ref,
   ) async {
+    final currentStudents = ref.read(localStudentProfilesProvider);
     final draft = await showDialog<_StudentDraft>(
       context: context,
-      builder: (context) => const _AddStudentDialog(),
+      builder: (context) =>
+          _AddStudentDialog(currentStudentCount: currentStudents.length),
     );
     if (draft == null || !context.mounted) {
       return;
@@ -343,6 +355,7 @@ class ParentHomeScreen extends ConsumerWidget {
           await ref.read(localStudentProfilesProvider.notifier).addStudent(
                 displayName: draft.displayName,
                 instrument: draft.instrument,
+                pin: draft.pin,
               );
       ref.invalidate(availableProfilesProvider);
       if (!context.mounted) {
@@ -359,6 +372,203 @@ class ParentHomeScreen extends ConsumerWidget {
         SnackBar(content: Text('Unable to add student: $error')),
       );
     }
+  }
+
+  Future<void> _removeStudentWithUnattribution(
+    BuildContext context,
+    WidgetRef ref,
+    Profile student,
+  ) async {
+    // Remove the student profile.
+    await ref.read(localStudentProfilesProvider.notifier).removeStudent(
+          student.id,
+        );
+    ref.invalidate(availableProfilesProvider);
+    // Pieces attributed to this student remain in the library but become
+    // unattributed on next load (they no longer match any active profile).
+  }
+
+  void _showStudentEditSheet(
+    BuildContext context,
+    WidgetRef ref,
+    Profile student,
+  ) {
+    final nameCtrl = TextEditingController(text: student.displayName);
+    var selectedInstrument = student.instrument;
+    var pinText = student.localPin ?? '';
+    var obscurePin = true;
+
+    showDialog<void>(
+      context: context,
+      builder: (context) => StatefulBuilder(
+        builder: (context, setState) {
+          final theme = Theme.of(context);
+          final localStudents = ref.read(localStudentProfilesProvider);
+          final hasMultipleStudents = localStudents.length >= 2;
+          return Dialog.fullscreen(
+            child: Scaffold(
+              appBar: AppBar(
+                title: Text('Edit ${student.displayName}'),
+                leading: IconButton(
+                  icon: const Icon(Icons.close),
+                  onPressed: () => Navigator.of(context).pop(),
+                ),
+                actions: [
+                  TextButton(
+                    onPressed: () async {
+                      final trimmedName = nameCtrl.text.trim();
+                      if (trimmedName.isEmpty) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('Student name is required.'),
+                          ),
+                        );
+                        return;
+                      }
+
+                      // Validate PIN if multiple students exist.
+                      final trimmedPin = pinText.trim();
+                      if (hasMultipleStudents &&
+                          (trimmedPin.isEmpty || trimmedPin.length < 4)) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                              'PIN must be at least 4 digits when there are multiple students.',
+                            ),
+                          ),
+                        );
+                        return;
+                      }
+
+                      try {
+                        await ref
+                            .read(localStudentProfilesProvider.notifier)
+                            .editStudent(
+                              id: student.id,
+                              displayName: trimmedName,
+                              instrument: selectedInstrument,
+                              pin: trimmedPin.isNotEmpty ? trimmedPin : null,
+                            );
+                        if (context.mounted) {
+                          Navigator.of(context).pop();
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(
+                              content: Text(
+                                '${trimmedName} updated.',
+                              ),
+                            ),
+                          );
+                        }
+                      } catch (error) {
+                        if (context.mounted) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            SnackBar(content: Text('Unable to update: $error')),
+                          );
+                        }
+                      }
+                    },
+                    child: const Text('Save'),
+                  ),
+                ],
+              ),
+              body: SingleChildScrollView(
+                padding: const EdgeInsets.all(24),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 500),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Student profile',
+                        style: theme.textTheme.headlineSmall?.copyWith(
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                      const SizedBox(height: 24),
+                      TextField(
+                        key: AppKeys.parentStudentNameField,
+                        controller: nameCtrl,
+                        decoration: InputDecoration(
+                          labelText: 'Student name',
+                          border: const OutlineInputBorder(),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      DropdownButtonFormField<InstrumentType>(
+                        value: selectedInstrument,
+                        decoration: const InputDecoration(
+                          labelText: 'Primary instrument',
+                          border: OutlineInputBorder(),
+                        ),
+                        items: InstrumentType.values
+                            .map(
+                              (instrument) => DropdownMenuItem(
+                                value: instrument,
+                                child: Text(_instrumentLabel(instrument)),
+                              ),
+                            )
+                            .toList(growable: false),
+                        onChanged: (value) {
+                          if (value != null) {
+                            setState(() {
+                              selectedInstrument = value;
+                            });
+                          }
+                        },
+                      ),
+                      const SizedBox(height: 24),
+                      Text(
+                        'Device PIN',
+                        style: theme.textTheme.titleMedium?.copyWith(
+                          fontWeight: FontWeight.w600,
+                        ),
+                      ),
+                      const SizedBox(height: 4),
+                      Text(
+                        hasMultipleStudents
+                            ? 'PIN is required when there are multiple students on this device. Enter a new PIN to change it.'
+                            : 'Set a PIN so the student must enter it before accessing their library.',
+                        style: theme.textTheme.bodySmall?.copyWith(
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      TextField(
+                        obscureText: obscurePin,
+                        controller: TextEditingController(text: pinText),
+                        keyboardType: TextInputType.number,
+                        decoration: InputDecoration(
+                          labelText: 'PIN',
+                          border: const OutlineInputBorder(),
+                          hintText: hasMultipleStudents ? 'Required' : 'Optional',
+                          suffixIcon: IconButton(
+                            icon: Icon(
+                              obscurePin
+                                  ? Icons.visibility_outlined
+                                  : Icons.visibility_off_outlined,
+                            ),
+                            onPressed: () {
+                              setState(() {
+                                obscurePin = !obscurePin;
+                              });
+                            },
+                          ),
+                        ),
+                        onChanged: (value) {
+                          setState(() {
+                            pinText = value;
+                          });
+                        },
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ),
+          );
+        },
+      ),
+    );
   }
 
   Future<void> _importScore(BuildContext context, WidgetRef ref) async {
@@ -2115,6 +2325,8 @@ class _StudentsTab extends StatefulWidget {
     required this.onEditMetadata,
     required this.onPushOriginal,
     required this.onPullForEdits,
+    required this.onEditStudent,
+    required this.onRemoveStudent,
   });
 
   final AsyncValue<List<RemotePieceSummary>> syncedPieces;
@@ -2126,6 +2338,8 @@ class _StudentsTab extends StatefulWidget {
   final Future<void> Function(RemotePieceSummary piece, String profileId)
       onPushOriginal;
   final Future<void> Function(RemotePieceSummary piece) onPullForEdits;
+  final void Function(BuildContext context, Profile student) onEditStudent;
+  final Future<void> Function(Profile student) onRemoveStudent;
 
   @override
   State<_StudentsTab> createState() => _StudentsTabState();
@@ -2164,6 +2378,8 @@ class _StudentsTabState extends State<_StudentsTab> {
           students: widget.students,
           onAddStudent: widget.onAddStudent,
           onCreatePairing: widget.onCreatePairing,
+          onEditStudent: widget.onEditStudent,
+          onRemoveStudent: widget.onRemoveStudent,
         ),
         const SizedBox(height: 20),
         Text(
@@ -3129,11 +3345,15 @@ class _StudentDevicePairingCard extends StatelessWidget {
     required this.students,
     required this.onAddStudent,
     required this.onCreatePairing,
+    required this.onEditStudent,
+    required this.onRemoveStudent,
   });
 
   final List<Profile> students;
   final VoidCallback onAddStudent;
   final ValueChanged<Profile> onCreatePairing;
+  final void Function(BuildContext context, Profile student) onEditStudent;
+  final Future<void> Function(Profile student) onRemoveStudent;
 
   @override
   Widget build(BuildContext context) {
@@ -3177,18 +3397,152 @@ class _StudentDevicePairingCard extends StatelessWidget {
               ),
             )
           else
-            Wrap(
-              spacing: 8,
-              runSpacing: 8,
-              children: students.map((student) {
-                return FilledButton.tonalIcon(
-                  key: AppKeys.studentDevicePairingButton(student.id),
-                  onPressed: () => onCreatePairing(student),
-                  icon: const Icon(Icons.qr_code_2_outlined),
-                  label: Text('Pair ${student.displayName} device'),
-                );
-              }).toList(growable: false),
+            Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Wrap(
+                  spacing: 8,
+                  runSpacing: 8,
+                  children: students.map((student) {
+                    return FilledButton.tonalIcon(
+                      key: AppKeys.studentDevicePairingButton(student.id),
+                      onPressed: () => onCreatePairing(student),
+                      icon: const Icon(Icons.qr_code_2_outlined),
+                      label: Text('Pair ${student.displayName} device'),
+                    );
+                  }).toList(growable: false),
+                ),
+                const SizedBox(height: 12),
+                Divider(color: theme.colorScheme.outlineVariant),
+                const SizedBox(height: 8),
+                Text(
+                  'Manage students',
+                  style: theme.textTheme.labelMedium?.copyWith(
+                    fontWeight: FontWeight.w600,
+                    color: theme.colorScheme.onSurfaceVariant,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                ...students.map((student) {
+                  return ListTile(
+                    dense: true,
+                    leading: CircleAvatar(
+                      backgroundColor: theme.colorScheme.primaryContainer,
+                      child: Text(
+                        student.displayName[0].toUpperCase(),
+                        style: TextStyle(
+                          color: theme.colorScheme.onPrimaryContainer,
+                          fontWeight: FontWeight.w700,
+                        ),
+                      ),
+                    ),
+                    title: Text(student.displayName),
+                    subtitle: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.music_note_outlined,
+                          size: 14,
+                          color: theme.colorScheme.onSurfaceVariant,
+                        ),
+                        const SizedBox(width: 4),
+                        Text(
+                          _instrumentLabel(student.instrument),
+                          style: theme.textTheme.bodySmall?.copyWith(
+                            color: theme.colorScheme.onSurfaceVariant,
+                          ),
+                        ),
+                        if (student.localPin?.isNotEmpty ?? false) ...[
+                          const SizedBox(width: 12),
+                          Icon(
+                            Icons.lock_outline,
+                            size: 14,
+                            color: theme.colorScheme.tertiary,
+                          ),
+                          const SizedBox(width: 4),
+                          Text(
+                            'PIN set',
+                            style: theme.textTheme.bodySmall?.copyWith(
+                              color: theme.colorScheme.tertiary,
+                              fontWeight: FontWeight.w600,
+                            ),
+                          ),
+                        ],
+                      ],
+                    ),
+                    trailing: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        IconButton(
+                          tooltip: 'Edit student',
+                          icon: const Icon(Icons.edit_outlined),
+                          onPressed: () => onEditStudent(context, student),
+                        ),
+                        if (students.length > 1)
+                          IconButton(
+                            tooltip: 'Remove student',
+                            icon: const Icon(Icons.delete_outline),
+                            color: theme.colorScheme.error,
+                            onPressed: () => _confirmRemoveStudent(
+                              context,
+                              student,
+                              () => onRemoveStudent(student),
+                            ),
+                          ),
+                      ],
+                    ),
+                  );
+                }).toList(growable: false),
+              ],
             ),
+        ],
+      ),
+    );
+  }
+
+  void _confirmRemoveStudent(
+    BuildContext context,
+    Profile student,
+    Future<void> Function() onRemove,
+  ) {
+    showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        title: Text('Remove ${student.displayName}?'),
+        content: Text(
+          'This will remove the student profile from this device. Their pieces will remain in your library but become unattributed — you can reassign them later.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text('Cancel'),
+          ),
+          FilledButton.tonal(
+            onPressed: () async {
+              Navigator.of(context).pop(true);
+              try {
+                await onRemove();
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      content: Text('${student.displayName} removed.'),
+                    ),
+                  );
+                }
+              } catch (error) {
+                if (context.mounted) {
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(content: Text('Unable to remove student: $error')),
+                  );
+                }
+              }
+            },
+            style: FilledButton.styleFrom(
+              backgroundColor: Theme.of(context).colorScheme.errorContainer,
+              foregroundColor: Theme.of(context).colorScheme.onErrorContainer,
+            ),
+            child: const Text('Remove'),
+          ),
         ],
       ),
     );
@@ -3199,14 +3553,18 @@ class _StudentDraft {
   const _StudentDraft({
     required this.displayName,
     required this.instrument,
+    this.pin,
   });
 
   final String displayName;
   final InstrumentType instrument;
+  final String? pin;
 }
 
 class _AddStudentDialog extends StatefulWidget {
-  const _AddStudentDialog();
+  const _AddStudentDialog({required this.currentStudentCount});
+
+  final int currentStudentCount;
 
   @override
   State<_AddStudentDialog> createState() => _AddStudentDialogState();
@@ -3214,17 +3572,23 @@ class _AddStudentDialog extends StatefulWidget {
 
 class _AddStudentDialogState extends State<_AddStudentDialog> {
   final TextEditingController _nameController = TextEditingController();
+  final TextEditingController _pinController = TextEditingController();
   InstrumentType _instrument = InstrumentType.cello;
   String? _nameError;
+  bool _obscurePin = true;
+
+  bool get _requiresPin => widget.currentStudentCount >= 1;
 
   @override
   void dispose() {
     _nameController.dispose();
+    _pinController.dispose();
     super.dispose();
   }
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
     return AlertDialog(
       title: const Text('Add student'),
       content: SizedBox(
@@ -3267,6 +3631,45 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
                 });
               },
             ),
+            const SizedBox(height: 16),
+            Text(
+              'Device PIN',
+              style: theme.textTheme.titleSmall?.copyWith(
+                fontWeight: FontWeight.w600,
+              ),
+            ),
+            const SizedBox(height: 4),
+            Text(
+              _requiresPin
+                  ? 'PIN is required when there are multiple students on this device.'
+                  : 'Set a PIN so the student must enter it before accessing their library.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 4),
+            TextField(
+              controller: _pinController,
+              obscureText: _obscurePin,
+              keyboardType: TextInputType.number,
+              decoration: InputDecoration(
+                labelText: 'PIN',
+                border: const OutlineInputBorder(),
+                hintText: _requiresPin ? 'Required (4+ digits)' : 'Optional',
+                suffixIcon: IconButton(
+                  icon: Icon(
+                    _obscurePin
+                        ? Icons.visibility_outlined
+                        : Icons.visibility_off_outlined,
+                  ),
+                  onPressed: () {
+                    setState(() {
+                      _obscurePin = !_obscurePin;
+                    });
+                  },
+                ),
+              ),
+            ),
           ],
         ),
       ),
@@ -3292,8 +3695,26 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
       });
       return;
     }
+
+    // Validate PIN when required.
+    if (_requiresPin) {
+      final pin = _pinController.text.trim();
+      if (pin.isEmpty || pin.length < 4) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('PIN must be at least 4 digits.'),
+          ),
+        );
+        return;
+      }
+    }
+
     Navigator.of(context).pop(
-      _StudentDraft(displayName: displayName, instrument: _instrument),
+      _StudentDraft(
+        displayName: displayName,
+        instrument: _instrument,
+        pin: _pinController.text.trim(),
+      ),
     );
   }
 }

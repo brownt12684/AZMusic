@@ -29,10 +29,20 @@ class LocalStudentProfilesNotifier extends Notifier<List<Profile>> {
   Future<Profile> addStudent({
     required String displayName,
     InstrumentType instrument = InstrumentType.cello,
+    String? pin,
   }) async {
     final trimmedName = displayName.trim();
     if (trimmedName.isEmpty) {
       throw ArgumentError('Student name is required.');
+    }
+
+    // Auto-PIN policy: when adding the 2nd student, PIN becomes mandatory.
+    final willHaveMultipleStudents = state.length >= 1;
+    final trimmedPin = pin?.trim();
+    if (willHaveMultipleStudents && (trimmedPin == null || trimmedPin.isEmpty)) {
+      throw ArgumentError(
+        'PIN is required when there are multiple students on this device.',
+      );
     }
 
     final now = DateTime.now().toUtc();
@@ -42,6 +52,7 @@ class LocalStudentProfilesNotifier extends Notifier<List<Profile>> {
       role: ProfileRole.student,
       instrument: instrument,
       subtitle: _studentSubtitle(instrument),
+      localPin: willHaveMultipleStudents ? (trimmedPin ?? '') : null,
       createdAt: now,
       updatedAt: now,
     );
@@ -51,6 +62,85 @@ class LocalStudentProfilesNotifier extends Notifier<List<Profile>> {
     );
     return profile;
   }
+
+  Future<void> editStudent({
+    required String id,
+    String? displayName,
+    InstrumentType? instrument,
+    String? pin,
+  }) async {
+    final index = state.indexWhere((p) => p.id == id);
+    if (index < 0) {
+      throw StateError('Student with id "$id" not found.');
+    }
+
+    final existing = state[index];
+    final trimmedName = (displayName ?? existing.displayName).trim();
+    if (trimmedName.isEmpty) {
+      throw ArgumentError('Student name is required.');
+    }
+
+    // Auto-PIN policy: when 2+ students exist, PIN is mandatory.
+    final hasMultipleStudents = state.length >= 2;
+    final trimmedPin = pin?.trim() ?? '';
+
+    // If clearing the PIN but multiple students remain, reject.
+    if (pin == null || trimmedPin.isEmpty) {
+      if (hasMultipleStudents && (existing.localPin?.isNotEmpty ?? false)) {
+        throw ArgumentError(
+          'PIN cannot be cleared while there are multiple students on this device.',
+        );
+      }
+    } else if (trimmedPin.length < 4) {
+      throw ArgumentError('PIN must be at least 4 digits.');
+    }
+
+    final updated = existing.copyWith(
+      displayName: trimmedName,
+      instrument: instrument ?? existing.instrument,
+      localPin: hasMultipleStudents
+          ? (trimmedPin.isNotEmpty ? trimmedPin : null)
+          : (trimmedPin.isNotEmpty ? trimmedPin : null),
+      updatedAt: DateTime.now().toUtc(),
+    );
+
+    state = [...state.sublist(0, index), updated, ...state.sublist(index + 1)];
+    await AppConfig.saveStudentProfileMaps(
+      state.map((profile) => profile.toMap()).toList(growable: false),
+    );
+  }
+
+  Future<void> removeStudent(String id) async {
+    final index = state.indexWhere((p) => p.id == id);
+    if (index < 0) {
+      throw StateError('Student with id "$id" not found.');
+    }
+
+    // Enforce PIN policy on remaining students:
+    // After removal, if count >= 2, all remaining must have PINs.
+    final remainingAfterRemoval = state.length - 1;
+    if (remainingAfterRemoval >= 2) {
+      for (final profile in state) {
+        if (profile.id != id && (profile.localPin?.isEmpty ?? true)) {
+          throw ArgumentError(
+            'All students require a PIN when there are multiple students on this device.',
+          );
+        }
+      }
+    }
+
+    state = [...state.sublist(0, index), ...state.sublist(index + 1)];
+    await AppConfig.saveStudentProfileMaps(
+      state.map((profile) => profile.toMap()).toList(growable: false),
+    );
+    // Return the removed student's ID for caller to unattribute pieces.
+    _lastRemovedStudentId = id;
+  }
+
+  /// The ID of the most recently removed student, used by callers to
+  /// unattribute their pieces before persisting changes.
+  String? get lastRemovedStudentId => _lastRemovedStudentId;
+  String? _lastRemovedStudentId;
 }
 
 final availableProfilesProvider = Provider<List<Profile>>((ref) {
