@@ -425,6 +425,16 @@ class _MediaAndRecordingsSectionState
   bool _isUploading = false;
   String? _uploadError;
 
+  @override
+  void initState() {
+    super.initState();
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (widget.studentId.isNotEmpty) {
+        ref.read(practiceRecordingsProvider.notifier).fetchRecordings(widget.studentId);
+      }
+    });
+  }
+
   Future<void> _pickAndUploadAudio() async {
     if (_isUploading) return;
 
