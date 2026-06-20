@@ -8,8 +8,9 @@ from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
 from server.database import get_db
-from server.models.orm import SyncState
+from server.models.orm import Profile, RecordingRequest, SyncState
 from server.models.schemas import (
+    PracticeAlertItem,
     SyncDownloadRequest,
     SyncStateResponse,
     SyncStateStatus,
@@ -22,9 +23,10 @@ router = APIRouter()
 _sync_state_metadata_service = SyncStateMetadataService()
 
 
-def _sync_state_to_response(
+async def _sync_state_to_response(
     client_id: str,
     state: SyncState | None,
+    db: AsyncSession | None = None,
 ) -> SyncStateResponse:
     metadata = _sync_state_metadata_service.metadata_for_client(client_id)
     pending_uploads = state.pending_uploads if state else 0
@@ -33,6 +35,11 @@ def _sync_state_to_response(
     retry_required = bool(metadata["retry_required"])
     last_sync = state.last_sync if state else None
     last_success_at = metadata["last_success_at"] or last_sync
+
+    # Fetch pending practice requests for student profiles
+    pending_requests: list[PracticeAlertItem] = []
+    if db is not None:
+        pending_requests = await _fetch_student_alerts(client_id, db)
 
     return SyncStateResponse(
         client_id=client_id,
@@ -51,7 +58,48 @@ def _sync_state_to_response(
         last_success_at=last_success_at,
         last_failure_at=metadata["last_failure_at"],
         last_error=metadata["last_error"],
+        pending_requests=pending_requests,
     )
+
+
+async def _fetch_student_alerts(client_id: str, db: AsyncSession) -> list[PracticeAlertItem]:
+    """Fetch unread practice requests for a student profile identified by client_id."""
+    result = await db.execute(
+        select(Profile).where(Profile.id == client_id, Profile.role == "student")
+    )
+    student = result.scalar_one_or_none()
+    if not student:
+        return []
+
+    stmt = (
+        select(
+            RecordingRequest,
+            Profile.name.label("teacher_name"),
+        )
+        .join(Profile, RecordingRequest.teacher_profile_id == Profile.id)
+        .where(
+            RecordingRequest.student_profile_id == student.id,
+            RecordingRequest.is_read == False,  # noqa: E712
+        )
+        .order_by(RecordingRequest.created_at.desc())
+    )
+    result = await db.execute(stmt)
+    rows = result.all()
+
+    alerts = []
+    for req, teacher_name in rows:
+        alerts.append(PracticeAlertItem(
+            id=req.id,
+            teacher_profile_id=req.teacher_profile_id,
+            teacher_name=teacher_name or "Teacher",
+            student_profile_id=req.student_profile_id,
+            piece_id=req.piece_id,
+            piece_title=None,
+            message_notes=req.message_notes,
+            is_read=req.is_read,
+            created_at=req.created_at,
+        ))
+    return alerts
 
 
 @router.get("/{client_id}")
@@ -61,7 +109,7 @@ async def get_sync_state(client_id: str, db: AsyncSession = Depends(get_db)):
         select(SyncState).where(SyncState.client_id == client_id)
     )
     state = result.scalar_one_or_none()
-    return _sync_state_to_response(client_id, state)
+    return await _sync_state_to_response(client_id, state, db)
 
 
 @router.patch("/{client_id}")
@@ -135,7 +183,7 @@ async def patch_sync_state(
     if metadata_updates:
         _sync_state_metadata_service.update(client_id, **metadata_updates)
 
-    return _sync_state_to_response(client_id, state)
+    return await _sync_state_to_response(client_id, state, db)
 
 
 @router.post("/{client_id}/upload")
@@ -164,7 +212,7 @@ async def upload_sync(
 
     await db.commit()
     await db.refresh(state)
-    return _sync_state_to_response(client_id, state)
+    return await _sync_state_to_response(client_id, state, db)
 
 
 @router.post("/{client_id}/download")
@@ -195,7 +243,7 @@ async def download_sync(
 
     await db.commit()
     await db.refresh(state)
-    return _sync_state_to_response(client_id, state)
+    return await _sync_state_to_response(client_id, state, db)
 
 
 def _derive_sync_status(

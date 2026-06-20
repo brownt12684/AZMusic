@@ -482,7 +482,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
             ),
             Positioned.fill(
               child: IgnorePointer(
-                ignoring: isDrawing,
+                ignoring: !isDrawing,
                 child: GestureDetector(
                   behavior: HitTestBehavior.opaque,
                   onPanStart: (details) {

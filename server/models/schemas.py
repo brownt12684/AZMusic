@@ -576,9 +576,62 @@ class MediaAssetResponse(BaseModel):
     id: str
     piece_id: str
     asset_type: str
-    file_path: str
+    file_path: Optional[str] = None
     status: str = "approved"
     created_at: datetime
+
+    # YouTube reference fields
+    youtube_video_id: Optional[str] = None
+    thumbnail_url: Optional[str] = None
+    local_file_path: Optional[str] = None
+    is_approved: bool = False
+    pushed_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class MediaCandidateResponse(BaseModel):
+    """Staged YouTube candidate for parent review dashboard."""
+
+    id: str
+    piece_id: str
+    youtube_video_id: str
+    title: str
+    thumbnail_url: Optional[str] = None
+    is_approved: bool = False
+    pushed_at: Optional[datetime] = None
+    updated_at: Optional[datetime] = None
+
+
+class MediaPushRequest(BaseModel):
+    """Request to approve and download a media asset."""
+
+    pass
+
+
+class MediaRevokeResponse(BaseModel):
+    id: str
+    is_approved: bool
+    updated_at: datetime
+
+
+class MediaSyncItem(BaseModel):
+    """Media attachment pushed to client during sync delta."""
+
+    id: str = Field(..., min_length=1, max_length=100)
+    piece_id: str = Field(..., min_length=1, max_length=100)
+    youtube_video_id: Optional[str] = None
+    title: str = Field(..., min_length=1, max_length=500)
+    thumbnail_url: Optional[str] = None
+    download_url: str = Field(..., min_length=1)
+    file_size_bytes: Optional[int] = None
+    content_sha256: Optional[str] = None
+
+
+class MediaSyncPayload(BaseModel):
+    """Media delta included in sync response."""
+
+    media_attachments: list[MediaSyncItem] = Field(default_factory=list)
+    media_deletions: list[str] = Field(default_factory=list)
 
 
 class PieceHistoryDraftResponse(BaseModel):
@@ -617,6 +670,24 @@ class JobResponse(BaseModel):
     updated_at: datetime
 
 
+class PracticeAlertItem(BaseModel):
+    """Unread recording request for a student's alert feed."""
+
+    id: str
+    teacher_profile_id: str
+    teacher_name: str
+    student_profile_id: str
+    piece_id: Optional[str] = None
+    piece_title: Optional[str] = None
+    message_notes: Optional[str] = None
+    is_read: bool = False
+    created_at: datetime
+
+
+class PracticeAlertsResponse(BaseModel):
+    pending_requests: list[PracticeAlertItem] = Field(default_factory=list)
+
+
 class SyncStateResponse(BaseModel):
     client_id: str
     last_sync: Optional[datetime] = None
@@ -629,7 +700,41 @@ class SyncStateResponse(BaseModel):
     last_success_at: Optional[datetime] = None
     last_failure_at: Optional[datetime] = None
     last_error: Optional[str] = None
+    pending_requests: list[PracticeAlertItem] = Field(default_factory=list)
 
 
 PieceResponse.model_rebuild()
 PieceDetailResponse.model_rebuild()
+
+
+class PracticeRecordingCreate(BaseModel):
+    """Request body for uploading a practice recording."""
+
+    piece_id: str = Field(..., min_length=1, max_length=36)
+    local_file_path: Optional[str] = None
+
+
+class PracticeRecordingResponse(BaseModel):
+    id: str
+    student_profile_id: str
+    piece_id: str
+    local_file_path: Optional[str] = None
+    submitted_at: datetime
+
+
+class RecordingRequestCreate(BaseModel):
+    """Request body for creating a teacher/parent recording request or note."""
+
+    student_profile_id: str = Field(..., min_length=1, max_length=36)
+    piece_id: Optional[str] = Field(default=None, max_length=36)
+    message_notes: Optional[str] = Field(default=None, max_length=5000)
+
+
+class RecordingRequestResponse(BaseModel):
+    id: str
+    teacher_profile_id: str
+    student_profile_id: str
+    piece_id: Optional[str] = None
+    message_notes: Optional[str] = None
+    is_read: bool = False
+    created_at: datetime

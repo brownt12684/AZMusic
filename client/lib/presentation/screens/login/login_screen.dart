@@ -14,6 +14,7 @@ import '../../providers/app_providers.dart';
 import '../../providers/piece_providers.dart';
 import '../../providers/processing_settings_providers.dart';
 import '../../providers/profile_providers.dart';
+import '../../providers/practice_providers.dart';
 import '../../providers/review_providers.dart';
 import '../../widgets/pairing_qr_scanner.dart';
 
@@ -231,10 +232,87 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     }
 
     ref.read(selectedProfileIdProvider.notifier).state = profile.id;
+
+    // Fetch practice alerts for student profiles before navigation
+    if (profile.role == ProfileRole.student && AppConfig.isServerPaired) {
+      final alertsNotifier =
+          ref.read(practiceAlertsProvider.notifier);
+      await alertsNotifier.fetchAlerts(profile.id);
+      final alertsState = ref.read(practiceAlertsProvider);
+      if (mounted && alertsState.pendingRequests.isNotEmpty) {
+        await _showPracticeAlertsDialog(context, profile.displayName);
+      }
+    }
+
     Navigator.of(context).pushReplacementNamed(
       profile.role == ProfileRole.parent
           ? AppRouter.parentHome
           : AppRouter.library,
+    );
+  }
+
+  Future<void> _showPracticeAlertsDialog(
+    BuildContext context,
+    String studentName,
+  ) async {
+    final alertsState = ref.read(practiceAlertsProvider);
+    if (!mounted || alertsState.pendingRequests.isEmpty) {
+      return;
+    }
+
+    final firstRequest = alertsState.pendingRequests.first;
+    final hasMore = alertsState.pendingRequests.length > 1;
+    final messageLines = <String>[
+      'You have ${alertsState.pendingRequests.length} pending${hasMore ? 's' : ''} from your teacher.',
+      '',
+      if (firstRequest.messageNotes?.isNotEmpty ?? false) ...[
+        '"${firstRequest.messageNotes}"',
+        '',
+      ],
+      if (firstRequest.pieceTitle != null && firstRequest.pieceTitle!.isNotEmpty)
+        'Piece: ${firstRequest.pieceTitle}',
+    ];
+
+    await showDialog(
+      context: context,
+      barrierDismissible: true,
+      builder: (context) {
+        return AlertDialog(
+          title: const Text('Teacher Message'),
+          content: SingleChildScrollView(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'From: ${firstRequest.teacherName}',
+                  style: Theme.of(context).textTheme.bodySmall?.copyWith(
+                    color: const Color(0xFF666666),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                ...messageLines.map((line) => Text(line)),
+              ],
+            ),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                ref.read(practiceAlertsProvider.notifier).clear();
+                Navigator.of(context).pop();
+              },
+              child: const Text('Dismiss'),
+            ),
+            FilledButton(
+              onPressed: () {
+                ref.read(practiceAlertsProvider.notifier).clear();
+                Navigator.of(context).pop();
+              },
+              child: const Text('View All'),
+            ),
+          ],
+        );
+      },
     );
   }
 

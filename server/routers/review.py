@@ -503,6 +503,8 @@ async def _apply_review_decision(
                     canonical_piece_id=piece.id,
                     resolved_review_item_id=item.id,
                 )
+                # Trigger YouTube reference search after full approval
+                _trigger_media_search_async(piece)
         await _mark_source_book_ready_if_metadata_review_complete(db, item=item)
 
     elif action_value == ReviewAction.reject.value:
@@ -560,6 +562,8 @@ async def _approve_student_pdf_review(
         _apply_catalog_metadata_to_piece(piece, candidate_data)
         piece.status = PieceStatus.approved
         piece.updated_at = datetime.utcnow()
+        # Trigger YouTube reference search after full approval
+        _trigger_media_search_async(piece)
 
     raw_score_id = candidate_data.get("raw_score_version_id")
     cleaned_score_id = (
@@ -2511,3 +2515,22 @@ def _append_reprocess_warning(
     candidate_data["validation_warnings"] = warnings
     candidate_data["reprocess_history"] = history
     return candidate_data
+
+
+def _trigger_media_search_async(piece: Piece) -> None:
+    """Fire-and-forget YouTube reference search after piece approval."""
+    import asyncio  # noqa: PLC0414
+
+    async def _do_search() -> None:
+        from server.database import async_session as _async_session  # noqa: PLC0414
+        from server.services.youtube_search import (  # noqa: PLC0414
+            search_reference_media,
+        )
+
+        try:
+            async with _async_session() as db:
+                await search_reference_media(piece, db)
+        except Exception:
+            pass  # Background task failures are non-critical
+
+    asyncio.create_task(_do_search())

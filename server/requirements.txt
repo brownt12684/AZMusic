@@ -36,3 +36,9 @@ music21>=9.1.0
 google-auth>=2.35.0
 google-auth-oauthlib>=1.2.1
 google-genai>=1.46.0
+
+# YouTube Data API v3 for reference performance lookup
+google-api-python-client>=2.140.0
+
+# Local audio extraction from approved YouTube videos
+yt-dlp>=2024.10.0

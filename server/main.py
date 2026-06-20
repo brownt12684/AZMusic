@@ -12,9 +12,11 @@ from server.routers import (
     cloud,
     debug,
     jobs,
+    media,
     notes,
     pairing,
     pieces,
+    practice,
     processing,
     review,
     setup,
@@ -102,6 +104,18 @@ app.include_router(
     annotations.router,
     prefix="/api/v1/annotations",
     tags=["annotations"],
+    dependencies=_protected_dependencies,
+)
+app.include_router(
+    media.router,
+    prefix="/api/v1/media",
+    tags=["media"],
+    dependencies=_protected_dependencies,
+)
+app.include_router(
+    practice.router,
+    prefix="/api/v1/practice",
+    tags=["practice"],
     dependencies=_protected_dependencies,
 )
 app.include_router(

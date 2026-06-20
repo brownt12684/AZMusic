@@ -10,6 +10,8 @@ Entities:
 - ReviewItem: pending review task for the student/parent
 - BackgroundJob: queued or running background task
 - SyncState: client-side sync checkpoint
+- PracticeRecording: student practice recording submission
+- RecordingRequest: teacher/parent assignment request or note
 """
 
 import uuid
@@ -172,7 +174,7 @@ class AnnotationLayer(Base):
 
 
 class MediaAsset(Base):
-    """Uploaded media files (images, scans, audio recordings)."""
+    """Uploaded media files (images, scans, audio recordings) and YouTube reference candidates."""
 
     __tablename__ = "media_assets"
 
@@ -180,10 +182,26 @@ class MediaAsset(Base):
     piece_id: Mapped[str] = mapped_column(
         ForeignKey("pieces.id", ondelete="CASCADE"), nullable=False
     )
-    asset_type: Mapped[str] = mapped_column(String(50), nullable=False)  # image, scan, audio
-    file_path: Mapped[str] = mapped_column(String(1000), nullable=False)
+    asset_type: Mapped[str] = mapped_column(  # image, scan, audio, youtube_candidate
+        String(50), nullable=False
+    )
+    file_path: Mapped[str] = mapped_column(String(1000), nullable=True)
     status: Mapped[str] = mapped_column(String(20), default="approved")
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    # YouTube reference fields (populated by youtube_search service)
+    youtube_video_id: Mapped[Optional[str]] = mapped_column(
+        String(50), nullable=True, unique=True, index=True
+    )
+    thumbnail_url: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    local_file_path: Mapped[Optional[str]] = mapped_column(  # path to saved audio file
+        String(1000), nullable=True
+    )
+    is_approved: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    pushed_at: Mapped[Optional[datetime]] = mapped_column(DateTime, nullable=True)
+    updated_at: Mapped[datetime] = mapped_column(
+        DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
 
     piece: Mapped["Piece"] = relationship(back_populates="media_assets")
 
@@ -264,4 +282,49 @@ class SyncState(Base):
     created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
     updated_at: Mapped[datetime] = mapped_column(
         DateTime, default=datetime.utcnow, onupdate=datetime.utcnow
+    )
+
+
+class PracticeRecording(Base):
+    """Student practice recording submitted for review."""
+
+    __tablename__ = "practice_recordings"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, index=True, default=_uuid)
+    student_profile_id: Mapped[str] = mapped_column(
+        ForeignKey("profiles.id"), nullable=False
+    )
+    piece_id: Mapped[str] = mapped_column(
+        ForeignKey("pieces.id", ondelete="CASCADE"), nullable=False
+    )
+    local_file_path: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
+    submitted_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    student_profile: Mapped["Profile"] = relationship()
+
+
+class RecordingRequest(Base):
+    """Teacher/parent assignment request or note for a student."""
+
+    __tablename__ = "recording_requests"
+
+    id: Mapped[str] = mapped_column(String(36), primary_key=True, index=True, default=_uuid)
+    teacher_profile_id: Mapped[str] = mapped_column(
+        ForeignKey("profiles.id"), nullable=False
+    )
+    student_profile_id: Mapped[str] = mapped_column(
+        ForeignKey("profiles.id"), nullable=False
+    )
+    piece_id: Mapped[Optional[str]] = mapped_column(
+        ForeignKey("pieces.id", ondelete="SET NULL"), nullable=True
+    )
+    message_notes: Mapped[Optional[str]] = mapped_column(Text, nullable=True)
+    is_read: Mapped[bool] = mapped_column(Boolean, default=False, nullable=False)
+    created_at: Mapped[datetime] = mapped_column(DateTime, default=datetime.utcnow)
+
+    teacher_profile: Mapped["Profile"] = relationship(
+        foreign_keys=[teacher_profile_id]
+    )
+    student_profile: Mapped["Profile"] = relationship(
+        foreign_keys=[student_profile_id]
     )

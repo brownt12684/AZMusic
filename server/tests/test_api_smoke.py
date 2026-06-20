@@ -582,6 +582,7 @@ def test_sync_state_defaults_to_offline_ready(api_client) -> None:
         "last_success_at": None,
         "last_failure_at": None,
         "last_error": None,
+        "pending_requests": [],
     }
 
 
