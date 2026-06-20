@@ -29,6 +29,7 @@ router = APIRouter()
 @router.post("/recordings/upload", response_model=PracticeRecordingResponse)
 async def upload_practice_recording(
     piece_id: str = File(...),
+    student_profile_id: str = File(...),
     audio_file: UploadFile = File(...),
     db: AsyncSession = Depends(get_db),
 ):
@@ -59,7 +60,7 @@ async def upload_practice_recording(
     # Create recording record
     now = datetime.utcnow()
     recording = PracticeRecording(
-        student_profile_id="",  # Set by auth layer or client
+        student_profile_id=student_profile_id,
         piece_id=piece_id,
         local_file_path=str(file_path),
         submitted_at=now,

@@ -254,6 +254,7 @@ class PracticeRecordingsNotifier extends StateNotifier<PracticeRecordingsState> 
       final client = ApiClient();
       final formData = FormData.fromMap({
         'piece_id': pieceId,
+        'student_profile_id': studentId,
         'audio_file': await MultipartFile.fromFile(filePath),
       });
 
