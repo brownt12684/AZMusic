@@ -1,4 +1,3 @@
-import 'package:file_picker/file_picker.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
@@ -9,7 +8,6 @@ import '../../../domain/entities/library_entry.dart';
 import '../../../domain/entities/score_version.dart';
 import '../../providers/piece_providers.dart';
 import '../../providers/profile_providers.dart';
-import '../../providers/practice_providers.dart';
 
 class PieceDetailScreen extends ConsumerWidget {
   const PieceDetailScreen({
@@ -51,114 +49,41 @@ class PieceDetailScreen extends ConsumerWidget {
       );
     }
 
-    final student = ref.watch(activeStudentProfileProvider);
-    final recordingsState = ref.watch(practiceRecordingsProvider);
-    final hasRecording = recordingsState.hasRecordingForPiece(entry.piece.id);
-
     return Scaffold(
       key: AppKeys.pieceDetailScreen,
       appBar: AppBar(
         title: Text(entry.piece.title),
       ),
-      body: Column(
+      body: ListView(
+        padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
         children: [
-          Container(
-            width: double.infinity,
-            padding: const EdgeInsets.all(20),
-            color: Colors.grey.shade100,
-            child: FilledButton.icon(
-              onPressed: () => _showRecordDialog(context, ref, entry.piece.id),
-              icon: const Icon(Icons.mic),
-              label: const Text('Record Practice'),
-              style: FilledButton.styleFrom(
-                backgroundColor: const Color(0xFF1D9E75),
-                foregroundColor: Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-              ),
-            ),
+          _SummaryCard(
+            entry: entry,
+            visibleScoreVersionCount: _visibleScoreVersions(
+              entry.scoreVersions,
+              showAllScoreVersions: showAllScoreVersions,
+            ).length,
           ),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.fromLTRB(16, 12, 16, 24),
-              children: [
-                _SummaryCard(
-                  entry: entry,
-                  visibleScoreVersionCount: _visibleScoreVersions(
-                    entry.scoreVersions,
-                    showAllScoreVersions: showAllScoreVersions,
-                  ).length,
-                ),
-                const SizedBox(height: 16),
-                _MediaAndRecordingsSection(
-                  pieceId: entry.piece.id,
-                  studentId: student?.id ?? '',
-                  hasRecording: hasRecording,
-                  lastRecordingAt: recordingsState.recordings
-                      .where((r) => r.pieceId == entry.piece.id)
-                      .isNotEmpty
-                      ? recordingsState.recordings.firstWhere(
-                          (r) => r.pieceId == entry.piece.id,
-                        ).submittedAt
-                      : null,
-                ),
-                const SizedBox(height: 16),
-                _ScoreVersionsSection(
-                  pieceTitle: entry.piece.title,
-                  scoreVersions: _visibleScoreVersions(
-                    entry.scoreVersions,
-                    showAllScoreVersions: showAllScoreVersions,
-                  ),
-                  onOpenVersion: (scoreVersion) {
-                    ref.read(scoreReaderLauncherProvider).open(
-                          context,
-                          ScoreReaderLaunchRequest(
-                            pieceId: entry.piece.id,
-                            scoreVersionId: scoreVersion.id,
-                          ),
-                        );
-                  },
-                ),
-              ],
+          const SizedBox(height: 16),
+          _ScoreVersionsSection(
+            pieceTitle: entry.piece.title,
+            scoreVersions: _visibleScoreVersions(
+              entry.scoreVersions,
+              showAllScoreVersions: showAllScoreVersions,
             ),
+            onOpenVersion: (scoreVersion) {
+              ref.read(scoreReaderLauncherProvider).open(
+                    context,
+                    ScoreReaderLaunchRequest(
+                      pieceId: entry.piece.id,
+                      scoreVersionId: scoreVersion.id,
+                    ),
+                  );
+            },
           ),
         ],
       ),
     );
-  }
-
-  void _showRecordDialog(
-    BuildContext context,
-    WidgetRef ref,
-    String pieceId,
-  ) async {
-    final notifier = ref.read(practiceRecordingsProvider.notifier);
-    final success = await FilePicker.pickFiles(
-      type: FileType.custom,
-      allowedExtensions: ['mp3', 'm4a', 'wav', 'aac', 'ogg', 'flac'],
-    ).then((result) async {
-      if (result == null || result.files.single.path == null) return false;
-      final filePath = result.files.single.path!;
-      final studentId = ref.read(activeStudentProfileProvider)?.id ?? '';
-      return notifier.uploadRecording(
-        studentId: studentId,
-        pieceId: pieceId,
-        filePath: filePath,
-      );
-    });
-
-    if (!context.mounted) return;
-    if (success == true) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('Recording uploaded successfully.'),
-          backgroundColor: Color(0xFF1D9E75),
-        ),
-      );
-    } else if (success == false) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Upload failed. Please try again.')),
-      );
-    }
   }
 }
 
@@ -393,169 +318,11 @@ class _ScoreVersionsSection extends StatelessWidget {
                 ),
               ),
             ),
-          ],
-        ),
-      ),
-    );
-  }
-}
-
-// ── Play Media & Recordings Section ─────────────────────────────────
-
-class _MediaAndRecordingsSection extends ConsumerStatefulWidget {
-  const _MediaAndRecordingsSection({
-    required this.pieceId,
-    required this.studentId,
-    required this.hasRecording,
-    required this.lastRecordingAt,
-  });
-
-  final String pieceId;
-  final String studentId;
-  final bool hasRecording;
-  final DateTime? lastRecordingAt;
-
-  @override
-  ConsumerState<_MediaAndRecordingsSection> createState() =>
-      _MediaAndRecordingsSectionState();
-}
-
-class _MediaAndRecordingsSectionState
-    extends ConsumerState<_MediaAndRecordingsSection> {
-  bool _isUploading = false;
-  String? _uploadError;
-
-  @override
-  void initState() {
-    super.initState();
-    WidgetsBinding.instance.addPostFrameCallback((_) {
-      if (widget.studentId.isNotEmpty) {
-        ref.read(practiceRecordingsProvider.notifier).fetchRecordings(widget.studentId);
-      }
-    });
-  }
-
-  Future<void> _pickAndUploadAudio() async {
-    if (_isUploading) return;
-
-    setState(() {
-      _isUploading = true;
-      _uploadError = null;
-    });
-
-    try {
-      final result = await FilePicker.pickFiles(
-        type: FileType.custom,
-        allowedExtensions: ['mp3', 'm4a', 'wav', 'aac', 'ogg', 'flac'],
-      );
-
-      if (result == null || result.files.single.path == null) {
-        setState(() => _isUploading = false);
-        return;
-      }
-
-      final filePath = result.files.single.path!;
-      final notifier = ref.read(practiceRecordingsProvider.notifier);
-      final success = await notifier.uploadRecording(
-        studentId: widget.studentId,
-        pieceId: widget.pieceId,
-        filePath: filePath,
-      );
-
-      if (!mounted) return;
-
-      if (success) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Recording uploaded successfully.'),
-            backgroundColor: Color(0xFF1D9E75),
-          ),
-        );
-      } else {
-        setState(() => _uploadError = 'Upload failed. Please try again.');
-      }
-    } catch (e) {
-      if (!mounted) return;
-      setState(() => _uploadError = 'Unable to pick audio file.');
-    } finally {
-      if (mounted) {
-        setState(() => _isUploading = false);
-      }
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-
-    return Card(
-      child: Padding(
-        padding: const EdgeInsets.all(20),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: [
-                Icon(Icons.headphones_outlined, size: 20, color: theme.colorScheme.primary),
-                const SizedBox(width: 8),
-                Text(
-                  'Play media & recordings',
-                  style: theme.textTheme.titleLarge?.copyWith(
-                    fontWeight: FontWeight.w700,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 12),
-
-            // YouTube / media content area (populated when server data is available)
-            Container(
-              padding: const EdgeInsets.all(16),
-              decoration: BoxDecoration(
-                color: Colors.grey.shade50,
-                borderRadius: BorderRadius.circular(8),
-                border: Border.all(color: Colors.grey.shade200),
+            if (scoreVersions.isEmpty)
+              Text(
+                'No stored score versions for $pieceTitle.',
+                style: theme.textTheme.bodyMedium,
               ),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    'Approved practice media and YouTube references will appear here.',
-                    style: theme.textTheme.bodyMedium?.copyWith(
-                      color: Colors.grey.shade600,
-                    ),
-                  ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'YouTube candidates are discovered automatically when a piece is processed.',
-                    style: theme.textTheme.bodySmall?.copyWith(
-                      color: Colors.grey.shade500,
-                    ),
-                  ),
-                ],
-              ),
-            ),
-
-            const SizedBox(height: 16),
-
-            // Recording button
-            if (_uploadError != null) ...[
-              Text(_uploadError!, style: TextStyle(color: Colors.red.shade700)),
-              const SizedBox(height: 8),
-            ],
-            FilledButton.icon(
-              onPressed: _isUploading ? null : _pickAndUploadAudio,
-              icon: _isUploading
-                  ? const SizedBox(
-                      width: 16,
-                      height: 16,
-                      child: CircularProgressIndicator(strokeWidth: 2),
-                    )
-                  : const Icon(Icons.mic),
-              label: Text(_isUploading
-                  ? 'Uploading...'
-                  : (widget.hasRecording ? 'Re-record' : 'Record Practice')),
-            ),
           ],
         ),
       ),
