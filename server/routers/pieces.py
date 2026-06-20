@@ -256,6 +256,11 @@ def _piece_to_detail_response(request: Request, piece: Piece) -> PieceDetailResp
             file_path=ma.file_path,
             status=ma.status,
             created_at=ma.created_at,
+            youtube_video_id=ma.youtube_video_id,
+            thumbnail_url=ma.thumbnail_url,
+            local_file_path=ma.local_file_path,
+            is_approved=ma.is_approved,
+            pushed_at=ma.pushed_at,
         )
         for ma in piece.media_assets
     ]

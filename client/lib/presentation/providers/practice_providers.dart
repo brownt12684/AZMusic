@@ -1,9 +1,10 @@
 import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
-import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/server_connection_error.dart';
+
+// ── Practice Alerts (teacher requests) ──────────────────────────────
 
 class PracticeAlert {
   final String id;
@@ -66,6 +67,68 @@ class PracticeAlertsState {
     );
   }
 }
+
+// ── Practice Recordings (student uploads) ───────────────────────────
+
+class PracticeRecording {
+  final String id;
+  final String studentProfileId;
+  final String pieceId;
+  final String? localFilePath;
+  final DateTime submittedAt;
+
+  const PracticeRecording({
+    required this.id,
+    required this.studentProfileId,
+    required this.pieceId,
+    this.localFilePath,
+    required this.submittedAt,
+  });
+
+  factory PracticeRecording.fromJson(Map<String, dynamic> json) {
+    return PracticeRecording(
+      id: json['id'] as String,
+      studentProfileId: json['student_profile_id'] as String,
+      pieceId: json['piece_id'] as String,
+      localFilePath: json['local_file_path'] as String?,
+      submittedAt: DateTime.parse(json['submitted_at'] as String),
+    );
+  }
+}
+
+class PracticeRecordingsState {
+  final List<PracticeRecording> recordings;
+  final Map<String, String?> uploadingErrors; // pieceId -> error message
+  final bool isLoading;
+  final String? error;
+
+  const PracticeRecordingsState({
+    this.recordings = const [],
+    this.uploadingErrors = const {},
+    this.isLoading = false,
+    this.error,
+  });
+
+  PracticeRecordingsState copyWith({
+    List<PracticeRecording>? recordings,
+    Map<String, String?>? uploadingErrors,
+    bool? isLoading,
+    String? error,
+  }) {
+    return PracticeRecordingsState(
+      recordings: recordings ?? this.recordings,
+      uploadingErrors: uploadingErrors ?? this.uploadingErrors,
+      isLoading: isLoading ?? this.isLoading,
+      error: error ?? this.error,
+    );
+  }
+
+  bool hasRecordingForPiece(String pieceId) {
+    return recordings.any((r) => r.pieceId == pieceId);
+  }
+}
+
+// ── Providers ───────────────────────────────────────────────────────
 
 final practiceApiClientProvider = Provider<ApiClient>((ref) {
   return ApiClient();
@@ -137,5 +200,96 @@ class PracticeAlertsNotifier extends StateNotifier<PracticeAlertsState> {
 
   void clear() {
     state = const PracticeAlertsState();
+  }
+}
+
+final practiceRecordingsProvider = StateNotifierProvider<PracticeRecordingsNotifier,
+    PracticeRecordingsState>((ref) => PracticeRecordingsNotifier());
+
+class PracticeRecordingsNotifier extends StateNotifier<PracticeRecordingsState> {
+  PracticeRecordingsNotifier() : super(const PracticeRecordingsState());
+
+  Future<void> fetchRecordings(String studentId) async {
+    state = state.copyWith(isLoading: true, error: null);
+    try {
+      final client = ApiClient();
+      final response = await client.get(
+        '/api/v1/practice/student/$studentId/recordings',
+      );
+      if (response.statusCode == 200) {
+        final data = response.data as List<dynamic>;
+        final recordings = data
+            .whereType<Map<String, dynamic>>()
+            .map((e) => PracticeRecording.fromJson(e))
+            .toList();
+        state = state.copyWith(
+          recordings: recordings,
+          isLoading: false,
+        );
+      } else {
+        state = state.copyWith(
+          error: 'Failed to load recordings',
+          isLoading: false,
+        );
+      }
+    } catch (error) {
+      state = state.copyWith(
+        error: formatServerConnectionError(error),
+        isLoading: false,
+      );
+    }
+  }
+
+  Future<bool> uploadRecording({
+    required String studentId,
+    required String pieceId,
+    required String filePath,
+  }) async {
+    // Mark this piece as uploading
+    final newErrors = Map<String, String?>.from(state.uploadingErrors);
+    newErrors[pieceId] = null; // null means "uploading"
+    state = state.copyWith(uploadingErrors: newErrors);
+
+    try {
+      final client = ApiClient();
+      final formData = FormData.fromMap({
+        'piece_id': pieceId,
+        'audio_file': await MultipartFile.fromFile(filePath),
+      });
+
+      final response = await client.post(
+        '/api/v1/practice/recordings/upload',
+        data: formData,
+      );
+
+      if (response.statusCode == 200) {
+        // Refresh the full list to include the new recording
+        await fetchRecordings(studentId);
+        return true;
+      } else {
+        final errorMsg = 'Upload failed (${response.statusCode})';
+        final updatedErrors = Map<String, String?>.from(state.uploadingErrors);
+        updatedErrors[pieceId] = errorMsg;
+        state = state.copyWith(uploadingErrors: updatedErrors);
+        return false;
+      }
+    } catch (error) {
+      final errorMsg = formatServerConnectionError(error);
+      final updatedErrors = Map<String, String?>.from(state.uploadingErrors);
+      updatedErrors[pieceId] = errorMsg;
+      state = state.copyWith(uploadingErrors: updatedErrors);
+      return false;
+    } finally {
+      // Remove the piece from uploading errors after success/failure
+      final updatedErrors = Map<String, String?>.from(state.uploadingErrors);
+      updatedErrors.remove(pieceId);
+      if (updatedErrors != state.uploadingErrors) {
+        state = state.copyWith(uploadingErrors: updatedErrors);
+      }
+    }
+  }
+
+  void clear() {
+    state = const PracticeRecordingsState();
   }
 }

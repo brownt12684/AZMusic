@@ -190,3 +190,34 @@ async def mark_request_read(
     req.updated_at = datetime.utcnow()
     await db.commit()
     return {"id": req.id, "is_read": True}
+
+
+@router.get("/student/{student_id}/recordings", response_model=list[PracticeRecordingResponse])
+async def get_student_recordings(
+    student_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Get all practice recordings for a student with piece titles."""
+    result = await db.execute(select(PracticeRecording).order_by(PracticeRecording.submitted_at.desc()))
+    recordings = result.scalars().all()
+
+    # Build a lookup of piece_id -> title
+    piece_ids = {r.piece_id for r in recordings}
+    if piece_ids:
+        pieces_result = await db.execute(
+            select(Piece).where(Piece.id.in_(piece_ids))
+        )
+        pieces = {p.id: p.title for p in pieces_result.scalars().all()}
+    else:
+        pieces = {}
+
+    return [
+        PracticeRecordingResponse(
+            id=r.id,
+            student_profile_id=r.student_profile_id,
+            piece_id=r.piece_id,
+            local_file_path=r.local_file_path,
+            submitted_at=r.submitted_at,
+        )
+        for r in recordings
+    ]
