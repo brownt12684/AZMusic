@@ -1,7 +1,4 @@
-import 'package:dio/dio.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
-import '../../core/config/app_config.dart';
 import '../../core/network/api_client.dart';
 import '../../core/network/server_connection_error.dart';
 

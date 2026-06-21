@@ -18,6 +18,7 @@ import '../../../domain/entities/server_job.dart';
 import '../../providers/app_providers.dart';
 import '../../providers/debug_tools_providers.dart';
 import '../../providers/parent_workflow_refresh.dart';
+import 'practice_recordings_dialog.dart';
 import '../../providers/piece_providers.dart';
 import '../../providers/processing_settings_providers.dart';
 import '../../providers/profile_providers.dart';
@@ -454,7 +455,7 @@ class ParentHomeScreen extends ConsumerWidget {
                           ScaffoldMessenger.of(context).showSnackBar(
                             SnackBar(
                               content: Text(
-                                '${trimmedName} updated.',
+                                '$trimmedName updated.',
                               ),
                             ),
                           );
@@ -488,14 +489,14 @@ class ParentHomeScreen extends ConsumerWidget {
                       TextField(
                         key: AppKeys.parentStudentNameField,
                         controller: nameCtrl,
-                        decoration: InputDecoration(
+                        decoration: const InputDecoration(
                           labelText: 'Student name',
-                          border: const OutlineInputBorder(),
+                          border: OutlineInputBorder(),
                         ),
                       ),
                       const SizedBox(height: 16),
                       DropdownButtonFormField<InstrumentType>(
-                        value: selectedInstrument,
+                        initialValue: selectedInstrument,
                         decoration: const InputDecoration(
                           labelText: 'Primary instrument',
                           border: OutlineInputBorder(),
@@ -2435,12 +2436,29 @@ class _StudentsTabState extends State<_StudentsTab> {
                       children: [
                         Padding(
                           padding: const EdgeInsets.only(bottom: 12),
-                          child: Text(
-                            '${selectedStudent.displayName} library '
-                            '(${assignedPieces.length})',
-                            style: theme.textTheme.titleMedium?.copyWith(
-                              fontWeight: FontWeight.w700,
-                            ),
+                          child: Row(
+                            children: [
+                              Expanded(
+                                child: Text(
+                                  '${selectedStudent.displayName} library '
+                                  '(${assignedPieces.length})',
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                  ),
+                                ),
+                              ),
+                              Consumer(
+                                builder: (context, ref, child) {
+                                  return FilledButton.tonalIcon(
+                                    onPressed: () {
+                                      showPracticeRecordingsDialog(context, ref, selectedStudent);
+                                    },
+                                    icon: const Icon(Icons.video_library_outlined),
+                                    label: const Text('Practice Recordings'),
+                                  );
+                                },
+                              ),
+                            ],
                           ),
                         ),
                         ...assignedPieces.map(
@@ -3492,7 +3510,7 @@ class _StudentDevicePairingCard extends StatelessWidget {
                       ],
                     ),
                   );
-                }).toList(growable: false),
+                }),
               ],
             ),
         ],
@@ -3509,7 +3527,7 @@ class _StudentDevicePairingCard extends StatelessWidget {
       context: context,
       builder: (context) => AlertDialog(
         title: Text('Remove ${student.displayName}?'),
-        content: Text(
+        content: const Text(
           'This will remove the student profile from this device. Their pieces will remain in your library but become unattributed — you can reassign them later.',
         ),
         actions: [

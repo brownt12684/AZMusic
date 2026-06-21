@@ -37,7 +37,7 @@ class LocalStudentProfilesNotifier extends Notifier<List<Profile>> {
     }
 
     // Auto-PIN policy: when adding the 2nd student, PIN becomes mandatory.
-    final willHaveMultipleStudents = state.length >= 1;
+    final willHaveMultipleStudents = state.isNotEmpty;
     final trimmedPin = pin?.trim();
     if (willHaveMultipleStudents && (trimmedPin == null || trimmedPin.isEmpty)) {
       throw ArgumentError(

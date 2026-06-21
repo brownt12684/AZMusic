@@ -19,6 +19,7 @@ import '../../providers/note_providers.dart';
 import '../../providers/piece_providers.dart';
 import '../../providers/profile_providers.dart';
 import '../../providers/toc_providers.dart';
+import 'modules/recording_module.dart';
 import 'reader_page_layout.dart';
 
 enum _ReaderModule {
@@ -27,6 +28,7 @@ enum _ReaderModule {
   tuner,
   notes,
   toc,
+  record,
 }
 
 typedef _ReaderAnnotationRequest = ({
@@ -252,6 +254,20 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                         onReveal: _showChromeTransient,
                       ),
                     ),
+                    if (chromeVisible)
+                      Positioned.fill(
+                        child: GestureDetector(
+                          behavior: HitTestBehavior.translucent,
+                          onTap: () {
+                            _cancelChromeAutoHide();
+                            setState(() {
+                              _activeModule = null;
+                              _chromeVisible = false;
+                            });
+                          },
+                          child: const SizedBox.expand(),
+                        ),
+                      ),
                     if (chromeVisible) ...[
                       Positioned(
                         left: 12,
@@ -265,6 +281,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                                   module, annotationRequest);
                             },
                             onBack: () => _handleBack(annotationRequest),
+                            showRecordButton:
+                                activeProfile.role == ProfileRole.student,
                           ),
                         ),
                       ),
@@ -337,7 +355,7 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
                           left: 88,
                           top: safePadding.top + 112,
                           bottom: safePadding.bottom + 12,
-                          width: 340,
+                          width: mediaQuery.size.width < 450 ? mediaQuery.size.width - 100 : 340,
                           child: _ReaderChromeSurface(
                             child: _ReaderModulePanel(
                               module: _activeModule!,
@@ -772,13 +790,16 @@ class _ReaderChromeSurface extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Material(
-      color: theme.colorScheme.surface.withValues(alpha: 0.94),
-      elevation: 14,
-      shadowColor: Colors.black.withValues(alpha: 0.18),
-      borderRadius: BorderRadius.circular(24),
-      clipBehavior: Clip.antiAlias,
-      child: child,
+    return GestureDetector(
+      onTap: () {}, // swallow taps so they don't fall through to the dismiss overlay
+      child: Material(
+        color: theme.colorScheme.surface.withValues(alpha: 0.94),
+        elevation: 14,
+        shadowColor: Colors.black.withValues(alpha: 0.18),
+        borderRadius: BorderRadius.circular(24),
+        clipBehavior: Clip.antiAlias,
+        child: child,
+      ),
     );
   }
 }
@@ -788,11 +809,13 @@ class _ReaderRail extends StatelessWidget {
     required this.activeModule,
     required this.onSelect,
     required this.onBack,
+    this.showRecordButton = false,
   });
 
   final _ReaderModule? activeModule;
   final ValueChanged<_ReaderModule> onSelect;
   final VoidCallback onBack;
+  final bool showRecordButton;
 
   @override
   Widget build(BuildContext context) {
@@ -852,6 +875,19 @@ class _ReaderRail extends StatelessWidget {
             selected: activeModule == _ReaderModule.toc,
             onTap: () => onSelect(_ReaderModule.toc),
           ),
+          if (showRecordButton) ...[
+            const SizedBox(height: 8),
+            SizedBox(
+              width: 28,
+              child: Divider(color: theme.colorScheme.outlineVariant),
+            ),
+            _RailButton(
+              key: AppKeys.recordModuleButton,
+              icon: Icons.mic_rounded,
+              selected: activeModule == _ReaderModule.record,
+              onTap: () => onSelect(_ReaderModule.record),
+            ),
+          ],
           const Spacer(),
           _RailButton(
             icon: Icons.arrow_back_outlined,
@@ -1107,13 +1143,31 @@ class _ReaderModulePanel extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    return Container(
-      decoration: BoxDecoration(
-        color: theme.colorScheme.surfaceContainerLowest,
-        border: Border(
-          right: BorderSide(color: theme.colorScheme.outlineVariant),
-        ),
+    final panelDecoration = BoxDecoration(
+      color: theme.colorScheme.surfaceContainerLowest,
+      border: Border(
+        right: BorderSide(color: theme.colorScheme.outlineVariant),
       ),
+    );
+
+    // RecordingModule returns a Column with an Expanded child, which requires
+    // bounded height from its parent. A ListView gives its children unbounded
+    // height, causing a "RenderFlex children have non-zero flex but incoming
+    // height constraints are unbounded" error. Hoist the record case out of
+    // the ListView so it fills the full panel height from the Positioned ancestor.
+    if (module == _ReaderModule.record) {
+      return Container(
+        decoration: panelDecoration,
+        child: RecordingModule(
+          pieceId: entry.piece.id,
+          profileId: activeProfile.id,
+          scoreVersionId: scoreVersion.id,
+        ),
+      );
+    }
+
+    return Container(
+      decoration: panelDecoration,
       child: ListView(
         padding: const EdgeInsets.all(20),
         children: [
@@ -1146,6 +1200,9 @@ class _ReaderModulePanel extends StatelessWidget {
                 currentPage: currentPage,
                 pageCount: pageCount,
               ),
+            // Unreachable: record is handled above, but required for
+            // exhaustive switch coverage.
+            _ReaderModule.record => const SizedBox.shrink(),
           },
         ],
       ),

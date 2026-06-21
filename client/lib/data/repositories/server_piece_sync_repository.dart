@@ -8,6 +8,7 @@ import '../../domain/entities/processing_settings.dart';
 import '../../domain/entities/review_candidate_package.dart';
 import '../../domain/entities/server_pairing.dart';
 import '../../domain/entities/server_job.dart';
+import '../../domain/entities/practice_recording.dart';
 
 class ServerPieceSyncRepository {
   ServerPieceSyncRepository({
@@ -146,6 +147,38 @@ class ServerPieceSyncRepository {
     final response =
         await _apiClient.post('/api/v1/processing/gemini/oauth/disconnect');
     return GeminiOAuthStatus.fromJson(response.data as Map<String, dynamic>);
+  }
+
+  Future<void> uploadPracticeRecording({
+    required String pieceId,
+    required String studentProfileId,
+    required String filePath,
+  }) async {
+    if (!AppConfig.isServerPaired) return;
+
+    final formData = FormData.fromMap({
+      'piece_id': pieceId,
+      'student_profile_id': studentProfileId,
+      'audio_file': await MultipartFile.fromFile(
+        filePath,
+        filename: path.basename(filePath),
+      ),
+    });
+
+    await _apiClient.post(
+      '/api/v1/practice/recordings/upload',
+      data: formData,
+    );
+  }
+
+  Future<List<RemotePracticeRecording>> fetchStudentRecordings(String studentId) async {
+    final response = await _apiClient.get('/api/v1/practice/student/$studentId/recordings');
+    final items = response.data as List<dynamic>;
+    return items.map((item) => RemotePracticeRecording.fromJson(item as Map<String, dynamic>)).toList();
+  }
+
+  String getPracticeRecordingVideoUrl(String recordingId) {
+    return '${AppConfig.serverBaseUrl}/api/v1/practice/recordings/$recordingId/file';
   }
 
   Future<List<ServerJob>> fetchJobs() async {

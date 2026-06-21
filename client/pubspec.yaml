@@ -43,7 +43,7 @@ dependencies:
   # Media playback
   just_audio: ^0.9.36
   audio_session: ^0.1.20
-
+  video_player: ^2.8.6
   # UI utilities
   flutter_slidable: ^3.0.1
   intl: ^0.19.0
