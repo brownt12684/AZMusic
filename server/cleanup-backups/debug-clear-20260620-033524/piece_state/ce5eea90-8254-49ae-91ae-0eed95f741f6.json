@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "ce5eea90-8254-49ae-91ae-0eed95f741f6",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Lament"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "4b9838aa-4d1c-40c3-adb2-6ef0186f75cb.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Lament"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Lament"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "4b9838aa-4d1c-40c3-adb2-6ef0186f75cb.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Lament"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:e359ec90d6067480862307b67a73d1f6eabcc8edbb1950f482136f194cb0f406|pages:1-1|title:lament|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "lament",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "44b68bb5-a189-4308-8ec5-df4cf108ff1d": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "df30cadf-bfb6-4976-afe5-57d694aa7ec0",
+      "student_default": true
+    },
+    "df30cadf-bfb6-4976-afe5-57d694aa7ec0": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "lament",
+  "source_book_fingerprint": "book_sha256:e359ec90d6067480862307b67a73d1f6eabcc8edbb1950f482136f194cb0f406",
+  "source_book_id": "66fd3449-996f-4bd1-aa7d-4910aa962d1c",
+  "source_content_sha256": "e359ec90d6067480862307b67a73d1f6eabcc8edbb1950f482136f194cb0f406",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "Lament",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

@@ -1,0 +1,131 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "b8823b7f-ea2f-4660-b65f-e1e600cac569",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Marching Martians",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "4 Dreamland 4 _ 2\u2014\u2014 x1 3 d- oz . 2 0 0 \u2014 0 2 4\u2014ax1 1 peg \u2014\u2014 ee gp a Ee cS SS SS SS SS Se SS sempre pizz. Lym \u2014 ere | ser perres | | eet] lg See ae eS SS SS SSS SS Ree Se \u2014 \u00b0 5 0 2 4\u2014 Ty 2 2 4 1 2 P| ey py \u2014Y\u2014p fe eg 2 | _ SS \u2014 \u2014_\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014 Se ee et eS \u2014\u2014\u2014\u2014E\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 js OT FS A a Ss ee ee ee a SSS SS SS SS SS Marching Martians \u2018- hed o 2 4 xl xl 01 ESE Ee ee ee SS Se ee ee ee ee Se f vVvVvVVY \u2014\u2014 a a, Ds ae EWES WAI WAS WAI WAS TaN a bs bENDESWEstiNd DA) bE) WA) bA0l bod WEY BES Dae? ae ae eres eee..."
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "4 Dreamland 4 _ 2\u2014\u2014 x1 3 d- oz . 2 0 0 \u2014 0 2 4\u2014ax1 1 peg \u2014\u2014 ee gp a Ee cS SS SS SS SS Se SS sempre pizz. Lym \u2014 ere | ser perres | | eet] lg See ae eS SS SS SSS SS Ree Se \u2014 \u00b0 5 0 2 4\u2014 Ty 2 2 4 1 2 P| ey py \u2014Y\u2014p fe eg 2 | _ SS \u2014 \u2014_\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014 Se ee et eS \u2014\u2014\u2014\u2014E\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 js OT FS A a Ss ee ee ee a SSS SS SS SS SS Marching Martians \u2018- hed o 2 4 xl xl 01 ESE Ee ee ee SS Se ee ee ee ee Se f vVvVvVVY \u2014\u2014 a a, Ds ae EWES WAI WAS WAI WAS TaN a bs bENDESWEstiNd DA) bE) WA) bA0l bod WEY BES Dae? ae ae eres eee ae ae seep an mae as aster eta aey ae ae see tat aE Eman 5 0 2 01 a es es a. | 5 a cS pe Og A I a, SS SS SS SS SS Se ee oe ee ee ee ee aa oP a a Re Be eee oe re ee ee eee ed ae ee ee ee eee ene re mars nae ee ee eet",
+    "primary_instrument": "Cello",
+    "source_file_name": "937383b6-910d-4524-8bd8-7cf5c98e4f89.pdf",
+    "title": "Dreamland"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Dreamland"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:eb65753c7cb3d32846bcc521e7ab3c1a06f0f3c5a1a83ebe8a64f975614f6bac",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "dreamland marching martians",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "composer": "Marching Martians",
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "937383b6-910d-4524-8bd8-7cf5c98e4f89.pdf",
+        "title": "Dreamland"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0666,
+          "has_staff_hint": true,
+          "horizontal_line_count": 45,
+          "page_number": 1,
+          "text_excerpt": "Dreamland deve 2 om 0 3 2 4.51 2 1 a yor fe = ape 22 == Sas ae Marching Martians",
+          "title_candidates": [
+            "Dreamland",
+            "Marching Martians"
+          ],
+          "title_ocr_excerpt": "Dreamland Marching Martians",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": "Marching Martians",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "Dreamland",
+            "Marching Martians"
+          ],
+          "multi_piece_page": true,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Dreamland / Marching Martians",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "4 Dreamland 4 _ 2\u2014\u2014 x1 3 d- oz . 2 0 0 \u2014 0 2 4\u2014ax1 1 peg \u2014\u2014 ee gp a Ee cS SS SS SS SS Se SS sempre pizz. Lym \u2014 ere | ser perres | | eet] lg See ae eS SS SS SSS SS Ree Se \u2014 \u00b0 5 0 2 4\u2014 Ty 2 2 4 1 2 P| ey py \u2014Y\u2014p fe eg 2 | _ SS \u2014 \u2014_\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014 Se ee et eS \u2014\u2014\u2014\u2014E\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 js OT FS A a Ss ee ee ee a SSS SS SS SS SS Marching Martians \u2018- hed o 2 4 xl xl 01 ESE Ee ee ee SS Se ee ee ee ee Se f vVvVvVVY \u2014\u2014 a a, Ds ae EWES WAI WAS WAI WAS TaN a bs bENDESWEstiNd DA) bE) WA) bA0l bod WEY BES Dae? ae ae eres eee..."
+      }
+    ],
+    "ocr_text_excerpt": "4 Dreamland 4 _ 2\u2014\u2014 x1 3 d- oz . 2 0 0 \u2014 0 2 4\u2014ax1 1 peg \u2014\u2014 ee gp a Ee cS SS SS SS SS Se SS sempre pizz. Lym \u2014 ere | ser perres | | eet] lg See ae eS SS SS SSS SS Ree Se \u2014 \u00b0 5 0 2 4\u2014 Ty 2 2 4 1 2 P| ey py \u2014Y\u2014p fe eg 2 | _ SS \u2014 \u2014_\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014 Se ee et eS \u2014\u2014\u2014\u2014E\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 js OT FS A a Ss ee ee ee a SSS SS SS SS SS Marching Martians \u2018- hed o 2 4 xl xl 01 ESE Ee ee ee SS Se ee ee ee ee Se f vVvVvVVY \u2014\u2014 a a, Ds ae EWES WAI WAS WAI WAS TaN a bs bENDESWEstiNd DA) bE) WA) bA0l bod WEY BES Dae? ae ae eres eee ae ae seep an mae as aster eta aey ae ae see tat aE Eman 5 0 2 01 a es es a. | 5 a cS pe Og A I a, SS SS SS SS SS Se ee oe ee ee ee ee aa oP a a Re Be eee oe re ee ee eee ed ae ee ee ee eee ene re mars nae ee ee eet",
+    "title": "Dreamland"
+  },
+  "score_versions": {
+    "2d6081f7-b021-4c7b-a543-6f3bf37001a7": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "3d5975b2-ec02-4a95-8147-c17c2085f836": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "2d6081f7-b021-4c7b-a543-6f3bf37001a7",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "dreamland marching martians",
+  "source_book_fingerprint": "book_sha256:eb65753c7cb3d32846bcc521e7ab3c1a06f0f3c5a1a83ebe8a64f975614f6bac",
+  "source_book_id": null,
+  "source_content_sha256": "eb65753c7cb3d32846bcc521e7ab3c1a06f0f3c5a1a83ebe8a64f975614f6bac",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Dreamland / Marching Martians",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

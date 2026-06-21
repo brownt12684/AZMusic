@@ -1,0 +1,132 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "a6b8ea8f-1809-4d1e-9e86-c73c7060b2fc",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "The Shark",
+    "ocr_confidence": 0.78,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "49 Half Position Serenade d-08 0 2 4 1 4 0 2 - ; 4 eet eit eee late DE Leto eg et a at a ee itt ates ecto pel The Shark Ca Ss ET - 3 5 othe tree 1 tletotee 4203 Keres eet ete el"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "49 Half Position Serenade d-08 0 2 4 1 4 0 2 - ; 4 eet eit eee late DE Leto eg et a at a ee itt ates ecto pel The Shark Ca Ss ET - 3 5 othe tree 1 tletotee 4203 Keres eet ete el",
+    "primary_instrument": "Cello",
+    "source_file_name": "1f843f26-9f7d-4526-b53f-c2ee41d67575.pdf",
+    "title": "Half Position Serenade"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.78,
+      "fields": {
+        "composer": "The Shark",
+        "title": "Half Position Serenade"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:ecb4c1e45405562dd82c15e47e60b4f79848e7a0637f07b1585d1c30acafad08",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "half position serenade the shark",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "1f843f26-9f7d-4526-b53f-c2ee41d67575.pdf",
+        "title": "Half Position Serenade"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0644,
+          "has_staff_hint": true,
+          "horizontal_line_count": 41,
+          "page_number": 1,
+          "text_excerpt": "49 Half Position Serenade",
+          "title_candidates": [
+            "Half Position Serenade",
+            "The Shark"
+          ],
+          "title_ocr_excerpt": "Half Position Serenade The Shark",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "Half Position Serenade",
+            "The Shark"
+          ],
+          "multi_piece_page": true,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Half Position Serenade / The Shark",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        }
+      ],
+      "warnings": []
+    },
+    "composer": "The Shark",
+    "ocr_confidence": 0.78,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "49 Half Position Serenade d-08 0 2 4 1 4 0 2 - ; 4 eet eit eee late DE Leto eg et a at a ee itt ates ecto pel The Shark Ca Ss ET - 3 5 othe tree 1 tletotee 4203 Keres eet ete el"
+      }
+    ],
+    "ocr_text_excerpt": "49 Half Position Serenade d-08 0 2 4 1 4 0 2 - ; 4 eet eit eee late DE Leto eg et a at a ee itt ates ecto pel The Shark Ca Ss ET - 3 5 othe tree 1 tletotee 4203 Keres eet ete el",
+    "title": "Half Position Serenade"
+  },
+  "score_versions": {
+    "3518d0d6-6ca1-47ed-8da4-333e1351b14b": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "64349cff-aac7-48d5-bab2-7a341080c5d4",
+      "student_default": true
+    },
+    "64349cff-aac7-48d5-bab2-7a341080c5d4": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "half position serenade the shark",
+  "source_book_fingerprint": "book_sha256:ecb4c1e45405562dd82c15e47e60b4f79848e7a0637f07b1585d1c30acafad08",
+  "source_book_id": null,
+  "source_content_sha256": "ecb4c1e45405562dd82c15e47e60b4f79848e7a0637f07b1585d1c30acafad08",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Half Position Serenade / The Shark",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

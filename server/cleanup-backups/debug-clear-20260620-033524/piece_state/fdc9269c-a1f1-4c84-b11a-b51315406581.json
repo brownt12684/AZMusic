@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "fdc9269c-a1f1-4c84-b11a-b51315406581",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "I Got the Blues, Baby"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "54782a18-990d-4dab-8ddd-9d4ac3096413.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "I Got the Blues, Baby"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "I Got the Blues, Baby"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "54782a18-990d-4dab-8ddd-9d4ac3096413.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "I Got the Blues, Baby"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:a681c6043bd49ac6c5d69b7961ed47c6142a7201ae8d1508d209f9147fb15c7a|pages:1-1|title:i got the blues baby|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "i got the blues baby",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "0b988837-9760-4bbb-8427-0b2bb138cc16": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "f36ffc32-4c3b-4dc1-8721-a511ed88535c": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "0b988837-9760-4bbb-8427-0b2bb138cc16",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "i got the blues baby",
+  "source_book_fingerprint": "book_sha256:a681c6043bd49ac6c5d69b7961ed47c6142a7201ae8d1508d209f9147fb15c7a",
+  "source_book_id": "71c36f4a-7972-48fb-ad5b-0381b377e951",
+  "source_content_sha256": "a681c6043bd49ac6c5d69b7961ed47c6142a7201ae8d1508d209f9147fb15c7a",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "I Got the Blues, Baby",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

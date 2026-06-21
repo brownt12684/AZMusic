@@ -1,0 +1,126 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "01c5f75d-7fec-4090-ab09-3a56d6b4906b",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "39 A Waltz ; v3 3 = 192 0 iow 4a Ty 2 0 l\u2014-Y 4-\u2014_\u2014__ tty\u00bb 9 2 9 9 9 9 fo oe \u2014\u2014 eo oe oe a a oe Ee Te yi v\u2014y e \u2018 Vv Vv \u2018 \u2018 Vv Vv Os i LE OS Se a | ee \u2014 on oe a @ oy \u00a5 g oy 5 2? 4 2.1 2 22 4 | TEE EE EA\u00bb \u2014\u2014\u00bb | ~*~\u00bb |\u00bb | # > oe lS ? ae \u2014 ee ee \u2014\u2014 a a ft \u2014\u2014\u2014 ee ee v Vv 0 9 0 wow Vv Vv 4\u2014__ 2 0 OT ss a TE \u2014 EE \u2014 , OSS EE EE \u2014\u2014 | anf YY P s Vv Vv v Vv Ot up ip rh > ee a \u2014\u2014\u2014 . , n\u2014\"\" \u2014"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "39 A Waltz ; v3 3 = 192 0 iow 4a Ty 2 0 l\u2014-Y 4-\u2014_\u2014__ tty\u00bb 9 2 9 9 9 9 fo oe \u2014\u2014 eo oe oe a a oe Ee Te yi v\u2014y e \u2018 Vv Vv \u2018 \u2018 Vv Vv Os i LE OS Se a | ee \u2014 on oe a @ oy \u00a5 g oy 5 2? 4 2.1 2 22 4 | TEE EE EA\u00bb \u2014\u2014\u00bb | ~*~\u00bb |\u00bb | # > oe lS ? ae \u2014 ee ee \u2014\u2014 a a ft \u2014\u2014\u2014 ee ee v Vv 0 9 0 wow Vv Vv 4\u2014__ 2 0 OT ss a TE \u2014 EE \u2014 , OSS EE EE \u2014\u2014 | anf YY P s Vv Vv v Vv Ot up ip rh > ee a \u2014\u2014\u2014 . , n\u2014\"\" \u2014",
+    "primary_instrument": "Cello",
+    "source_file_name": "f05c64cd-7845-43af-8415-c94a32050283.pdf",
+    "title": "A Waltz"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "A Waltz"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:148dc790e56c3ff5ffa173971941ac0f6713616ed903d2c2220231ba5222fa1d",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "a waltz",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "f05c64cd-7845-43af-8415-c94a32050283.pdf",
+        "title": "A Waltz"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0441,
+          "has_staff_hint": true,
+          "horizontal_line_count": 34,
+          "page_number": 1,
+          "text_excerpt": "A Waltz 39 7 Vv Vv Je 0 iy 4a Ty 2 1\u2014? 4 le t mf Vy Y\u2014~y y y 2 2 y, y, iad \u2014",
+          "title_candidates": [
+            "A Waltz"
+          ],
+          "title_ocr_excerpt": "A Waltz",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "A Waltz"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "A Waltz",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "39 A Waltz ; v3 3 = 192 0 iow 4a Ty 2 0 l\u2014-Y 4-\u2014_\u2014__ tty\u00bb 9 2 9 9 9 9 fo oe \u2014\u2014 eo oe oe a a oe Ee Te yi v\u2014y e \u2018 Vv Vv \u2018 \u2018 Vv Vv Os i LE OS Se a | ee \u2014 on oe a @ oy \u00a5 g oy 5 2? 4 2.1 2 22 4 | TEE EE EA\u00bb \u2014\u2014\u00bb | ~*~\u00bb |\u00bb | # > oe lS ? ae \u2014 ee ee \u2014\u2014 a a ft \u2014\u2014\u2014 ee ee v Vv 0 9 0 wow Vv Vv 4\u2014__ 2 0 OT ss a TE \u2014 EE \u2014 , OSS EE EE \u2014\u2014 | anf YY P s Vv Vv v Vv Ot up ip rh > ee a \u2014\u2014\u2014 . , n\u2014\"\" \u2014"
+      }
+    ],
+    "ocr_text_excerpt": "39 A Waltz ; v3 3 = 192 0 iow 4a Ty 2 0 l\u2014-Y 4-\u2014_\u2014__ tty\u00bb 9 2 9 9 9 9 fo oe \u2014\u2014 eo oe oe a a oe Ee Te yi v\u2014y e \u2018 Vv Vv \u2018 \u2018 Vv Vv Os i LE OS Se a | ee \u2014 on oe a @ oy \u00a5 g oy 5 2? 4 2.1 2 22 4 | TEE EE EA\u00bb \u2014\u2014\u00bb | ~*~\u00bb |\u00bb | # > oe lS ? ae \u2014 ee ee \u2014\u2014 a a ft \u2014\u2014\u2014 ee ee v Vv 0 9 0 wow Vv Vv 4\u2014__ 2 0 OT ss a TE \u2014 EE \u2014 , OSS EE EE \u2014\u2014 | anf YY P s Vv Vv v Vv Ot up ip rh > ee a \u2014\u2014\u2014 . , n\u2014\"\" \u2014",
+    "title": "A Waltz"
+  },
+  "score_versions": {
+    "3fbe49e1-0d54-4db0-8e61-fffc737d1bc2": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "581eda3d-3766-4a22-8335-4cce842573cd": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "3fbe49e1-0d54-4db0-8e61-fffc737d1bc2",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "waltz",
+  "source_book_fingerprint": "book_sha256:148dc790e56c3ff5ffa173971941ac0f6713616ed903d2c2220231ba5222fa1d",
+  "source_book_id": null,
+  "source_content_sha256": "148dc790e56c3ff5ffa173971941ac0f6713616ed903d2c2220231ba5222fa1d",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "A Waltz",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

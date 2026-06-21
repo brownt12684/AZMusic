@@ -1,0 +1,130 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "cad98691-e035-4c8a-befa-2b6ceeb6f618",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "10 Bugle Call J 4 =66 2 421 Dp lon fom\u2019 er ro ow TTETETEo_\u2014 St \u2014\u2014\u2014\u2014 Se Cl, ed ee ee \u2014\u2014\u2014\u2014 i LE Se A cr re ee ee ee OO ee Sa a Ce oe a eS ee es at a a | 2 4 2 rs an O_O ET | OO \u2014\u2014\u2014\u2014 EE _ EE oS eS FS SS SS See Mg To do oe \u2014 ee see Cee seas ee se! Toy Soldiers ! Vv = 144 4 2 1 So ok Se Se a \u2014 \u2014\u2014\u2014 mf sempre pizz. ee ES SE _\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014 a \u2014\u2014 4 5 1 2 \u2014\u2014\u2014\u2014\u2014\u2014\u2014 So a an a _\u2014 ee tee EE A A A a Se ee es ee |"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "10 Bugle Call J 4 =66 2 421 Dp lon fom\u2019 er ro ow TTETETEo_\u2014 St \u2014\u2014\u2014\u2014 Se Cl, ed ee ee \u2014\u2014\u2014\u2014 i LE Se A cr re ee ee ee OO ee Sa a Ce oe a eS ee es at a a | 2 4 2 rs an O_O ET | OO \u2014\u2014\u2014\u2014 EE _ EE oS eS FS SS SS See Mg To do oe \u2014 ee see Cee seas ee se! Toy Soldiers ! Vv = 144 4 2 1 So ok Se Se a \u2014 \u2014\u2014\u2014 mf sempre pizz. ee ES SE _\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014 a \u2014\u2014 4 5 1 2 \u2014\u2014\u2014\u2014\u2014\u2014\u2014 So a an a _\u2014 ee tee EE A A A a Se ee es ee |",
+    "primary_instrument": "Cello",
+    "source_file_name": "c91defa4-fc32-4d9b-b017-b1457d7be58d.pdf",
+    "title": "Bugle Call"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Bugle Call"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:3b761ce3bfdb432f2250f07882a750a8c09ae75993809f13f4b76364427972cc",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "bugle call toy soldiers",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "c91defa4-fc32-4d9b-b017-b1457d7be58d.pdf",
+        "title": "Bugle Call"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0635,
+          "has_staff_hint": true,
+          "horizontal_line_count": 39,
+          "page_number": 1,
+          "text_excerpt": "Bugle Call i> id T+ Lit w",
+          "title_candidates": [
+            "Bugle Call",
+            "Toy Soldiers"
+          ],
+          "title_ocr_excerpt": "Bugle Call Toy Soldiers",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "Bugle Call",
+            "Toy Soldiers"
+          ],
+          "multi_piece_page": true,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Bugle Call / Toy Soldiers",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "10 Bugle Call J 4 =66 2 421 Dp lon fom\u2019 er ro ow TTETETEo_\u2014 St \u2014\u2014\u2014\u2014 Se Cl, ed ee ee \u2014\u2014\u2014\u2014 i LE Se A cr re ee ee ee OO ee Sa a Ce oe a eS ee es at a a | 2 4 2 rs an O_O ET | OO \u2014\u2014\u2014\u2014 EE _ EE oS eS FS SS SS See Mg To do oe \u2014 ee see Cee seas ee se! Toy Soldiers ! Vv = 144 4 2 1 So ok Se Se a \u2014 \u2014\u2014\u2014 mf sempre pizz. ee ES SE _\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014 a \u2014\u2014 4 5 1 2 \u2014\u2014\u2014\u2014\u2014\u2014\u2014 So a an a _\u2014 ee tee EE A A A a Se ee es ee |"
+      }
+    ],
+    "ocr_text_excerpt": "10 Bugle Call J 4 =66 2 421 Dp lon fom\u2019 er ro ow TTETETEo_\u2014 St \u2014\u2014\u2014\u2014 Se Cl, ed ee ee \u2014\u2014\u2014\u2014 i LE Se A cr re ee ee ee OO ee Sa a Ce oe a eS ee es at a a | 2 4 2 rs an O_O ET | OO \u2014\u2014\u2014\u2014 EE _ EE oS eS FS SS SS See Mg To do oe \u2014 ee see Cee seas ee se! Toy Soldiers ! Vv = 144 4 2 1 So ok Se Se a \u2014 \u2014\u2014\u2014 mf sempre pizz. ee ES SE _\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014 a \u2014\u2014 4 5 1 2 \u2014\u2014\u2014\u2014\u2014\u2014\u2014 So a an a _\u2014 ee tee EE A A A a Se ee es ee |",
+    "title": "Bugle Call"
+  },
+  "score_versions": {
+    "5d801aa8-f2d0-4073-baf5-bf8aae3d992f": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "d9e1a435-1ea3-4933-8b0b-1ac8d25d3016": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "5d801aa8-f2d0-4073-baf5-bf8aae3d992f",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "bugle call toy soldiers",
+  "source_book_fingerprint": "book_sha256:3b761ce3bfdb432f2250f07882a750a8c09ae75993809f13f4b76364427972cc",
+  "source_book_id": null,
+  "source_content_sha256": "3b761ce3bfdb432f2250f07882a750a8c09ae75993809f13f4b76364427972cc",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Bugle Call / Toy Soldiers",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "f40e23c9-1d97-45e5-b660-40082e39495f",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "The Hippopotamus\u2019 Dance."
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "9fae1a51-88c5-4110-9e9c-c6c3cb0b7bfc.pdf",
+    "source_page_end": 41,
+    "source_page_start": 41,
+    "title": "The Hippopotamus\u2019 Dance."
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "The Hippopotamus\u2019 Dance."
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "9fae1a51-88c5-4110-9e9c-c6c3cb0b7bfc.pdf",
+        "source_page_end": 41,
+        "source_page_start": 41,
+        "title": "The Hippopotamus\u2019 Dance."
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:8cef428183a3be697d28d69a450878038b556666a18aadb68483ace0e9b47dcc|pages:41-41|title:the hippopotamus dance|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "the hippopotamus dance",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "17e1da27-d7a4-42ac-ada9-0b285ee80c21": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "6d21cb85-cf18-4530-b4da-fce6a2a6b79e": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "17e1da27-d7a4-42ac-ada9-0b285ee80c21",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "hippopotamus dance",
+  "source_book_fingerprint": "book_sha256:8cef428183a3be697d28d69a450878038b556666a18aadb68483ace0e9b47dcc",
+  "source_book_id": "fa8de395-26c8-4d97-9aff-a20858953b44",
+  "source_content_sha256": "3452a270d4a5cab2afc88b13602cb729660568b4863cd16fca9c489fb96fe4bc",
+  "source_page_end": 41,
+  "source_page_start": 41,
+  "split_confidence": 0.84,
+  "title": "The Hippopotamus\u2019 Dance.",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

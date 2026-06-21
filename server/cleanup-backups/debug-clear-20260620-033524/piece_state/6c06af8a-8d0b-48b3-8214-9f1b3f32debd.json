@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "6c06af8a-8d0b-48b3-8214-9f1b3f32debd",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Landler"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "83ddbd06-9c4a-43a3-9df2-07f9dfea8dd9.pdf",
+    "source_page_end": 2,
+    "source_page_start": 2,
+    "title": "Landler"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Landler"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "83ddbd06-9c4a-43a3-9df2-07f9dfea8dd9.pdf",
+        "source_page_end": 2,
+        "source_page_start": 2,
+        "title": "Landler"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:290d5e760cb172bffbe33d4b1f2d178b8e73be5acbd48024b439e1b37950e422|pages:2-2|title:landler|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "landler",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "4f53b70e-f6cb-487b-87d6-9316be8abf24": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "e3b88d55-4a3d-4520-91d0-b4bed1970c56": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "4f53b70e-f6cb-487b-87d6-9316be8abf24",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "landler",
+  "source_book_fingerprint": "book_sha256:290d5e760cb172bffbe33d4b1f2d178b8e73be5acbd48024b439e1b37950e422",
+  "source_book_id": "1934582f-e9f0-4d0d-944b-cf99f69be8c3",
+  "source_content_sha256": "c0f4fc8c7b1e90264a83e8d5e8102f30357f590acdd56a1c7a6c7910e8ec90b3",
+  "source_page_end": 2,
+  "source_page_start": 2,
+  "split_confidence": 0.84,
+  "title": "Landler",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

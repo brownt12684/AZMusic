@@ -4,6 +4,7 @@ from datetime import datetime
 from pathlib import Path
 
 from fastapi import APIRouter, Depends, File, HTTPException, UploadFile
+from fastapi.responses import FileResponse
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
@@ -222,3 +223,40 @@ async def get_student_recordings(
         )
         for r in recordings
     ]
+
+@router.get("/recordings/{recording_id}/file")
+async def get_practice_recording_file(
+    recording_id: str,
+    db: AsyncSession = Depends(get_db),
+):
+    """Serve a student practice recording file for download/streaming."""
+    result = await db.execute(
+        select(PracticeRecording).where(PracticeRecording.id == recording_id)
+    )
+    recording = result.scalar_one_or_none()
+    if not recording:
+        raise HTTPException(status_code=404, detail="Recording not found")
+
+    local_path = Path(recording.local_file_path or "")
+    if not local_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Local recording file not found: {local_path}",
+        )
+
+    # Determine content type from suffix
+    suffix = local_path.suffix.lower()
+    if suffix == ".mp4":
+        content_type = "video/mp4"
+    elif suffix == ".m4a":
+        content_type = "audio/mp4"
+    elif suffix == ".mp3":
+        content_type = "audio/mpeg"
+    else:
+        content_type = "application/octet-stream"
+
+    return FileResponse(
+        path=str(local_path),
+        media_type=content_type,
+        filename=local_path.name,
+    )

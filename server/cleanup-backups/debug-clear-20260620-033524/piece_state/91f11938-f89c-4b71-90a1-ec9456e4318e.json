@@ -1,0 +1,126 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "91f11938-f89c-4b71-90a1-ec9456e4318e",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "9 Sitting in the Shade J 2 row 2 4 13 2 2 = 96 t) 12\\ 104 o'3 We ; 0 (2): Bye Se ee 2 EP Ge eee ee Ee en eS ee ee ee ee = Sos mp sempre pizz, ot] eee os) = \u2014\u2014\u2014 a es ee Et a i \u2014 ir or ar | ar a ir or 2 5 \u00b0 2 \u2014\u2014 4 \u00b0 1 .\u2014 Fi A A ce A A | SE \u2014\u2014\u2014$_\u2014\u2014 = \u2014 2 => a os a es a a = a ee eee eee A ee SS es ae \u2014 == SS SS SS EE EEE ce a ee ee ee \u2014\u2014\u2014\u2014E\u2014EE\u2014EE\u2014\u2014\u2014\u2014\u2014\u2014_ 2 S.=\u2014\u2014\u2014\u2014_\u2014-.---\u2014\u2014\u2014-- === = = EAS | \u2014 > \u2014\u00bb-|\u2014\u00bb_| +\u00bb |\u00bb |_| >\u00bb \u2014\u2014# | | \u2014 SSS SS 2 2 13 \u00b0 Se ty oN 4 ol oe eee. \u00b0 Poy pe Se SS el eS a SS | rT | 2 SS..."
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "9 Sitting in the Shade J 2 row 2 4 13 2 2 = 96 t) 12\\ 104 o'3 We ; 0 (2): Bye Se ee 2 EP Ge eee ee Ee en eS ee ee ee ee = Sos mp sempre pizz, ot] eee os) = \u2014\u2014\u2014 a es ee Et a i \u2014 ir or ar | ar a ir or 2 5 \u00b0 2 \u2014\u2014 4 \u00b0 1 .\u2014 Fi A A ce A A | SE \u2014\u2014\u2014$_\u2014\u2014 = \u2014 2 => a os a es a a = a ee eee eee A ee SS es ae \u2014 == SS SS SS EE EEE ce a ee ee ee \u2014\u2014\u2014\u2014E\u2014EE\u2014EE\u2014\u2014\u2014\u2014\u2014\u2014_ 2 S.=\u2014\u2014\u2014\u2014_\u2014-.---\u2014\u2014\u2014-- === = = EAS | \u2014 > \u2014\u00bb-|\u2014\u00bb_| +\u00bb |\u00bb |_| >\u00bb \u2014\u2014# | | \u2014 SSS SS 2 2 13 \u00b0 Se ty oN 4 ol oe eee. \u00b0 Poy pe Se SS el eS a SS | rT | 2 SS OO ee ee ee ee ee ee",
+    "primary_instrument": "Cello",
+    "source_file_name": "35704ab3-bf87-4bdc-9223-2dcccb6f5458.pdf",
+    "title": "Sitting in the Shade"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Sitting in the Shade"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:1fc4929f2a47bfad597f11ece25170931b57358f201f02ce7223d1449884ae12",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "sitting in the shade",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "35704ab3-bf87-4bdc-9223-2dcccb6f5458.pdf",
+        "title": "Sitting in the Shade"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0693,
+          "has_staff_hint": true,
+          "horizontal_line_count": 44,
+          "page_number": 1,
+          "text_excerpt": "Sitting in the Shade 24 J. 2 Lr 2 4 13 a\u2014+ 2 = 06 \u2018 \u2122 13 ov fl of # ettes 12 4 0 erte 0 i t",
+          "title_candidates": [
+            "Sitting in the Shade"
+          ],
+          "title_ocr_excerpt": "Sitting in the Shade",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Sitting in the Shade"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Sitting in the Shade",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "9 Sitting in the Shade J 2 row 2 4 13 2 2 = 96 t) 12\\ 104 o'3 We ; 0 (2): Bye Se ee 2 EP Ge eee ee Ee en eS ee ee ee ee = Sos mp sempre pizz, ot] eee os) = \u2014\u2014\u2014 a es ee Et a i \u2014 ir or ar | ar a ir or 2 5 \u00b0 2 \u2014\u2014 4 \u00b0 1 .\u2014 Fi A A ce A A | SE \u2014\u2014\u2014$_\u2014\u2014 = \u2014 2 => a os a es a a = a ee eee eee A ee SS es ae \u2014 == SS SS SS EE EEE ce a ee ee ee \u2014\u2014\u2014\u2014E\u2014EE\u2014EE\u2014\u2014\u2014\u2014\u2014\u2014_ 2 S.=\u2014\u2014\u2014\u2014_\u2014-.---\u2014\u2014\u2014-- === = = EAS | \u2014 > \u2014\u00bb-|\u2014\u00bb_| +\u00bb |\u00bb |_| >\u00bb \u2014\u2014# | | \u2014 SSS SS 2 2 13 \u00b0 Se ty oN 4 ol oe eee. \u00b0 Poy pe Se SS el eS a SS | rT | 2 SS..."
+      }
+    ],
+    "ocr_text_excerpt": "9 Sitting in the Shade J 2 row 2 4 13 2 2 = 96 t) 12\\ 104 o'3 We ; 0 (2): Bye Se ee 2 EP Ge eee ee Ee en eS ee ee ee ee = Sos mp sempre pizz, ot] eee os) = \u2014\u2014\u2014 a es ee Et a i \u2014 ir or ar | ar a ir or 2 5 \u00b0 2 \u2014\u2014 4 \u00b0 1 .\u2014 Fi A A ce A A | SE \u2014\u2014\u2014$_\u2014\u2014 = \u2014 2 => a os a es a a = a ee eee eee A ee SS es ae \u2014 == SS SS SS EE EEE ce a ee ee ee \u2014\u2014\u2014\u2014E\u2014EE\u2014EE\u2014\u2014\u2014\u2014\u2014\u2014_ 2 S.=\u2014\u2014\u2014\u2014_\u2014-.---\u2014\u2014\u2014-- === = = EAS | \u2014 > \u2014\u00bb-|\u2014\u00bb_| +\u00bb |\u00bb |_| >\u00bb \u2014\u2014# | | \u2014 SSS SS 2 2 13 \u00b0 Se ty oN 4 ol oe eee. \u00b0 Poy pe Se SS el eS a SS | rT | 2 SS OO ee ee ee ee ee ee",
+    "title": "Sitting in the Shade"
+  },
+  "score_versions": {
+    "4e28bfd1-2863-4d68-81bc-7377e3ce2a9f": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "e22613c4-5911-4c94-9ba2-b5aefe57921c": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "4e28bfd1-2863-4d68-81bc-7377e3ce2a9f",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "sitting in the shade",
+  "source_book_fingerprint": "book_sha256:1fc4929f2a47bfad597f11ece25170931b57358f201f02ce7223d1449884ae12",
+  "source_book_id": null,
+  "source_content_sha256": "1fc4929f2a47bfad597f11ece25170931b57358f201f02ce7223d1449884ae12",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Sitting in the Shade",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

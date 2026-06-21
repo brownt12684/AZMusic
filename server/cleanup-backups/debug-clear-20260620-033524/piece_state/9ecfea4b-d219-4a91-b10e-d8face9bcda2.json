@@ -1,0 +1,126 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "9ecfea4b-d219-4a91-b10e-d8face9bcda2",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "50 Running dee 0 24 y 2 21 m2 SS \u2014\u2014\u2014\u2014\u2014 ee SSS SS SS SS f 2 4 1 1 3 ei eS ee ee ES Se 5 il \u2014_ = a\u201c Ns Se ee ee \u2014\u2014\u2014\u2014\u2014_\u2014\u2014e SS ee See 1 3 1 : eel te eee ee \u2014 ee eS i \u2014 eee eee Fine 9 5 A 41 A Se Oe Fe Ree ee ee rr a | nf 9 \u2122 1 1 3 et} Sef feet cots Colette. | ae. 13 A A A 0 4 Dt eS RGR OIG on | ot a eS ee \u00ab\u2014t.-NC\u2019-NT_N FTE 0D e\u2014\u2014\u2014_\u2014_ D.C. al Fine"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "50 Running dee 0 24 y 2 21 m2 SS \u2014\u2014\u2014\u2014\u2014 ee SSS SS SS SS f 2 4 1 1 3 ei eS ee ee ES Se 5 il \u2014_ = a\u201c Ns Se ee ee \u2014\u2014\u2014\u2014\u2014_\u2014\u2014e SS ee See 1 3 1 : eel te eee ee \u2014 ee eS i \u2014 eee eee Fine 9 5 A 41 A Se Oe Fe Ree ee ee rr a | nf 9 \u2122 1 1 3 et} Sef feet cots Colette. | ae. 13 A A A 0 4 Dt eS RGR OIG on | ot a eS ee \u00ab\u2014t.-NC\u2019-NT_N FTE 0D e\u2014\u2014\u2014_\u2014_ D.C. al Fine",
+    "primary_instrument": "Cello",
+    "source_file_name": "5d37173b-9488-4e39-9ab7-ed6ec03449b1.pdf",
+    "title": "eS"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Running"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:23ad3004dccf172e95025e007fde8b06ec7f07af9ff15d102ed2f5b2d085bc38",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "running",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "5d37173b-9488-4e39-9ab7-ed6ec03449b1.pdf",
+        "title": "eS"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0729,
+          "has_staff_hint": true,
+          "horizontal_line_count": 38,
+          "page_number": 1,
+          "text_excerpt": "\u00a9 =] \u00b0 eS D.C. al Fine",
+          "title_candidates": [
+            "Running"
+          ],
+          "title_ocr_excerpt": "Running",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Running"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Running",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "50 Running dee 0 24 y 2 21 m2 SS \u2014\u2014\u2014\u2014\u2014 ee SSS SS SS SS f 2 4 1 1 3 ei eS ee ee ES Se 5 il \u2014_ = a\u201c Ns Se ee ee \u2014\u2014\u2014\u2014\u2014_\u2014\u2014e SS ee See 1 3 1 : eel te eee ee \u2014 ee eS i \u2014 eee eee Fine 9 5 A 41 A Se Oe Fe Ree ee ee rr a | nf 9 \u2122 1 1 3 et} Sef feet cots Colette. | ae. 13 A A A 0 4 Dt eS RGR OIG on | ot a eS ee \u00ab\u2014t.-NC\u2019-NT_N FTE 0D e\u2014\u2014\u2014_\u2014_ D.C. al Fine"
+      }
+    ],
+    "ocr_text_excerpt": "50 Running dee 0 24 y 2 21 m2 SS \u2014\u2014\u2014\u2014\u2014 ee SSS SS SS SS f 2 4 1 1 3 ei eS ee ee ES Se 5 il \u2014_ = a\u201c Ns Se ee ee \u2014\u2014\u2014\u2014\u2014_\u2014\u2014e SS ee See 1 3 1 : eel te eee ee \u2014 ee eS i \u2014 eee eee Fine 9 5 A 41 A Se Oe Fe Ree ee ee rr a | nf 9 \u2122 1 1 3 et} Sef feet cots Colette. | ae. 13 A A A 0 4 Dt eS RGR OIG on | ot a eS ee \u00ab\u2014t.-NC\u2019-NT_N FTE 0D e\u2014\u2014\u2014_\u2014_ D.C. al Fine",
+    "title": "Running"
+  },
+  "score_versions": {
+    "ca22bef5-2aec-4cf2-9e7c-604daba2ff26": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "cdf8ba94-f733-4ae0-8103-ff713ace1b76",
+      "student_default": true
+    },
+    "cdf8ba94-f733-4ae0-8103-ff713ace1b76": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "running",
+  "source_book_fingerprint": "book_sha256:23ad3004dccf172e95025e007fde8b06ec7f07af9ff15d102ed2f5b2d085bc38",
+  "source_book_id": null,
+  "source_content_sha256": "23ad3004dccf172e95025e007fde8b06ec7f07af9ff15d102ed2f5b2d085bc38",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Running",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

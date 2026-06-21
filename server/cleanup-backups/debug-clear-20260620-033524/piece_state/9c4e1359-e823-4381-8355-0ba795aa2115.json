@@ -1,0 +1,126 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "9c4e1359-e823-4381-8355-0ba795aa2115",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "25 I\u2019ve Got Homework Jao o 3 4 4 0 3\u2014\u2014~_ 4 _ a 5 a , be Le | 0 3 4 |"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "25 I\u2019ve Got Homework Jao o 3 4 4 0 3\u2014\u2014~_ 4 _ a 5 a , be Le | 0 3 4 |",
+    "primary_instrument": "Cello",
+    "source_file_name": "a7f88bff-3794-4984-9674-f1f1044776d4.pdf",
+    "title": "I\u2019ve Got Homework"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "I\u2019ve Got Homework"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:11c0656f2c5eb0a25247c00bf3a1f0c48f0a9e718cbdd5f1faad428392f3f5ed",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "i ve got homework",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "a7f88bff-3794-4984-9674-f1f1044776d4.pdf",
+        "title": "I\u2019ve Got Homework"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0394,
+          "has_staff_hint": true,
+          "horizontal_line_count": 35,
+          "page_number": 1,
+          "text_excerpt": "I\u2019ve Got Homework _ ae : 3\u2014\u2014~_ 4 a : mf \u20ac $19)",
+          "title_candidates": [],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.55,
+          "contained_piece_titles": [
+            "Untitled piece page 1"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Untitled piece page 1",
+          "validation_warnings": [
+            "No reliable title was detected on the first music page."
+          ]
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "25 I\u2019ve Got Homework Jao o 3 4 4 0 3\u2014\u2014~_ 4 _ a 5 a , be Le | 0 3 4 |"
+      }
+    ],
+    "ocr_text_excerpt": "25 I\u2019ve Got Homework Jao o 3 4 4 0 3\u2014\u2014~_ 4 _ a 5 a , be Le | 0 3 4 |",
+    "title": "I\u2019ve Got Homework"
+  },
+  "score_versions": {
+    "3395d748-9b6b-42ed-8e0b-3dab377cd5be": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "df5fbc3a-3e07-4aa2-a03a-e005a9e71919": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "3395d748-9b6b-42ed-8e0b-3dab377cd5be",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "i ve got homework",
+  "source_book_fingerprint": "book_sha256:11c0656f2c5eb0a25247c00bf3a1f0c48f0a9e718cbdd5f1faad428392f3f5ed",
+  "source_book_id": null,
+  "source_content_sha256": "11c0656f2c5eb0a25247c00bf3a1f0c48f0a9e718cbdd5f1faad428392f3f5ed",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "I\u2019ve Got Homework",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

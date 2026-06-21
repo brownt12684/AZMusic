@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "e989110d-c434-447b-b738-e4f8eb9728b3",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Walking Home"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "83ddbd06-9c4a-43a3-9df2-07f9dfea8dd9.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Walking Home"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Walking Home"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "83ddbd06-9c4a-43a3-9df2-07f9dfea8dd9.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Walking Home"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:290d5e760cb172bffbe33d4b1f2d178b8e73be5acbd48024b439e1b37950e422|pages:1-1|title:walking home|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "walking home",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "1c56eedd-7091-4d20-8cb2-62f26405cb36": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "c73837f7-1448-4883-ad9b-20a5256af547": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "1c56eedd-7091-4d20-8cb2-62f26405cb36",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "walking home",
+  "source_book_fingerprint": "book_sha256:290d5e760cb172bffbe33d4b1f2d178b8e73be5acbd48024b439e1b37950e422",
+  "source_book_id": "1934582f-e9f0-4d0d-944b-cf99f69be8c3",
+  "source_content_sha256": "88975d496a2d47dae800452611f86c24d5c8c8a2cf6ea4fa358f76603984d3cb",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "Walking Home",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

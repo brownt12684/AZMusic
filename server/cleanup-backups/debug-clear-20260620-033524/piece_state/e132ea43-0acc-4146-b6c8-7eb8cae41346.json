@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "e132ea43-0acc-4146-b6c8-7eb8cae41346",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Spanish Dance"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "b85d1d92-cc0e-4f9a-a235-51e55574b55b.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Spanish Dance"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Spanish Dance"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "b85d1d92-cc0e-4f9a-a235-51e55574b55b.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Spanish Dance"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:6b713e99841a5d239b02cde23c01ae10d98e3aa8ad31f61136944fa50cc5d807|pages:1-1|title:spanish dance|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "spanish dance",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "0ef72263-9370-472e-9d18-cdba26289bd3": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "cdd38f2f-1445-4bb1-a866-63deff31cfd0": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "0ef72263-9370-472e-9d18-cdba26289bd3",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "spanish dance",
+  "source_book_fingerprint": "book_sha256:6b713e99841a5d239b02cde23c01ae10d98e3aa8ad31f61136944fa50cc5d807",
+  "source_book_id": "0f02835f-44ad-419f-a3e8-23b78abc36c5",
+  "source_content_sha256": "6b713e99841a5d239b02cde23c01ae10d98e3aa8ad31f61136944fa50cc5d807",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "Spanish Dance",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

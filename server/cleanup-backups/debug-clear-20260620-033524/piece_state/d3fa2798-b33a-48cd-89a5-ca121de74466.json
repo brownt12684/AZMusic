@@ -1,0 +1,80 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "d3fa2798-b33a-48cd-89a5-ca121de74466",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Dreamland",
+      "Marching Martians"
+    ],
+    "multi_piece_page": true,
+    "primary_instrument": "Cello",
+    "source_file_name": "9fae1a51-88c5-4110-9e9c-c6c3cb0b7bfc.pdf",
+    "source_page_end": 45,
+    "source_page_start": 45,
+    "title": "Dreamland / Marching Martians"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.8,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Dreamland",
+          "Marching Martians"
+        ],
+        "multi_piece_page": true,
+        "primary_instrument": "Cello",
+        "source_file_name": "9fae1a51-88c5-4110-9e9c-c6c3cb0b7bfc.pdf",
+        "source_page_end": 45,
+        "source_page_start": 45,
+        "title": "Dreamland / Marching Martians"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:8cef428183a3be697d28d69a450878038b556666a18aadb68483ace0e9b47dcc|pages:45-45|title:dreamland marching martians|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "dreamland marching martians",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "689431d7-a120-41bb-842b-7116d6f5968d": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "fff38c6f-04d9-4042-852f-8088869c4f05": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "689431d7-a120-41bb-842b-7116d6f5968d",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "dreamland marching martians",
+  "source_book_fingerprint": "book_sha256:8cef428183a3be697d28d69a450878038b556666a18aadb68483ace0e9b47dcc",
+  "source_book_id": "fa8de395-26c8-4d97-9aff-a20858953b44",
+  "source_content_sha256": "eb65753c7cb3d32846bcc521e7ab3c1a06f0f3c5a1a83ebe8a64f975614f6bac",
+  "source_page_end": 45,
+  "source_page_start": 45,
+  "split_confidence": 0.8,
+  "title": "Dreamland / Marching Martians",
+  "validation_warnings": [
+    "Multiple short pieces detected on one page; kept together as one shared page item."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

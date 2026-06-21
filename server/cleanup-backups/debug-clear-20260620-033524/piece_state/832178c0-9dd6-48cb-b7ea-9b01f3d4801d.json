@@ -1,0 +1,130 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "832178c0-9dd6-48cb-b7ea-9b01f3d4801d",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "41 The Heavy Highlander d Vv =60 3.1 og 2 4 2 3 2 44 3 ya a ee ee a ee ee f NYS NES |] a \u00b0 a a a ee | 5) gg SS See 5 2 2 4 0 1 2 \u00b0 SS ee EE \u2014\u2014\u2014\u2014 \u2014\u2014\u2014 MN\u2014_\u00a3 N Ps Q a Q Leyte | ee et ee ee et Barcarole ] 2g .=56 ; uo 1 3 4 2 3! SS eS Se Se ae ee ee ae ee ae SS \u2014e\u2014\u2014\u2014EE EEE mp sempre pizz. Lp oe cm bn pe | SS eS ee 2 5 aN _ 7 ~\u00bb 4 1 1-4 4 3 SS 22S SS SSS SS ete teet top || A ae"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "41 The Heavy Highlander d Vv =60 3.1 og 2 4 2 3 2 44 3 ya a ee ee a ee ee f NYS NES |] a \u00b0 a a a ee | 5) gg SS See 5 2 2 4 0 1 2 \u00b0 SS ee EE \u2014\u2014\u2014\u2014 \u2014\u2014\u2014 MN\u2014_\u00a3 N Ps Q a Q Leyte | ee et ee ee et Barcarole ] 2g .=56 ; uo 1 3 4 2 3! SS eS Se Se ae ee ee ae ee ae SS \u2014e\u2014\u2014\u2014EE EEE mp sempre pizz. Lp oe cm bn pe | SS eS ee 2 5 aN _ 7 ~\u00bb 4 1 1-4 4 3 SS 22S SS SSS SS ete teet top || A ae",
+    "primary_instrument": "Cello",
+    "source_file_name": "77d18544-5e33-4c66-8a92-5a60efd867b0.pdf",
+    "title": "The Heavy Highlander"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "The Heavy Highlander"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:be11912f6d7554e25292cc99a5a70a20faee75a0311db14a397ebffa01925a91",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "the heavy highlander barcarole",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "77d18544-5e33-4c66-8a92-5a60efd867b0.pdf",
+        "title": "The Heavy Highlander"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0696,
+          "has_staff_hint": true,
+          "horizontal_line_count": 36,
+          "page_number": 1,
+          "text_excerpt": "41 The Heavy Highlander",
+          "title_candidates": [
+            "The Heavy Highlander",
+            "Barcarole"
+          ],
+          "title_ocr_excerpt": "The Heavy Highlander Barcarole",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "The Heavy Highlander",
+            "Barcarole"
+          ],
+          "multi_piece_page": true,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "The Heavy Highlander / Barcarole",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "41 The Heavy Highlander d Vv =60 3.1 og 2 4 2 3 2 44 3 ya a ee ee a ee ee f NYS NES |] a \u00b0 a a a ee | 5) gg SS See 5 2 2 4 0 1 2 \u00b0 SS ee EE \u2014\u2014\u2014\u2014 \u2014\u2014\u2014 MN\u2014_\u00a3 N Ps Q a Q Leyte | ee et ee ee et Barcarole ] 2g .=56 ; uo 1 3 4 2 3! SS eS Se Se ae ee ee ae ee ae SS \u2014e\u2014\u2014\u2014EE EEE mp sempre pizz. Lp oe cm bn pe | SS eS ee 2 5 aN _ 7 ~\u00bb 4 1 1-4 4 3 SS 22S SS SSS SS ete teet top || A ae"
+      }
+    ],
+    "ocr_text_excerpt": "41 The Heavy Highlander d Vv =60 3.1 og 2 4 2 3 2 44 3 ya a ee ee a ee ee f NYS NES |] a \u00b0 a a a ee | 5) gg SS See 5 2 2 4 0 1 2 \u00b0 SS ee EE \u2014\u2014\u2014\u2014 \u2014\u2014\u2014 MN\u2014_\u00a3 N Ps Q a Q Leyte | ee et ee ee et Barcarole ] 2g .=56 ; uo 1 3 4 2 3! SS eS Se Se ae ee ee ae ee ae SS \u2014e\u2014\u2014\u2014EE EEE mp sempre pizz. Lp oe cm bn pe | SS eS ee 2 5 aN _ 7 ~\u00bb 4 1 1-4 4 3 SS 22S SS SSS SS ete teet top || A ae",
+    "title": "The Heavy Highlander"
+  },
+  "score_versions": {
+    "16ea7253-5ba8-48dd-935d-dd6d18180eaf": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "25ee7b2c-cff9-4f6b-934b-9dadec7713b5",
+      "student_default": true
+    },
+    "25ee7b2c-cff9-4f6b-934b-9dadec7713b5": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "heavy highlander barcarole",
+  "source_book_fingerprint": "book_sha256:be11912f6d7554e25292cc99a5a70a20faee75a0311db14a397ebffa01925a91",
+  "source_book_id": null,
+  "source_content_sha256": "be11912f6d7554e25292cc99a5a70a20faee75a0311db14a397ebffa01925a91",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "The Heavy Highlander / Barcarole",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

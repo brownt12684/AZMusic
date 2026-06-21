@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "c641d4b9-33a0-4cab-a0af-6ec3b92bb1cb",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "I\u2019ve Got Homework"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "9fae1a51-88c5-4110-9e9c-c6c3cb0b7bfc.pdf",
+    "source_page_end": 26,
+    "source_page_start": 26,
+    "title": "I\u2019ve Got Homework"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "I\u2019ve Got Homework"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "9fae1a51-88c5-4110-9e9c-c6c3cb0b7bfc.pdf",
+        "source_page_end": 26,
+        "source_page_start": 26,
+        "title": "I\u2019ve Got Homework"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:8cef428183a3be697d28d69a450878038b556666a18aadb68483ace0e9b47dcc|pages:26-26|title:i ve got homework|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "i ve got homework",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "d4edcdfb-303e-4b0b-baa8-aa1020858a51": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "e75d35b9-62da-4f28-b1e5-7969ee7d8f0f",
+      "student_default": true
+    },
+    "e75d35b9-62da-4f28-b1e5-7969ee7d8f0f": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "i ve got homework",
+  "source_book_fingerprint": "book_sha256:8cef428183a3be697d28d69a450878038b556666a18aadb68483ace0e9b47dcc",
+  "source_book_id": "fa8de395-26c8-4d97-9aff-a20858953b44",
+  "source_content_sha256": "11c0656f2c5eb0a25247c00bf3a1f0c48f0a9e718cbdd5f1faad428392f3f5ed",
+  "source_page_end": 26,
+  "source_page_start": 26,
+  "split_confidence": 0.84,
+  "title": "I\u2019ve Got Homework",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

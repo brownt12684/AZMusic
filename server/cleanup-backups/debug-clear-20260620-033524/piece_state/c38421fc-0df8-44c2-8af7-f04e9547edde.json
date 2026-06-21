@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "c38421fc-0df8-44c2-8af7-f04e9547edde",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Playing in the Park"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "0c43f091-74ba-451f-8edb-18941682334b.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Playing in the Park"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Playing in the Park"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "0c43f091-74ba-451f-8edb-18941682334b.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Playing in the Park"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:0d7ee00c3a324bc65e60fda913d8911fa18038f2fe4e4e805e4b89ecc01a2556|pages:1-1|title:playing in the park|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "playing in the park",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "43716fa3-1a63-47e9-85aa-fbedd80c17cc": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "caf59af4-30f3-4acf-9f6f-7aa9a0cdc853",
+      "student_default": true
+    },
+    "caf59af4-30f3-4acf-9f6f-7aa9a0cdc853": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "playing in the park",
+  "source_book_fingerprint": "book_sha256:0d7ee00c3a324bc65e60fda913d8911fa18038f2fe4e4e805e4b89ecc01a2556",
+  "source_book_id": "4e429679-6162-4785-84fa-5476f0f56808",
+  "source_content_sha256": "0d7ee00c3a324bc65e60fda913d8911fa18038f2fe4e4e805e4b89ecc01a2556",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "Playing in the Park",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

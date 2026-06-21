@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "93b5617d-87ba-46ce-8387-93d30286a1b1",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Erik\u2019s Minuet"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "9fae1a51-88c5-4110-9e9c-c6c3cb0b7bfc.pdf",
+    "source_page_end": 18,
+    "source_page_start": 18,
+    "title": "Erik\u2019s Minuet"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Erik\u2019s Minuet"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "9fae1a51-88c5-4110-9e9c-c6c3cb0b7bfc.pdf",
+        "source_page_end": 18,
+        "source_page_start": 18,
+        "title": "Erik\u2019s Minuet"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:8cef428183a3be697d28d69a450878038b556666a18aadb68483ace0e9b47dcc|pages:18-18|title:erik s minuet|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "erik s minuet",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "4df08bde-22b3-4d0c-82dd-7eaff5802574": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "56042499-db6e-4983-9226-a33860d72393",
+      "student_default": true
+    },
+    "56042499-db6e-4983-9226-a33860d72393": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "erik s minuet",
+  "source_book_fingerprint": "book_sha256:8cef428183a3be697d28d69a450878038b556666a18aadb68483ace0e9b47dcc",
+  "source_book_id": "fa8de395-26c8-4d97-9aff-a20858953b44",
+  "source_content_sha256": "384b650f05743abdb29a1d37ef96d13787704957b7246ce3819542b323ce55af",
+  "source_page_end": 18,
+  "source_page_start": 18,
+  "split_confidence": 0.84,
+  "title": "Erik\u2019s Minuet",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

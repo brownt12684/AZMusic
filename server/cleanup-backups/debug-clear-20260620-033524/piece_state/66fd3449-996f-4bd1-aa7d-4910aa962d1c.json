@@ -1,0 +1,125 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "66fd3449-996f-4bd1-aa7d-4910aa962d1c",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "ll Lament J 2 =66 a 43 2 x2. a a A A ES a Se a a SN Se Fe ce oes as ees ee eee ee ee [2b Ca a a ot Vv \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 ee \u2014\u2014\u2014\u2014\u2014 a \u2014\u2014\u2014\u2014 EEE 4 ; . ~ a A Lc | SS \u2014\u2014\u2014\u2014 = ee eS \u2014\u2014\u2014_\u2014_=_ ____\u2014 \u2014 ye fF > eS vy 9 NON 23, Oe EN eee Se \u2014\u2014\u2014 eS \u2014\u2014\u2014_\u2014\u2014\u2014 Se f | fal \u2014\u2014 Se ee ee ee ae as 2 13 ol Le \u00a9 > 2 \u2014 a yi Ee pO, \u2014\u2014\u2014\u2014\u2014 \u2014\u2014 \u2014 ee SS ee ee SS SS SS SS Ss Oe aS Se a, eS | ee cee v \u2014 | S\u2014\u2014\u2014\u2014 a ee! So ee ee es oe -<\u2014?\u2014_ a 9 ss =D oe or oor"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "ll Lament J 2 =66 a 43 2 x2. a a A A ES a Se a a SN Se Fe ce oes as ees ee eee ee ee [2b Ca a a ot Vv \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 ee \u2014\u2014\u2014\u2014\u2014 a \u2014\u2014\u2014\u2014 EEE 4 ; . ~ a A Lc | SS \u2014\u2014\u2014\u2014 = ee eS \u2014\u2014\u2014_\u2014_=_ ____\u2014 \u2014 ye fF > eS vy 9 NON 23, Oe EN eee Se \u2014\u2014\u2014 eS \u2014\u2014\u2014_\u2014\u2014\u2014 Se f | fal \u2014\u2014 Se ee ee ee ae as 2 13 ol Le \u00a9 > 2 \u2014 a yi Ee pO, \u2014\u2014\u2014\u2014\u2014 \u2014\u2014 \u2014 ee SS ee ee SS SS SS SS Ss Oe aS Se a, eS | ee cee v \u2014 | S\u2014\u2014\u2014\u2014 a ee! So ee ee es oe -<\u2014?\u2014_ a 9 ss =D oe or oor",
+    "primary_instrument": "Cello",
+    "source_file_name": "4b9838aa-4d1c-40c3-adb2-6ef0186f75cb.pdf",
+    "title": "ll"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "ll"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:e359ec90d6067480862307b67a73d1f6eabcc8edbb1950f482136f194cb0f406",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "lament",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "4b9838aa-4d1c-40c3-adb2-6ef0186f75cb.pdf"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0536,
+          "has_staff_hint": true,
+          "horizontal_line_count": 46,
+          "page_number": 1,
+          "text_excerpt": "",
+          "title_candidates": [
+            "Lament"
+          ],
+          "title_ocr_excerpt": "Lament",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Lament"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Lament",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "ll Lament J 2 =66 a 43 2 x2. a a A A ES a Se a a SN Se Fe ce oes as ees ee eee ee ee [2b Ca a a ot Vv \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 ee \u2014\u2014\u2014\u2014\u2014 a \u2014\u2014\u2014\u2014 EEE 4 ; . ~ a A Lc | SS \u2014\u2014\u2014\u2014 = ee eS \u2014\u2014\u2014_\u2014_=_ ____\u2014 \u2014 ye fF > eS vy 9 NON 23, Oe EN eee Se \u2014\u2014\u2014 eS \u2014\u2014\u2014_\u2014\u2014\u2014 Se f | fal \u2014\u2014 Se ee ee ee ae as 2 13 ol Le \u00a9 > 2 \u2014 a yi Ee pO, \u2014\u2014\u2014\u2014\u2014 \u2014\u2014 \u2014 ee SS ee ee SS SS SS SS Ss Oe aS Se a, eS | ee cee v \u2014 | S\u2014\u2014\u2014\u2014 a ee! So ee ee es oe -<\u2014?\u2014_ a 9 ss =D oe or oor"
+      }
+    ],
+    "ocr_text_excerpt": "ll Lament J 2 =66 a 43 2 x2. a a A A ES a Se a a SN Se Fe ce oes as ees ee eee ee ee [2b Ca a a ot Vv \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 ee \u2014\u2014\u2014\u2014\u2014 a \u2014\u2014\u2014\u2014 EEE 4 ; . ~ a A Lc | SS \u2014\u2014\u2014\u2014 = ee eS \u2014\u2014\u2014_\u2014_=_ ____\u2014 \u2014 ye fF > eS vy 9 NON 23, Oe EN eee Se \u2014\u2014\u2014 eS \u2014\u2014\u2014_\u2014\u2014\u2014 Se f | fal \u2014\u2014 Se ee ee ee ae as 2 13 ol Le \u00a9 > 2 \u2014 a yi Ee pO, \u2014\u2014\u2014\u2014\u2014 \u2014\u2014 \u2014 ee SS ee ee SS SS SS SS Ss Oe aS Se a, eS | ee cee v \u2014 | S\u2014\u2014\u2014\u2014 a ee! So ee ee es oe -<\u2014?\u2014_ a 9 ss =D oe or oor",
+    "title": "ll"
+  },
+  "score_versions": {
+    "8cbf83b5-d210-4732-85c2-82294d738bbd": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "96583641-d30b-43f4-8714-273b289c9ad3": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "8cbf83b5-d210-4732-85c2-82294d738bbd",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "lament",
+  "source_book_fingerprint": "book_sha256:e359ec90d6067480862307b67a73d1f6eabcc8edbb1950f482136f194cb0f406",
+  "source_book_id": null,
+  "source_content_sha256": "e359ec90d6067480862307b67a73d1f6eabcc8edbb1950f482136f194cb0f406",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Lament",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

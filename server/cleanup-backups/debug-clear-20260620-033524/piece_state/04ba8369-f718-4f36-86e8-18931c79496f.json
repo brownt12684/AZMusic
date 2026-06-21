@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "04ba8369-f718-4f36-86e8-18931c79496f",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Valse Triste"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "badc999d-5370-4b59-9f46-6875c0677587.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Valse Triste"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Valse Triste"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "badc999d-5370-4b59-9f46-6875c0677587.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Valse Triste"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:ce82167f252a4a7a0c7af14e8c96f14b0d12fa9122c5a8ad895500dd4df86c94|pages:1-1|title:valse triste|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "valse triste",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "5176d2f2-0d01-400a-90ef-c672cbc40a3d": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "afd8b5f0-306a-43cf-b45c-19f6c144c2ea": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "5176d2f2-0d01-400a-90ef-c672cbc40a3d",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "valse triste",
+  "source_book_fingerprint": "book_sha256:ce82167f252a4a7a0c7af14e8c96f14b0d12fa9122c5a8ad895500dd4df86c94",
+  "source_book_id": "783c5ebc-fc28-4011-b9d6-a8a9f3f041f5",
+  "source_content_sha256": "ce82167f252a4a7a0c7af14e8c96f14b0d12fa9122c5a8ad895500dd4df86c94",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "Valse Triste",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

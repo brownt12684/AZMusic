@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "d74d29f0-405f-476d-80a6-1edb07ff06f4",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Sicilienne"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "0a9852a7-4cec-433e-9be1-d8b138fe15db.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Sicilienne"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Sicilienne"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "0a9852a7-4cec-433e-9be1-d8b138fe15db.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Sicilienne"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:9b86f2f4af532c041f648e006ef0100ce3cd078a191494b967f0733a2735599f|pages:1-1|title:sicilienne|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "sicilienne",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "0012edb7-caf1-4a23-a2e6-8bd996a83e36": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "130441af-ae28-417d-8533-cd98783938bc",
+      "student_default": true
+    },
+    "130441af-ae28-417d-8533-cd98783938bc": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "sicilienne",
+  "source_book_fingerprint": "book_sha256:9b86f2f4af532c041f648e006ef0100ce3cd078a191494b967f0733a2735599f",
+  "source_book_id": "86647821-78b3-42d6-bc39-4e82dc2f7428",
+  "source_content_sha256": "9b86f2f4af532c041f648e006ef0100ce3cd078a191494b967f0733a2735599f",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "Sicilienne",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

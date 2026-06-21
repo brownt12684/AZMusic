@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "7b983d4f-5a16-416b-a77f-e0530f7f9552",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Running"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "5d37173b-9488-4e39-9ab7-ed6ec03449b1.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Running"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Running"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "5d37173b-9488-4e39-9ab7-ed6ec03449b1.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Running"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:23ad3004dccf172e95025e007fde8b06ec7f07af9ff15d102ed2f5b2d085bc38|pages:1-1|title:running|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "running",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "429f9e0c-6649-4c45-b3d3-44810bf38a72": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "9553b2cf-467a-43f2-9ab9-abc28f85071f",
+      "student_default": true
+    },
+    "9553b2cf-467a-43f2-9ab9-abc28f85071f": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "running",
+  "source_book_fingerprint": "book_sha256:23ad3004dccf172e95025e007fde8b06ec7f07af9ff15d102ed2f5b2d085bc38",
+  "source_book_id": "9ecfea4b-d219-4a91-b10e-d8face9bcda2",
+  "source_content_sha256": "23ad3004dccf172e95025e007fde8b06ec7f07af9ff15d102ed2f5b2d085bc38",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "Running",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

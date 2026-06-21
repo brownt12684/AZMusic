@@ -1,0 +1,133 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "79f1196c-1aa7-4d97-a35a-7d4789d88eb0",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Pachyderm Parade",
+    "ocr_confidence": 0.78,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "ON __ __ ___ _ _____ _ _ _ _ _ _ 12 The Invisible Target Jes00 40 bet OY ts be et OY ES a A A, Sa, Oe ae Se | op emi | | sem i2z. mre TTT | \u2014 ae \u2014_ Coy 9 i Seat ps rr rr a on o_o ea | o* 5 o 1 \u2014 o\u2014 0 1 \u2014! 4 et \u2014 9 8 0 8 it ro rt oO oatar?ssxsxXSEOSSsSS et ee eS}enjmNmNn\u2019 oe | DS ee a a eS a an a ee! a ee ee a \u2014 SS a an a st * This harmonic can be played in three different places. See if you can find them all. Pachyderm Parade e106 y 0 o 4 _\u2014 4 0 3 bo | \u2014 Sa \u2014\u2014 ee At ||\u00bb \u2014 \u00ab0-0 fi #0 \u2014 0-9-6 ae..."
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "ON __ __ ___ _ _____ _ _ _ _ _ _ 12 The Invisible Target Jes00 40 bet OY ts be et OY ES a A A, Sa, Oe ae Se | op emi | | sem i2z. mre TTT | \u2014 ae \u2014_ Coy 9 i Seat ps rr rr a on o_o ea | o* 5 o 1 \u2014 o\u2014 0 1 \u2014! 4 et \u2014 9 8 0 8 it ro rt oO oatar?ssxsxXSEOSSsSS et ee eS}enjmNmNn\u2019 oe | DS ee a a eS a an a ee! a ee ee a \u2014 SS a an a st * This harmonic can be played in three different places. See if you can find them all. Pachyderm Parade e106 y 0 o 4 _\u2014 4 0 3 bo | \u2014 Sa \u2014\u2014 ee At ||\u00bb \u2014 \u00ab0-0 fi #0 \u2014 0-9-6 ae et eo ee f ial Vv vos hy rr? rH HH oO Sf a > | i? i >??? i i es a 5 tC) 4 \u2014 1 x4 it \u2014\u2014 a 7 eS FE EE ES a y= > rr (EE ee ee ee es ee st SS SS SS es i ss",
+    "primary_instrument": "Cello",
+    "source_file_name": "d9942c94-c455-4163-8b30-70e0b7abd17c.pdf",
+    "title": "The Invisible Target"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.78,
+      "fields": {
+        "composer": "The Invisible Target",
+        "title": "On"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:fe83b1f67195faa7d856933c12fba0827f9b8ce23a1cd2961ce215ef44d526bb",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "the invisible target pachyderm parade",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "composer": "Pachyderm Parade",
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "d9942c94-c455-4163-8b30-70e0b7abd17c.pdf",
+        "title": "The Invisible Target"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0623,
+          "has_staff_hint": true,
+          "horizontal_line_count": 52,
+          "page_number": 1,
+          "text_excerpt": "The Invisible Target = 100 oy oo, oO) 3 0 b \u00a2 f E x 2 + 2 go = ee + * This harmonic can be played in three different places. See if you can find them all. Pachyderm Parade Jos Yo 0 4 2 4 o 3 x2 Bere eee pile SS f Dp Ser erie rs * SSS a ra ra 3 > \u20182 Se",
+          "title_candidates": [
+            "The Invisible Target",
+            "Pachyderm Parade"
+          ],
+          "title_ocr_excerpt": "Pachyderm Parade",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": "Pachyderm Parade",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "The Invisible Target",
+            "Pachyderm Parade"
+          ],
+          "multi_piece_page": true,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "The Invisible Target / Pachyderm Parade",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        }
+      ],
+      "warnings": []
+    },
+    "composer": "The Invisible Target",
+    "ocr_confidence": 0.78,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "ON __ __ ___ _ _____ _ _ _ _ _ _ 12 The Invisible Target Jes00 40 bet OY ts be et OY ES a A A, Sa, Oe ae Se | op emi | | sem i2z. mre TTT | \u2014 ae \u2014_ Coy 9 i Seat ps rr rr a on o_o ea | o* 5 o 1 \u2014 o\u2014 0 1 \u2014! 4 et \u2014 9 8 0 8 it ro rt oO oatar?ssxsxXSEOSSsSS et ee eS}enjmNmNn\u2019 oe | DS ee a a eS a an a ee! a ee ee a \u2014 SS a an a st * This harmonic can be played in three different places. See if you can find them all. Pachyderm Parade e106 y 0 o 4 _\u2014 4 0 3 bo | \u2014 Sa \u2014\u2014 ee At ||\u00bb \u2014 \u00ab0-0 fi #0 \u2014 0-9-6 ae..."
+      }
+    ],
+    "ocr_text_excerpt": "ON __ __ ___ _ _____ _ _ _ _ _ _ 12 The Invisible Target Jes00 40 bet OY ts be et OY ES a A A, Sa, Oe ae Se | op emi | | sem i2z. mre TTT | \u2014 ae \u2014_ Coy 9 i Seat ps rr rr a on o_o ea | o* 5 o 1 \u2014 o\u2014 0 1 \u2014! 4 et \u2014 9 8 0 8 it ro rt oO oatar?ssxsxXSEOSSsSS et ee eS}enjmNmNn\u2019 oe | DS ee a a eS a an a ee! a ee ee a \u2014 SS a an a st * This harmonic can be played in three different places. See if you can find them all. Pachyderm Parade e106 y 0 o 4 _\u2014 4 0 3 bo | \u2014 Sa \u2014\u2014 ee At ||\u00bb \u2014 \u00ab0-0 fi #0 \u2014 0-9-6 ae et eo ee f ial Vv vos hy rr? rH HH oO Sf a > | i? i >??? i i es a 5 tC) 4 \u2014 1 x4 it \u2014\u2014 a 7 eS FE EE ES a y= > rr (EE ee ee ee es ee st SS SS SS es i ss",
+    "title": "On"
+  },
+  "score_versions": {
+    "169a6bab-3534-4043-bf90-ac4c3f5086f2": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "d2de2f82-f2b0-4f32-a739-6ac4e06bf3a8",
+      "student_default": true
+    },
+    "d2de2f82-f2b0-4f32-a739-6ac4e06bf3a8": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "invisible target pachyderm parade",
+  "source_book_fingerprint": "book_sha256:fe83b1f67195faa7d856933c12fba0827f9b8ce23a1cd2961ce215ef44d526bb",
+  "source_book_id": null,
+  "source_content_sha256": "fe83b1f67195faa7d856933c12fba0827f9b8ce23a1cd2961ce215ef44d526bb",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "The Invisible Target / Pachyderm Parade",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

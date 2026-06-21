@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "b5f162c0-05d0-4bd0-9caf-29d6e4d2dfed",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Jig"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "88270970-1861-424a-bcac-636854209d0f.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Jig"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Jig"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "88270970-1861-424a-bcac-636854209d0f.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Jig"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:ac0dee1342f1bdf59325fb0e32d488efaa7681e91a7f7998e91987ecc4cb5708|pages:1-1|title:jig|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "jig",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "4c8ac69a-ae78-4029-a512-37d93c319b95": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "a00f1398-06a6-44e0-ba20-cea23cb0ec5d",
+      "student_default": true
+    },
+    "a00f1398-06a6-44e0-ba20-cea23cb0ec5d": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "jig",
+  "source_book_fingerprint": "book_sha256:ac0dee1342f1bdf59325fb0e32d488efaa7681e91a7f7998e91987ecc4cb5708",
+  "source_book_id": "d512bc70-96d6-4223-872d-f0f8e0d4b73e",
+  "source_content_sha256": "ac0dee1342f1bdf59325fb0e32d488efaa7681e91a7f7998e91987ecc4cb5708",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "Jig",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

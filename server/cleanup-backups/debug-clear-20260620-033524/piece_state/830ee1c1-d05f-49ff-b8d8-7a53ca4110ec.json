@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "830ee1c1-d05f-49ff-b8d8-7a53ca4110ec",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "March"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "bf90c82b-9634-47f0-8696-888d8cb12e8a.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "March"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "March"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "bf90c82b-9634-47f0-8696-888d8cb12e8a.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "March"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:15c09c76d642fa5b59fc2a7116be687904a9fcaccdc3366c64165e3f273db1f7|pages:1-1|title:march|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "march",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "1d54aaaa-3f97-4d25-833c-60967ab5ac5f": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "4062d574-9dc8-439f-99d9-6dd2d3534db6": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "1d54aaaa-3f97-4d25-833c-60967ab5ac5f",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "march",
+  "source_book_fingerprint": "book_sha256:15c09c76d642fa5b59fc2a7116be687904a9fcaccdc3366c64165e3f273db1f7",
+  "source_book_id": "6b355224-b053-4914-95b2-7e09f187db09",
+  "source_content_sha256": "15c09c76d642fa5b59fc2a7116be687904a9fcaccdc3366c64165e3f273db1f7",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "March",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

@@ -1,4 +1,14 @@
 # AZMusic — Agent Guidance
+# Agent Directives
+
+## Code Search Rules (Windows Environment)
+You are operating in a Windows environment. DO NOT use `grep`. 
+When searching for code, you must exclusively use `rg` (ripgrep).
+* Use `rg -n -C 2 'pattern' file`.
+* Always include line numbers (`-n`).
+* Always include 2 lines of context (`-C 2`). 
+* If searching directories, always exclude node_modules and build folders.
+
 
 ## Essential Commands
 

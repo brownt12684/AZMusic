@@ -1,0 +1,80 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "cc9b05d0-adae-4d8f-bea9-f65a1d159255",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "The Elephant\u2019s Waltz",
+      "The Tired Tortoise"
+    ],
+    "multi_piece_page": true,
+    "primary_instrument": "Cello",
+    "source_file_name": "9fae1a51-88c5-4110-9e9c-c6c3cb0b7bfc.pdf",
+    "source_page_end": 7,
+    "source_page_start": 7,
+    "title": "The Elephant\u2019s Waltz / The Tired Tortoise"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.8,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "The Elephant\u2019s Waltz",
+          "The Tired Tortoise"
+        ],
+        "multi_piece_page": true,
+        "primary_instrument": "Cello",
+        "source_file_name": "9fae1a51-88c5-4110-9e9c-c6c3cb0b7bfc.pdf",
+        "source_page_end": 7,
+        "source_page_start": 7,
+        "title": "The Elephant\u2019s Waltz / The Tired Tortoise"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:8cef428183a3be697d28d69a450878038b556666a18aadb68483ace0e9b47dcc|pages:7-7|title:the elephant s waltz the tired tortoise|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "the elephant s waltz the tired tortoise",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "26a64e06-8d8b-4ef6-9d15-403023573d01": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "4ddda357-460a-4ed9-b743-daf54fa2db7d": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "26a64e06-8d8b-4ef6-9d15-403023573d01",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "elephant s waltz the tired tortoise",
+  "source_book_fingerprint": "book_sha256:8cef428183a3be697d28d69a450878038b556666a18aadb68483ace0e9b47dcc",
+  "source_book_id": "fa8de395-26c8-4d97-9aff-a20858953b44",
+  "source_content_sha256": "cb3c7861e408916ba8f4d30e0956600c88c50b83dda55587d1bec9adcad49e1c",
+  "source_page_end": 7,
+  "source_page_start": 7,
+  "split_confidence": 0.8,
+  "title": "The Elephant\u2019s Waltz / The Tired Tortoise",
+  "validation_warnings": [
+    "Multiple short pieces detected on one page; kept together as one shared page item."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

@@ -1,0 +1,129 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "77f6c7ed-58e8-4da4-8d08-2e2e8b3ee24e",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "2 I Was a Teenage Monster = yoo4 4 d-se0 0 0 39 431 2 0 >t IS FO ee St Oboe |) ea DOS ee PA ea ee a a ee yt eee ee eeses 2 eee abe wee eee pee ee 6 | 6 6 +p ees www) A AE A, SS OS SS SS SS GN GS SS PS SS SS SS SS SG Os Pp ep 5 4 2 ee et ES SS SS SS cc SS SS O_O A NS SS SS SS A SS NS A SS Sf WE NS SS Sf op a a NTL inet eee 2 Pe 2, ee eee thet Ye eee Bee ee settee utente seen Fine 1 1 i} 3 2 it} 3 0 ao KS ES ee SS ee ee ee es eee Se es eG\u201d ee es Se a ee ee VY VY _. wy YA (gqepoa tet st # _ te ee..."
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "2 I Was a Teenage Monster = yoo4 4 d-se0 0 0 39 431 2 0 >t IS FO ee St Oboe |) ea DOS ee PA ea ee a a ee yt eee ee eeses 2 eee abe wee eee pee ee 6 | 6 6 +p ees www) A AE A, SS OS SS SS SS GN GS SS PS SS SS SS SS SG Os Pp ep 5 4 2 ee et ES SS SS SS cc SS SS O_O A NS SS SS SS A SS NS A SS Sf WE NS SS Sf op a a NTL inet eee 2 Pe 2, ee eee thet Ye eee Bee ee settee utente seen Fine 1 1 i} 3 2 it} 3 0 ao KS ES ee SS ee ee ee es eee Se es eG\u201d ee es Se a ee ee VY VY _. wy YA (gqepoa tet st # _ te ee ee ___e # _#pe ___ SS Se ee er a oe aa a a ee a le GO oo a se 2 SE Se nS as 13 13 2 0 4 eT yp nt pe ee ae ee ee ee ee ae a La] Vv inl v inl Vv ff Vv lyst Pe PP _ijiep _*he __ji\u00a2\u00a2 \u00a2\u00a2_._i\u00a2\u00a2* _#- _ a Ce ee A ee | Dao ey ay Py eh BO ye eS ee ee ee ee D.C. al Fine",
+    "opus": "op a a NTL",
+    "primary_instrument": "Cello",
+    "source_file_name": "91dafcfa-e844-493c-a580-46686f1d4362.pdf",
+    "title": "I Was a Teenage Monster"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "opus": "op a a NTL",
+        "title": "I Was a Teenage Monster"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:887a31fca19cbee065890aad765fd877da10379d234eff461fcedcfd3f2ea98a",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "i was a teenage monster",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "91dafcfa-e844-493c-a580-46686f1d4362.pdf",
+        "title": "I Was a Teenage Monster"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0669,
+          "has_staff_hint": true,
+          "horizontal_line_count": 44,
+          "page_number": 1,
+          "text_excerpt": "I Was a Teenage Monster Fine D.C. al Fine",
+          "title_candidates": [],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.55,
+          "contained_piece_titles": [
+            "Untitled piece page 1"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Untitled piece page 1",
+          "validation_warnings": [
+            "No reliable title was detected on the first music page."
+          ]
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "2 I Was a Teenage Monster = yoo4 4 d-se0 0 0 39 431 2 0 >t IS FO ee St Oboe |) ea DOS ee PA ea ee a a ee yt eee ee eeses 2 eee abe wee eee pee ee 6 | 6 6 +p ees www) A AE A, SS OS SS SS SS GN GS SS PS SS SS SS SS SG Os Pp ep 5 4 2 ee et ES SS SS SS cc SS SS O_O A NS SS SS SS A SS NS A SS Sf WE NS SS Sf op a a NTL inet eee 2 Pe 2, ee eee thet Ye eee Bee ee settee utente seen Fine 1 1 i} 3 2 it} 3 0 ao KS ES ee SS ee ee ee es eee Se es eG\u201d ee es Se a ee ee VY VY _. wy YA (gqepoa tet st # _ te ee..."
+      }
+    ],
+    "ocr_text_excerpt": "2 I Was a Teenage Monster = yoo4 4 d-se0 0 0 39 431 2 0 >t IS FO ee St Oboe |) ea DOS ee PA ea ee a a ee yt eee ee eeses 2 eee abe wee eee pee ee 6 | 6 6 +p ees www) A AE A, SS OS SS SS SS GN GS SS PS SS SS SS SS SG Os Pp ep 5 4 2 ee et ES SS SS SS cc SS SS O_O A NS SS SS SS A SS NS A SS Sf WE NS SS Sf op a a NTL inet eee 2 Pe 2, ee eee thet Ye eee Bee ee settee utente seen Fine 1 1 i} 3 2 it} 3 0 ao KS ES ee SS ee ee ee es eee Se es eG\u201d ee es Se a ee ee VY VY _. wy YA (gqepoa tet st # _ te ee ee ___e # _#pe ___ SS Se ee er a oe aa a a ee a le GO oo a se 2 SE Se nS as 13 13 2 0 4 eT yp nt pe ee ae ee ee ee ee ae a La] Vv inl v inl Vv ff Vv lyst Pe PP _ijiep _*he __ji\u00a2\u00a2 \u00a2\u00a2_._i\u00a2\u00a2* _#- _ a Ce ee A ee | Dao ey ay Py eh BO ye eS ee ee ee ee D.C. al Fine",
+    "opus": "op a a NTL",
+    "title": "I Was a Teenage Monster"
+  },
+  "score_versions": {
+    "6ffa5c16-83d6-41b6-9ef9-6348f3f9ede0": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "82b74420-3dbc-4fcd-884c-9d1cfda08543": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "6ffa5c16-83d6-41b6-9ef9-6348f3f9ede0",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "i was a teenage monster",
+  "source_book_fingerprint": "book_sha256:887a31fca19cbee065890aad765fd877da10379d234eff461fcedcfd3f2ea98a",
+  "source_book_id": null,
+  "source_content_sha256": "887a31fca19cbee065890aad765fd877da10379d234eff461fcedcfd3f2ea98a",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "I Was a Teenage Monster",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

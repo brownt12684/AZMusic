@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "492718fb-c1f6-43ec-9eb3-fbac3519e3b3",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Japanese Garden",
+    "contained_piece_titles": [
+      "Japanese Garden"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "16f1defc-7202-4327-b2f1-c545b12d47d1.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Japanese Garden"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Japanese Garden",
+        "contained_piece_titles": [
+          "Japanese Garden"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "16f1defc-7202-4327-b2f1-c545b12d47d1.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Japanese Garden"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Japanese Garden",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:155ad27af3cf9e193089a94fe84e6841a09aab398db3ec394ddbd49f88174033|pages:1-1|title:japanese garden|composer:japanese garden|instrument:cello",
+  "normalized_composer": "japanese garden",
+  "normalized_title": "japanese garden",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "903ac959-2a74-4995-87ed-064c5f57131d": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "f53458c6-05f1-4c02-b52f-a0e058de3e7e",
+      "student_default": true
+    },
+    "f53458c6-05f1-4c02-b52f-a0e058de3e7e": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "japanese garden",
+  "sort_title": "japanese garden",
+  "source_book_fingerprint": "book_sha256:155ad27af3cf9e193089a94fe84e6841a09aab398db3ec394ddbd49f88174033",
+  "source_book_id": "a1ded381-05a1-4d12-bc09-4ab37e828984",
+  "source_content_sha256": "155ad27af3cf9e193089a94fe84e6841a09aab398db3ec394ddbd49f88174033",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "Japanese Garden",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

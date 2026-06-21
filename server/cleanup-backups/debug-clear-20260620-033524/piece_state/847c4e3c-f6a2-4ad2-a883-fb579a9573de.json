@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "847c4e3c-f6a2-4ad2-a883-fb579a9573de",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Feeling Fine"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "9df9a84a-f5a2-4868-9098-bc2385e286c1.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Feeling Fine"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Feeling Fine"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "9df9a84a-f5a2-4868-9098-bc2385e286c1.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Feeling Fine"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:ae9d15c452cc1f5e57c6b929e4766c20ecadad1407f40c7e793767955e10abc7|pages:1-1|title:feeling fine|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "feeling fine",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "80f47959-4be4-4ab1-9a1d-1b72f37482ce": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "a6a2ebb8-9239-45f1-b781-6fb490b9bb84": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "80f47959-4be4-4ab1-9a1d-1b72f37482ce",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "feeling fine",
+  "source_book_fingerprint": "book_sha256:ae9d15c452cc1f5e57c6b929e4766c20ecadad1407f40c7e793767955e10abc7",
+  "source_book_id": "d659b166-2758-461f-b168-e4fdaaa09334",
+  "source_content_sha256": "ae9d15c452cc1f5e57c6b929e4766c20ecadad1407f40c7e793767955e10abc7",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "Feeling Fine",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

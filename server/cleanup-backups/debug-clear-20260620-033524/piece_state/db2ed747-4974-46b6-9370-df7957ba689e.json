@@ -1,0 +1,80 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "db2ed747-4974-46b6-9370-df7957ba689e",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Bugle Call",
+      "Toy Soldiers"
+    ],
+    "multi_piece_page": true,
+    "primary_instrument": "Cello",
+    "source_file_name": "c91defa4-fc32-4d9b-b017-b1457d7be58d.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Bugle Call / Toy Soldiers"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.8,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Bugle Call",
+          "Toy Soldiers"
+        ],
+        "multi_piece_page": true,
+        "primary_instrument": "Cello",
+        "source_file_name": "c91defa4-fc32-4d9b-b017-b1457d7be58d.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Bugle Call / Toy Soldiers"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:3b761ce3bfdb432f2250f07882a750a8c09ae75993809f13f4b76364427972cc|pages:1-1|title:bugle call toy soldiers|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "bugle call toy soldiers",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "2e21d0b4-c46d-4c7e-8e2e-ccb84f27637f": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "8e680c09-bf1b-4511-8715-d6c805016e15",
+      "student_default": true
+    },
+    "8e680c09-bf1b-4511-8715-d6c805016e15": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "bugle call toy soldiers",
+  "source_book_fingerprint": "book_sha256:3b761ce3bfdb432f2250f07882a750a8c09ae75993809f13f4b76364427972cc",
+  "source_book_id": "cad98691-e035-4c8a-befa-2b6ceeb6f618",
+  "source_content_sha256": "3b761ce3bfdb432f2250f07882a750a8c09ae75993809f13f4b76364427972cc",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.8,
+  "title": "Bugle Call / Toy Soldiers",
+  "validation_warnings": [
+    "Multiple short pieces detected on one page; kept together as one shared page item."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

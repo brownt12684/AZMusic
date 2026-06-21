@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "8717e643-8b41-4a52-927f-d349fdb5d96d",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "At The Ball"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "c4fbaf7d-2a2a-477e-94e6-d39246c99769.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "At The Ball"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "At The Ball"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "c4fbaf7d-2a2a-477e-94e6-d39246c99769.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "At The Ball"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:6ddb3cbe8707c2651e640f84e1122daee810cc9f82b6f87bef64c72d7e212f0f|pages:1-1|title:at the ball|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "at the ball",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "20014c0b-2953-40ad-8611-418d168cd4ee": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "968db13f-8029-4524-886a-605bdf24c9ae",
+      "student_default": true
+    },
+    "968db13f-8029-4524-886a-605bdf24c9ae": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "at the ball",
+  "source_book_fingerprint": "book_sha256:6ddb3cbe8707c2651e640f84e1122daee810cc9f82b6f87bef64c72d7e212f0f",
+  "source_book_id": "0cee05ed-7b56-44e9-8dc6-c06b210f1dd8",
+  "source_content_sha256": "6ddb3cbe8707c2651e640f84e1122daee810cc9f82b6f87bef64c72d7e212f0f",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "At The Ball",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

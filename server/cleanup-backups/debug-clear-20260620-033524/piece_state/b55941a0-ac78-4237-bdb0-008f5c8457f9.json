@@ -1,0 +1,80 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "b55941a0-ac78-4237-bdb0-008f5c8457f9",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "The Big Kangaroo",
+    "contained_piece_titles": [
+      "A Minor Melody",
+      "The Big Kangaroo"
+    ],
+    "multi_piece_page": true,
+    "primary_instrument": "Cello",
+    "source_file_name": "328e5318-424f-41cc-b70f-db13d3bda8e9.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "A Minor Melody / The Big Kangaroo"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.8,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "The Big Kangaroo",
+        "contained_piece_titles": [
+          "A Minor Melody",
+          "The Big Kangaroo"
+        ],
+        "multi_piece_page": true,
+        "primary_instrument": "Cello",
+        "source_file_name": "328e5318-424f-41cc-b70f-db13d3bda8e9.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "A Minor Melody / The Big Kangaroo"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "The Big Kangaroo",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:fd22b43822af24689396f0eb0e977036ef72dc69465289baf68a22a73b4b0c44|pages:1-1|title:a minor melody the big kangaroo|composer:the big kangaroo|instrument:cello",
+  "normalized_composer": "the big kangaroo",
+  "normalized_title": "a minor melody the big kangaroo",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "aed0ee8c-f389-4392-a247-8a17263e7d82": {
+      "approved_by_parent": true,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "eafba90d-4975-4fb2-a4c0-d41e01f968af",
+      "student_default": true
+    },
+    "eafba90d-4975-4fb2-a4c0-d41e01f968af": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "big kangaroo",
+  "sort_title": "minor melody the big kangaroo",
+  "source_book_fingerprint": "book_sha256:fd22b43822af24689396f0eb0e977036ef72dc69465289baf68a22a73b4b0c44",
+  "source_book_id": "8d586fc8-39ae-466f-a384-8ed347553d57",
+  "source_content_sha256": "fd22b43822af24689396f0eb0e977036ef72dc69465289baf68a22a73b4b0c44",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.8,
+  "title": "A Minor Melody / The Big Kangaroo",
+  "validation_warnings": [
+    "Multiple short pieces detected on one page; kept together as one shared page item."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

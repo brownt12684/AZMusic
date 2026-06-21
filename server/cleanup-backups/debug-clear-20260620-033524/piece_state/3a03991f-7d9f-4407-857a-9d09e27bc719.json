@@ -1,0 +1,129 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "3a03991f-7d9f-4407-857a-9d09e27bc719",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "54 Sad Song Jess Y ot ey \u2014 1 Oo 1 oN \u2014 1 \u2014\u2014\u2014\u2014\u2014 \u00bb\u2014\u00bb\u2014# \u2014o \u2014 fF \u2014_* \u2014\u00bb \u2014_ ___ \u2014\u00bb\u2014\u00bb\u2014 #* \u2014 9 fF \u2014 #9\u00bb Oe i EE SE ee nf mf sempre pizz. | mn A | | T\u2122 A _ Se ee ee Se ae ae | OP a a i ee Br A SS SS SS ST A SA SS NS A A SS MS A SO | 5 0 2 pam \u2014 1 0 2 booms \u2014 1 > \u2014\u2014 \u00bb \u2014 \u2014 \u2014\u00bb \u2014 9\u00bb \u2014 92 __\u00bb 5 \u2014 9 Ee ee ee | SS SS eS eS eS eS ee Eo _ EE ee 3 \u2014\u2014 9 TH ee a 0 0 ae ar cA Fo ee E4\u2014\u2014e e e t e \u00b0 9 0 1 oN > Y \u00a5 Po ye 1 i EE ee es TEE EEE | _ EEE ee EE ee \u2014\u2014 TS SS A A AS SS AS SS OT A OF A A SE eS SS a"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "54 Sad Song Jess Y ot ey \u2014 1 Oo 1 oN \u2014 1 \u2014\u2014\u2014\u2014\u2014 \u00bb\u2014\u00bb\u2014# \u2014o \u2014 fF \u2014_* \u2014\u00bb \u2014_ ___ \u2014\u00bb\u2014\u00bb\u2014 #* \u2014 9 fF \u2014 #9\u00bb Oe i EE SE ee nf mf sempre pizz. | mn A | | T\u2122 A _ Se ee ee Se ae ae | OP a a i ee Br A SS SS SS ST A SA SS NS A A SS MS A SO | 5 0 2 pam \u2014 1 0 2 booms \u2014 1 > \u2014\u2014 \u00bb \u2014 \u2014 \u2014\u00bb \u2014 9\u00bb \u2014 92 __\u00bb 5 \u2014 9 Ee ee ee | SS SS eS eS eS eS ee Eo _ EE ee 3 \u2014\u2014 9 TH ee a 0 0 ae ar cA Fo ee E4\u2014\u2014e e e t e \u00b0 9 0 1 oN > Y \u00a5 Po ye 1 i EE ee es TEE EEE | _ EEE ee EE ee \u2014\u2014 TS SS A A AS SS AS SS OT A OF A A SE eS SS a",
+    "opus": "OP a a i ee Br",
+    "primary_instrument": "Cello",
+    "source_file_name": "4e837ee9-1292-4b22-ad08-1bb8071ee605.pdf",
+    "title": "Sad Song"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "opus": "OP a a i ee Br",
+        "title": "Sad Song"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:399fc156773832799ae458d90694a2146b95f8be2065a0f6742f1dff53fcec43",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "sad song",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "4e837ee9-1292-4b22-ad08-1bb8071ee605.pdf",
+        "title": "Sad Song"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0467,
+          "has_staff_hint": true,
+          "horizontal_line_count": 32,
+          "page_number": 1,
+          "text_excerpt": "Sad Song ty Oe |e Na ee ot a a",
+          "title_candidates": [
+            "Sad Song"
+          ],
+          "title_ocr_excerpt": "Sad Song",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Sad Song"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Sad Song",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "54 Sad Song Jess Y ot ey \u2014 1 Oo 1 oN \u2014 1 \u2014\u2014\u2014\u2014\u2014 \u00bb\u2014\u00bb\u2014# \u2014o \u2014 fF \u2014_* \u2014\u00bb \u2014_ ___ \u2014\u00bb\u2014\u00bb\u2014 #* \u2014 9 fF \u2014 #9\u00bb Oe i EE SE ee nf mf sempre pizz. | mn A | | T\u2122 A _ Se ee ee Se ae ae | OP a a i ee Br A SS SS SS ST A SA SS NS A A SS MS A SO | 5 0 2 pam \u2014 1 0 2 booms \u2014 1 > \u2014\u2014 \u00bb \u2014 \u2014 \u2014\u00bb \u2014 9\u00bb \u2014 92 __\u00bb 5 \u2014 9 Ee ee ee | SS SS eS eS eS eS ee Eo _ EE ee 3 \u2014\u2014 9 TH ee a 0 0 ae ar cA Fo ee E4\u2014\u2014e e e t e \u00b0 9 0 1 oN > Y \u00a5 Po ye 1 i EE ee es TEE EEE | _ EEE ee EE ee \u2014\u2014 TS SS A A AS SS AS SS OT A OF A A SE eS SS a"
+      }
+    ],
+    "ocr_text_excerpt": "54 Sad Song Jess Y ot ey \u2014 1 Oo 1 oN \u2014 1 \u2014\u2014\u2014\u2014\u2014 \u00bb\u2014\u00bb\u2014# \u2014o \u2014 fF \u2014_* \u2014\u00bb \u2014_ ___ \u2014\u00bb\u2014\u00bb\u2014 #* \u2014 9 fF \u2014 #9\u00bb Oe i EE SE ee nf mf sempre pizz. | mn A | | T\u2122 A _ Se ee ee Se ae ae | OP a a i ee Br A SS SS SS ST A SA SS NS A A SS MS A SO | 5 0 2 pam \u2014 1 0 2 booms \u2014 1 > \u2014\u2014 \u00bb \u2014 \u2014 \u2014\u00bb \u2014 9\u00bb \u2014 92 __\u00bb 5 \u2014 9 Ee ee ee | SS SS eS eS eS eS ee Eo _ EE ee 3 \u2014\u2014 9 TH ee a 0 0 ae ar cA Fo ee E4\u2014\u2014e e e t e \u00b0 9 0 1 oN > Y \u00a5 Po ye 1 i EE ee es TEE EEE | _ EEE ee EE ee \u2014\u2014 TS SS A A AS SS AS SS OT A OF A A SE eS SS a",
+    "opus": "OP a a i ee Br",
+    "title": "Sad Song"
+  },
+  "score_versions": {
+    "0257ce20-cadf-46a0-ad01-79fc65a1a3d5": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "a635d052-2a6c-426b-baa1-596679dc522b": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "0257ce20-cadf-46a0-ad01-79fc65a1a3d5",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "sad song",
+  "source_book_fingerprint": "book_sha256:399fc156773832799ae458d90694a2146b95f8be2065a0f6742f1dff53fcec43",
+  "source_book_id": null,
+  "source_content_sha256": "399fc156773832799ae458d90694a2146b95f8be2065a0f6742f1dff53fcec43",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Sad Song",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

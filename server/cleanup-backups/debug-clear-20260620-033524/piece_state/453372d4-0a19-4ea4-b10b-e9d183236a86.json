@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "453372d4-0a19-4ea4-b10b-e9d183236a86",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Sad Song"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "4e837ee9-1292-4b22-ad08-1bb8071ee605.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Sad Song"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Sad Song"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "4e837ee9-1292-4b22-ad08-1bb8071ee605.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Sad Song"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:399fc156773832799ae458d90694a2146b95f8be2065a0f6742f1dff53fcec43|pages:1-1|title:sad song|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "sad song",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "5cec273a-1fb3-44ad-b12b-652e7b080f76": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "91e15983-6531-47c1-8892-7cf74f2458bf",
+      "student_default": true
+    },
+    "91e15983-6531-47c1-8892-7cf74f2458bf": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "sad song",
+  "source_book_fingerprint": "book_sha256:399fc156773832799ae458d90694a2146b95f8be2065a0f6742f1dff53fcec43",
+  "source_book_id": "3a03991f-7d9f-4407-857a-9d09e27bc719",
+  "source_content_sha256": "399fc156773832799ae458d90694a2146b95f8be2065a0f6742f1dff53fcec43",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "Sad Song",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

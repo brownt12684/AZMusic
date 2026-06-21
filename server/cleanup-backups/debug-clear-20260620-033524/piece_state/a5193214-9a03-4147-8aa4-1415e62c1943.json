@@ -1,0 +1,129 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "a5193214-9a03-4147-8aa4-1415e62c1943",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "catalog_number": "d. 92 M 0",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "17 \u201c19 . Erik\u2019s Minuet 24 d. 92 M 0 \u2014\u2014_ 1 \u2014 1 re ee ee ee SS \u2014\u2014\u2014\u2014 \u2014\u2014 \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 Se SEE EE P dolce 4 3 vf 1 Ff \u00b0 6 EE SS \u2014 ee 5 I \u2014\u2014 2 \u2014 \u2014\u2014\u2014 a \u2014\u2014 ee ee ee ee ee ee 9 \u2014 1 x4 L\u2014 1 yet hr > Ff oS \u2014 _\u2014\u2014\u2014\u2014\u2014 | _ EE | I _\u2014 a te 13 1 4 4 Ss SE Ee! SS a ee ee ee ee e \u00a9 4 _ _\u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "17 \u201c19 . Erik\u2019s Minuet 24 d. 92 M 0 \u2014\u2014_ 1 \u2014 1 re ee ee ee SS \u2014\u2014\u2014\u2014 \u2014\u2014 \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 Se SEE EE P dolce 4 3 vf 1 Ff \u00b0 6 EE SS \u2014 ee 5 I \u2014\u2014 2 \u2014 \u2014\u2014\u2014 a \u2014\u2014 ee ee ee ee ee ee 9 \u2014 1 x4 L\u2014 1 yet hr > Ff oS \u2014 _\u2014\u2014\u2014\u2014\u2014 | _ EE | I _\u2014 a te 13 1 4 4 Ss SE Ee! SS a ee ee ee ee e \u00a9 4 _ _\u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014",
+    "primary_instrument": "Cello",
+    "source_file_name": "1506c8c3-d030-4c23-b3bb-b142aa722f1a.pdf",
+    "title": "Erik\u2019s Minuet"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "catalog_number": "d. 92 M 0",
+        "title": "Erik\u2019s Minuet"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:384b650f05743abdb29a1d37ef96d13787704957b7246ce3819542b323ce55af",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "erik s minuet",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "1506c8c3-d030-4c23-b3bb-b142aa722f1a.pdf",
+        "title": "Erik\u2019s Minuet"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0529,
+          "has_staff_hint": true,
+          "horizontal_line_count": 42,
+          "page_number": 1,
+          "text_excerpt": "Erik\u2019s Minuet",
+          "title_candidates": [],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.55,
+          "contained_piece_titles": [
+            "Untitled piece page 1"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Untitled piece page 1",
+          "validation_warnings": [
+            "No reliable title was detected on the first music page."
+          ]
+        }
+      ],
+      "warnings": []
+    },
+    "catalog_number": "d. 92 M 0",
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "17 \u201c19 . Erik\u2019s Minuet 24 d. 92 M 0 \u2014\u2014_ 1 \u2014 1 re ee ee ee SS \u2014\u2014\u2014\u2014 \u2014\u2014 \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 Se SEE EE P dolce 4 3 vf 1 Ff \u00b0 6 EE SS \u2014 ee 5 I \u2014\u2014 2 \u2014 \u2014\u2014\u2014 a \u2014\u2014 ee ee ee ee ee ee 9 \u2014 1 x4 L\u2014 1 yet hr > Ff oS \u2014 _\u2014\u2014\u2014\u2014\u2014 | _ EE | I _\u2014 a te 13 1 4 4 Ss SE Ee! SS a ee ee ee ee e \u00a9 4 _ _\u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014"
+      }
+    ],
+    "ocr_text_excerpt": "17 \u201c19 . Erik\u2019s Minuet 24 d. 92 M 0 \u2014\u2014_ 1 \u2014 1 re ee ee ee SS \u2014\u2014\u2014\u2014 \u2014\u2014 \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 Se SEE EE P dolce 4 3 vf 1 Ff \u00b0 6 EE SS \u2014 ee 5 I \u2014\u2014 2 \u2014 \u2014\u2014\u2014 a \u2014\u2014 ee ee ee ee ee ee 9 \u2014 1 x4 L\u2014 1 yet hr > Ff oS \u2014 _\u2014\u2014\u2014\u2014\u2014 | _ EE | I _\u2014 a te 13 1 4 4 Ss SE Ee! SS a ee ee ee ee e \u00a9 4 _ _\u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014",
+    "title": "Erik\u2019s Minuet"
+  },
+  "score_versions": {
+    "e93e7f46-6493-46d4-882a-f8dd00ce7887": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "ed7437e8-035f-402c-bbbc-24c9ab4f6637",
+      "student_default": true
+    },
+    "ed7437e8-035f-402c-bbbc-24c9ab4f6637": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "erik s minuet",
+  "source_book_fingerprint": "book_sha256:384b650f05743abdb29a1d37ef96d13787704957b7246ce3819542b323ce55af",
+  "source_book_id": null,
+  "source_content_sha256": "384b650f05743abdb29a1d37ef96d13787704957b7246ce3819542b323ce55af",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Erik\u2019s Minuet",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

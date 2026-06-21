@@ -1,0 +1,80 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "426bcc88-141a-473a-93da-be4f33044753",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "The Troubadour",
+      "Hoedown"
+    ],
+    "multi_piece_page": true,
+    "primary_instrument": "Cello",
+    "source_file_name": "d62b2576-04f4-4573-9e61-934df520e863.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "The Troubadour / Hoedown"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.8,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "The Troubadour",
+          "Hoedown"
+        ],
+        "multi_piece_page": true,
+        "primary_instrument": "Cello",
+        "source_file_name": "d62b2576-04f4-4573-9e61-934df520e863.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "The Troubadour / Hoedown"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:ac16eba309ae20d0deffe69a5c1cf7b0d8bd002871154461bdb7bb00e11afcd1|pages:1-1|title:the troubadour hoedown|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "the troubadour hoedown",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "78bb8631-07d8-45a5-b78b-a7bf91489e92": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "c6ef4970-60c7-490d-a045-eb162efddd9d",
+      "student_default": true
+    },
+    "c6ef4970-60c7-490d-a045-eb162efddd9d": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "troubadour hoedown",
+  "source_book_fingerprint": "book_sha256:ac16eba309ae20d0deffe69a5c1cf7b0d8bd002871154461bdb7bb00e11afcd1",
+  "source_book_id": "02171eb5-485c-4034-8987-a6ac17cea980",
+  "source_content_sha256": "ac16eba309ae20d0deffe69a5c1cf7b0d8bd002871154461bdb7bb00e11afcd1",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.8,
+  "title": "The Troubadour / Hoedown",
+  "validation_warnings": [
+    "Multiple short pieces detected on one page; kept together as one shared page item."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

@@ -1,0 +1,129 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "270edf0f-0936-4a0f-8f87-421c7ccf5ab3",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "31 J 2 2 =02 oo e 3 1 9 0 > SS SS SS SS | SE \u2014\u2014 \u2014 _\u2014\u2014\u2014 \u2014 | ee = a a px i \u2014 \u2014\u2014\u2014\u2014\u2014 I 4 1 5 4 1 3 1 0 ey \u2014 oP \u2014_F _ \u2014_\u00bb \u2014_\"__,__F\u2019 _\u00bb\u2014_|->___}- 2\u00bb \u2014__, OE \u2014_ \u2014 \u2014\u2014\u2014 _\u2014_\u2014\u2014\u2014\u2014 _ \u2014\u2014\u2014 EO EE SE _ OO EEE \u2014 _ 9 OE \u2014 So \u2014\u2014\u2014\u2014\u2014\u2014 et tT \u2014\u2014 \u2014 ae Se \u2014 ee EEO EO yg \u2014 se ee Ss Sr! EC SS"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "31 J 2 2 =02 oo e 3 1 9 0 > SS SS SS SS | SE \u2014\u2014 \u2014 _\u2014\u2014\u2014 \u2014 | ee = a a px i \u2014 \u2014\u2014\u2014\u2014\u2014 I 4 1 5 4 1 3 1 0 ey \u2014 oP \u2014_F _ \u2014_\u00bb \u2014_\"__,__F\u2019 _\u00bb\u2014_|->___}- 2\u00bb \u2014__, OE \u2014_ \u2014 \u2014\u2014\u2014 _\u2014_\u2014\u2014\u2014\u2014 _ \u2014\u2014\u2014 EO EE SE _ OO EEE \u2014 _ 9 OE \u2014 So \u2014\u2014\u2014\u2014\u2014\u2014 et tT \u2014\u2014 \u2014 ae Se \u2014 ee EEO EO yg \u2014 se ee Ss Sr! EC SS",
+    "opus": "oP",
+    "primary_instrument": "Cello",
+    "source_file_name": "b51ecf03-ff69-42e1-b92b-e0659e17f005.pdf",
+    "title": "Church Bells"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "opus": "oP",
+        "title": "=02 oo e 3 1 9 0"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:e3ae9f7565795b67d613a0c4c8aa5d7cfd96c75d9a0fdfd8067a67ad56036e63",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "church bells",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "b51ecf03-ff69-42e1-b92b-e0659e17f005.pdf",
+        "title": "Church Bells"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0408,
+          "has_staff_hint": true,
+          "horizontal_line_count": 36,
+          "page_number": 1,
+          "text_excerpt": "Church Bells",
+          "title_candidates": [
+            "Church Bells"
+          ],
+          "title_ocr_excerpt": "Church Bells",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Church Bells"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Church Bells",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "31 J 2 2 =02 oo e 3 1 9 0 > SS SS SS SS | SE \u2014\u2014 \u2014 _\u2014\u2014\u2014 \u2014 | ee = a a px i \u2014 \u2014\u2014\u2014\u2014\u2014 I 4 1 5 4 1 3 1 0 ey \u2014 oP \u2014_F _ \u2014_\u00bb \u2014_\"__,__F\u2019 _\u00bb\u2014_|->___}- 2\u00bb \u2014__, OE \u2014_ \u2014 \u2014\u2014\u2014 _\u2014_\u2014\u2014\u2014\u2014 _ \u2014\u2014\u2014 EO EE SE _ OO EEE \u2014 _ 9 OE \u2014 So \u2014\u2014\u2014\u2014\u2014\u2014 et tT \u2014\u2014 \u2014 ae Se \u2014 ee EEO EO yg \u2014 se ee Ss Sr! EC SS"
+      }
+    ],
+    "ocr_text_excerpt": "31 J 2 2 =02 oo e 3 1 9 0 > SS SS SS SS | SE \u2014\u2014 \u2014 _\u2014\u2014\u2014 \u2014 | ee = a a px i \u2014 \u2014\u2014\u2014\u2014\u2014 I 4 1 5 4 1 3 1 0 ey \u2014 oP \u2014_F _ \u2014_\u00bb \u2014_\"__,__F\u2019 _\u00bb\u2014_|->___}- 2\u00bb \u2014__, OE \u2014_ \u2014 \u2014\u2014\u2014 _\u2014_\u2014\u2014\u2014\u2014 _ \u2014\u2014\u2014 EO EE SE _ OO EEE \u2014 _ 9 OE \u2014 So \u2014\u2014\u2014\u2014\u2014\u2014 et tT \u2014\u2014 \u2014 ae Se \u2014 ee EEO EO yg \u2014 se ee Ss Sr! EC SS",
+    "opus": "oP",
+    "title": "=02 oo e 3 1 9 0"
+  },
+  "score_versions": {
+    "0b907e7b-05d5-4219-b9c3-36c61f830334": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "8611d61e-825d-4cce-8558-a9f610aeea40": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "0b907e7b-05d5-4219-b9c3-36c61f830334",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "church bells",
+  "source_book_fingerprint": "book_sha256:e3ae9f7565795b67d613a0c4c8aa5d7cfd96c75d9a0fdfd8067a67ad56036e63",
+  "source_book_id": null,
+  "source_content_sha256": "e3ae9f7565795b67d613a0c4c8aa5d7cfd96c75d9a0fdfd8067a67ad56036e63",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Church Bells",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

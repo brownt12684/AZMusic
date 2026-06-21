@@ -1,0 +1,126 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "0f02835f-44ad-419f-a3e8-23b78abc36c5",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "52 Spanish Dance d- 0 ei 3 0 a o 4 wy \u2014 eo i \u2014 ot ee ee ee SS oe Co mf \u2019 1 pi2z, 4 b a A __\u2014__\u2014\u2014\u2014\u2014\u2014 i ee oe es cs 2 oo So eo Sn Se Soe oo es a Se Se me i FS SS SS SO i 5 e . 1 0 La 2\u00b0 EE eS eS EE ee _ EE _ ee, . |. | L _ SS ee a a oe \u2014 a a so a 9 5 : 4 p 1 o 2 cE SS ee ee | Se \u2014 ee f \u2019 O_o a ns ee | _ EEE ST 33 2 3 1 0 0 1 13 a ; 30 4 > he . \u2014\u2014\u2014 SE \u2014\u2014\u2014 EEE \u2014\u2014 et ee | ot, oe ley | me | ET i OEE Fg eg fT"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "52 Spanish Dance d- 0 ei 3 0 a o 4 wy \u2014 eo i \u2014 ot ee ee ee SS oe Co mf \u2019 1 pi2z, 4 b a A __\u2014__\u2014\u2014\u2014\u2014\u2014 i ee oe es cs 2 oo So eo Sn Se Soe oo es a Se Se me i FS SS SS SO i 5 e . 1 0 La 2\u00b0 EE eS eS EE ee _ EE _ ee, . |. | L _ SS ee a a oe \u2014 a a so a 9 5 : 4 p 1 o 2 cE SS ee ee | Se \u2014 ee f \u2019 O_o a ns ee | _ EEE ST 33 2 3 1 0 0 1 13 a ; 30 4 > he . \u2014\u2014\u2014 SE \u2014\u2014\u2014 EEE \u2014\u2014 et ee | ot, oe ley | me | ET i OEE Fg eg fT",
+    "primary_instrument": "Cello",
+    "source_file_name": "b85d1d92-cc0e-4f9a-a235-51e55574b55b.pdf",
+    "title": "Spanish Dance"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Spanish Dance"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:6b713e99841a5d239b02cde23c01ae10d98e3aa8ad31f61136944fa50cc5d807",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "spanish dance",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "b85d1d92-cc0e-4f9a-a235-51e55574b55b.pdf",
+        "title": "Spanish Dance"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0558,
+          "has_staff_hint": true,
+          "horizontal_line_count": 42,
+          "page_number": 1,
+          "text_excerpt": "Spanish Dance i",
+          "title_candidates": [
+            "Spanish Dance"
+          ],
+          "title_ocr_excerpt": "Spanish Dance",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Spanish Dance"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Spanish Dance",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "52 Spanish Dance d- 0 ei 3 0 a o 4 wy \u2014 eo i \u2014 ot ee ee ee SS oe Co mf \u2019 1 pi2z, 4 b a A __\u2014__\u2014\u2014\u2014\u2014\u2014 i ee oe es cs 2 oo So eo Sn Se Soe oo es a Se Se me i FS SS SS SO i 5 e . 1 0 La 2\u00b0 EE eS eS EE ee _ EE _ ee, . |. | L _ SS ee a a oe \u2014 a a so a 9 5 : 4 p 1 o 2 cE SS ee ee | Se \u2014 ee f \u2019 O_o a ns ee | _ EEE ST 33 2 3 1 0 0 1 13 a ; 30 4 > he . \u2014\u2014\u2014 SE \u2014\u2014\u2014 EEE \u2014\u2014 et ee | ot, oe ley | me | ET i OEE Fg eg fT"
+      }
+    ],
+    "ocr_text_excerpt": "52 Spanish Dance d- 0 ei 3 0 a o 4 wy \u2014 eo i \u2014 ot ee ee ee SS oe Co mf \u2019 1 pi2z, 4 b a A __\u2014__\u2014\u2014\u2014\u2014\u2014 i ee oe es cs 2 oo So eo Sn Se Soe oo es a Se Se me i FS SS SS SO i 5 e . 1 0 La 2\u00b0 EE eS eS EE ee _ EE _ ee, . |. | L _ SS ee a a oe \u2014 a a so a 9 5 : 4 p 1 o 2 cE SS ee ee | Se \u2014 ee f \u2019 O_o a ns ee | _ EEE ST 33 2 3 1 0 0 1 13 a ; 30 4 > he . \u2014\u2014\u2014 SE \u2014\u2014\u2014 EEE \u2014\u2014 et ee | ot, oe ley | me | ET i OEE Fg eg fT",
+    "title": "Spanish Dance"
+  },
+  "score_versions": {
+    "329b614c-204a-47d2-b191-b45d5222dbf7": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "7e3b8909-f1b2-4f12-9742-9d89e12839a3": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "329b614c-204a-47d2-b191-b45d5222dbf7",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "spanish dance",
+  "source_book_fingerprint": "book_sha256:6b713e99841a5d239b02cde23c01ae10d98e3aa8ad31f61136944fa50cc5d807",
+  "source_book_id": null,
+  "source_content_sha256": "6b713e99841a5d239b02cde23c01ae10d98e3aa8ad31f61136944fa50cc5d807",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Spanish Dance",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

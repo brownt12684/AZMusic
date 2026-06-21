@@ -1,0 +1,126 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "79243ac2-7df4-4f57-b300-1f036c889912",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "33 A Cloudy Day imarrwarre a nepenersduederss | 0 1 21 4 t 4 \u2014 4 _"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "33 A Cloudy Day imarrwarre a nepenersduederss | 0 1 21 4 t 4 \u2014 4 _",
+    "primary_instrument": "Cello",
+    "source_file_name": "c03272c0-344c-4313-96c0-3698529a5956.pdf",
+    "title": "A Cloudy Day"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "A Cloudy Day"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:6936fe668181ce683319e27275f3016389194948486dfdc97198cb6f72221a21",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "a cloudy day",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "c03272c0-344c-4313-96c0-3698529a5956.pdf",
+        "title": "A Cloudy Day"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0538,
+          "has_staff_hint": true,
+          "horizontal_line_count": 42,
+          "page_number": 1,
+          "text_excerpt": "33 A Cloudy Day _ v dw 1 oo 1 3 4 1 oo = | \u00b0 \u00b0 \u2122 : $ ial",
+          "title_candidates": [
+            "A Cloudy Day"
+          ],
+          "title_ocr_excerpt": "A Cloudy Day",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "A Cloudy Day"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "A Cloudy Day",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "33 A Cloudy Day imarrwarre a nepenersduederss | 0 1 21 4 t 4 \u2014 4 _"
+      }
+    ],
+    "ocr_text_excerpt": "33 A Cloudy Day imarrwarre a nepenersduederss | 0 1 21 4 t 4 \u2014 4 _",
+    "title": "A Cloudy Day"
+  },
+  "score_versions": {
+    "21fd5890-e27a-4d43-a8df-cf5fcdb1b9f4": {
+      "approved_by_parent": true,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "a6d969dd-f4bf-4aa8-9d2c-072c21ff7860",
+      "student_default": true
+    },
+    "a6d969dd-f4bf-4aa8-9d2c-072c21ff7860": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "cloudy day",
+  "source_book_fingerprint": "book_sha256:6936fe668181ce683319e27275f3016389194948486dfdc97198cb6f72221a21",
+  "source_book_id": null,
+  "source_content_sha256": "6936fe668181ce683319e27275f3016389194948486dfdc97198cb6f72221a21",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "A Cloudy Day",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

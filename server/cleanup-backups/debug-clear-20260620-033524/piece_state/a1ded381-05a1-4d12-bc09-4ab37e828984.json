@@ -1,0 +1,127 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "a1ded381-05a1-4d12-bc09-4ab37e828984",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Japanese Garden",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "20 Japanese Garden dere 0 . * \u00bb > 1 3 BN ; 21 I ras 5 0 2 3 2 oo Ser \u2014a 7] I\u2019m So Sleepy ; 5 4 1 3, 4 3 4 3 2 3 Pretec = pee"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "20 Japanese Garden dere 0 . * \u00bb > 1 3 BN ; 21 I ras 5 0 2 3 2 oo Ser \u2014a 7] I\u2019m So Sleepy ; 5 4 1 3, 4 3 4 3 2 3 Pretec = pee",
+    "primary_instrument": "Cello",
+    "source_file_name": "16f1defc-7202-4327-b2f1-c545b12d47d1.pdf",
+    "title": "deve 1"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Japanese Garden"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:155ad27af3cf9e193089a94fe84e6841a09aab398db3ec394ddbd49f88174033",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "japanese garden i m so sleepy",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "composer": "Japanese Garden",
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "16f1defc-7202-4327-b2f1-c545b12d47d1.pdf",
+        "title": "deve 1"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0539,
+          "has_staff_hint": true,
+          "horizontal_line_count": 44,
+          "page_number": 1,
+          "text_excerpt": "deve 1 Japanese Garden fpe 3 = } 2 eee mf ofr a7: - Jy I\u2019m So Sleepy",
+          "title_candidates": [
+            "Japanese Garden"
+          ],
+          "title_ocr_excerpt": "Japanese Garden",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": "Japanese Garden",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Japanese Garden"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Japanese Garden",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "20 Japanese Garden dere 0 . * \u00bb > 1 3 BN ; 21 I ras 5 0 2 3 2 oo Ser \u2014a 7] I\u2019m So Sleepy ; 5 4 1 3, 4 3 4 3 2 3 Pretec = pee"
+      }
+    ],
+    "ocr_text_excerpt": "20 Japanese Garden dere 0 . * \u00bb > 1 3 BN ; 21 I ras 5 0 2 3 2 oo Ser \u2014a 7] I\u2019m So Sleepy ; 5 4 1 3, 4 3 4 3 2 3 Pretec = pee",
+    "title": "Japanese Garden"
+  },
+  "score_versions": {
+    "baa89e01-fd09-418d-8808-1f9577e7a8a8": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "d676a472-3a1c-48e9-8371-c7f0d3ff16c5",
+      "student_default": true
+    },
+    "d676a472-3a1c-48e9-8371-c7f0d3ff16c5": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "japanese garden i m so sleepy",
+  "source_book_fingerprint": "book_sha256:155ad27af3cf9e193089a94fe84e6841a09aab398db3ec394ddbd49f88174033",
+  "source_book_id": null,
+  "source_content_sha256": "155ad27af3cf9e193089a94fe84e6841a09aab398db3ec394ddbd49f88174033",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Japanese Garden / I'm So Sleepy",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

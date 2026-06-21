@@ -1,0 +1,80 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "9958b0a0-28e1-48f2-9ade-84d1bd8bb234",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Somersaults and Cartwheels",
+      "Tango"
+    ],
+    "multi_piece_page": true,
+    "primary_instrument": "Cello",
+    "source_file_name": "9219c8b0-549b-4e64-83cc-06954b117b2c.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Somersaults and Cartwheels / Tango"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.8,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Somersaults and Cartwheels",
+          "Tango"
+        ],
+        "multi_piece_page": true,
+        "primary_instrument": "Cello",
+        "source_file_name": "9219c8b0-549b-4e64-83cc-06954b117b2c.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Somersaults and Cartwheels / Tango"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:3a1e84547cec6abe5bf67e6092ca5abe3ca4524090444847f0b833436a4ca059|pages:1-1|title:somersaults and cartwheels tango|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "somersaults and cartwheels tango",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "017282d3-42ea-41d8-bbac-8072cb5b78b0": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "b6d2f53e-fbb5-47c4-83d8-906a3b462155",
+      "student_default": true
+    },
+    "b6d2f53e-fbb5-47c4-83d8-906a3b462155": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "somersaults and cartwheels tango",
+  "source_book_fingerprint": "book_sha256:3a1e84547cec6abe5bf67e6092ca5abe3ca4524090444847f0b833436a4ca059",
+  "source_book_id": "5f96ec49-ef48-4b93-ab1e-2ba6740456d7",
+  "source_content_sha256": "3a1e84547cec6abe5bf67e6092ca5abe3ca4524090444847f0b833436a4ca059",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.8,
+  "title": "Somersaults and Cartwheels / Tango",
+  "validation_warnings": [
+    "Multiple short pieces detected on one page; kept together as one shared page item."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

@@ -1,0 +1,125 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "059f946d-0d78-4849-b685-e9ab6b79fc24",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "28 J =\" 4 3 2 4 120 0 x 4 oy,i1 4 o 40 3 o 4 Coy ay ee fh 9 A ey hp me \u2014\u2014 Ee ee oe rr oe _ oS _S EE oo \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 EE Co 44 5 3 3 o 44 0 MN Ee Ep \u2014 | ot I ae ee _ _ oS OEE Ee _ Oo \u2014 Ee | lS oe ee oS Fine 2 3 1 9 3.4 3 9 vio \u2014\u2014\u2014\u2014\u2014 a a a a a ah \u2014 Fe eee et A ee ee ae oe ee Se oc a ee oe 2 3 yet 9 or _ EE _ OEE SE _ lS 1 13 IN x2 a en ee ered So \u2014 \u2014\u2014 ee oe a ee oe ee a i (_\u2014\u2014\u2014_\u00a5 >? ae ee =*=g | =p \"gt \u201cs St * =e FL De \"ng _., , , | {| EE | a , A ee ee, Se a ee || \u2014\u2014 EE D.C. al Fine"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "28 J =\" 4 3 2 4 120 0 x 4 oy,i1 4 o 40 3 o 4 Coy ay ee fh 9 A ey hp me \u2014\u2014 Ee ee oe rr oe _ oS _S EE oo \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 EE Co 44 5 3 3 o 44 0 MN Ee Ep \u2014 | ot I ae ee _ _ oS OEE Ee _ Oo \u2014 Ee | lS oe ee oS Fine 2 3 1 9 3.4 3 9 vio \u2014\u2014\u2014\u2014\u2014 a a a a a ah \u2014 Fe eee et A ee ee ae oe ee Se oc a ee oe 2 3 yet 9 or _ EE _ OEE SE _ lS 1 13 IN x2 a en ee ered So \u2014 \u2014\u2014 ee oe a ee oe ee a i (_\u2014\u2014\u2014_\u00a5 >? ae ee =*=g | =p \"gt \u201cs St * =e FL De \"ng _., , , | {| EE | a , A ee ee, Se a ee || \u2014\u2014 EE D.C. al Fine",
+    "primary_instrument": "Cello",
+    "source_file_name": "167485f3-3826-4250-b56b-c7ad49a3fc5b.pdf",
+    "title": "120 0 x 4 oy,i1 4 o 40 3 o 4"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "120 0 x 4 oy,i1 4 o 40 3 o 4"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:83093e4644c14045f37b394c66188d3d993c1eb3b8f0bcaf672a0a4b6b94c68a",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "etude",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "167485f3-3826-4250-b56b-c7ad49a3fc5b.pdf"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0511,
+          "has_staff_hint": true,
+          "horizontal_line_count": 37,
+          "page_number": 1,
+          "text_excerpt": "",
+          "title_candidates": [
+            "Etude"
+          ],
+          "title_ocr_excerpt": "Etude",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Etude"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Etude",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "28 J =\" 4 3 2 4 120 0 x 4 oy,i1 4 o 40 3 o 4 Coy ay ee fh 9 A ey hp me \u2014\u2014 Ee ee oe rr oe _ oS _S EE oo \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 EE Co 44 5 3 3 o 44 0 MN Ee Ep \u2014 | ot I ae ee _ _ oS OEE Ee _ Oo \u2014 Ee | lS oe ee oS Fine 2 3 1 9 3.4 3 9 vio \u2014\u2014\u2014\u2014\u2014 a a a a a ah \u2014 Fe eee et A ee ee ae oe ee Se oc a ee oe 2 3 yet 9 or _ EE _ OEE SE _ lS 1 13 IN x2 a en ee ered So \u2014 \u2014\u2014 ee oe a ee oe ee a i (_\u2014\u2014\u2014_\u00a5 >? ae ee =*=g | =p \"gt \u201cs St * =e FL De \"ng _., , , | {| EE | a , A ee ee, Se a ee || \u2014\u2014 EE D.C. al Fine"
+      }
+    ],
+    "ocr_text_excerpt": "28 J =\" 4 3 2 4 120 0 x 4 oy,i1 4 o 40 3 o 4 Coy ay ee fh 9 A ey hp me \u2014\u2014 Ee ee oe rr oe _ oS _S EE oo \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 EE Co 44 5 3 3 o 44 0 MN Ee Ep \u2014 | ot I ae ee _ _ oS OEE Ee _ Oo \u2014 Ee | lS oe ee oS Fine 2 3 1 9 3.4 3 9 vio \u2014\u2014\u2014\u2014\u2014 a a a a a ah \u2014 Fe eee et A ee ee ae oe ee Se oc a ee oe 2 3 yet 9 or _ EE _ OEE SE _ lS 1 13 IN x2 a en ee ered So \u2014 \u2014\u2014 ee oe a ee oe ee a i (_\u2014\u2014\u2014_\u00a5 >? ae ee =*=g | =p \"gt \u201cs St * =e FL De \"ng _., , , | {| EE | a , A ee ee, Se a ee || \u2014\u2014 EE D.C. al Fine",
+    "title": "120 0 x 4 oy,i1 4 o 40 3 o 4"
+  },
+  "score_versions": {
+    "f4ba2f40-e83c-4d02-8428-96aeec12db46": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "f675769a-b5be-4b71-ab65-af51e985fe4d": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "f4ba2f40-e83c-4d02-8428-96aeec12db46",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "etude",
+  "source_book_fingerprint": "book_sha256:83093e4644c14045f37b394c66188d3d993c1eb3b8f0bcaf672a0a4b6b94c68a",
+  "source_book_id": null,
+  "source_content_sha256": "83093e4644c14045f37b394c66188d3d993c1eb3b8f0bcaf672a0a4b6b94c68a",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Etude",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

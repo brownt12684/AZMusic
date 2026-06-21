@@ -214,21 +214,18 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
     if (profile.role == ProfileRole.parent) {
       if (!AppConfig.hasParentPin) {
         final created = await _promptForParentPinSetup();
-        if (!created || !mounted) {
-          return;
-        }
+        if (!created) return;
+        if (!mounted) return;
         ref.invalidate(availableProfilesProvider);
       } else {
         final accepted = await _promptForPin(profile);
-        if (!accepted || !mounted) {
-          return;
-        }
+        if (!accepted) return;
+        if (!mounted) return;
       }
     } else if (profile.localPin?.isNotEmpty ?? false) {
       final accepted = await _promptForPin(profile);
-      if (!accepted || !mounted) {
-        return;
-      }
+      if (!accepted) return;
+      if (!mounted) return;
     }
 
     ref.read(selectedProfileIdProvider.notifier).state = profile.id;
@@ -239,11 +236,13 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
           ref.read(practiceAlertsProvider.notifier);
       await alertsNotifier.fetchAlerts(profile.id);
       final alertsState = ref.read(practiceAlertsProvider);
-      if (mounted && alertsState.pendingRequests.isNotEmpty) {
+      if (alertsState.pendingRequests.isNotEmpty) {
+        if (!mounted) return;
         await _showPracticeAlertsDialog(context, profile.displayName);
       }
     }
 
+    if (!mounted) return;
     Navigator.of(context).pushReplacementNamed(
       profile.role == ProfileRole.parent
           ? AppRouter.parentHome

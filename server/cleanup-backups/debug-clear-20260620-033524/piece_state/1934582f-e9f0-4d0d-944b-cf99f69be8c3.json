@@ -1,0 +1,162 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "1934582f-e9f0-4d0d-944b-cf99f69be8c3",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "55 Walking Home Je s20 Vv 1 ~ 4 1 4 5 1 \u2014~ 4 1 4 va hn ee ee 9 > i LL \u2014 4 vv 1 \u2014 4 1 ) 4 :"
+      },
+      {
+        "page_number": 2,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "56 Landler 4 v ~~ \u2122 4 J = 104 lL. 4 2. \u2018ex. ~~ ry ry ~\u2014\u2014 ee Leypg\u2014p\u2014 |. 4 =. EEE 4 o 4 a \u00a9. ~~ 4 Vv 5 . a 2 Vv \u2014\u2014__. Ce ig ir OOo Ee | Se Tt \u2014_\u2014_\u2014\u2014_\u2014=_\u2014___ a NN _ O_O EE oo TE Exe} i e \u2014 \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 $I eS he a at . \u2014\u2014\u2014 Fine 2 4 4 9 t1 4 14 ay ee Oe Oe Oe _ ECE _ =| = \u2014 \u2014_\u2014_\u2014_\u2014\u2014_ Se \u2014_ TEE es S| #4 \u2014\u2014\u2014 oh 8 CE Ee ee | | \u2014 \u2014\u2014 ir er 4 1 13 1 1A \u2014 Ts | _\u2014\u2014\u2014 a | hey? rh 3 |} \u2014\u2014 | \u2014\u2014 \u2014 2 \u2014? EE EE | (4 \u2014\u2014\u2014 \u2014 \u2014 \u2014?\u2014 oo \u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014 D.C. al Fine"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "55 Walking Home Je s20 Vv 1 ~ 4 1 4 5 1 \u2014~ 4 1 4 va hn ee ee 9 > i LL \u2014 4 vv 1 \u2014 4 1 ) 4 : 56 Landler 4 v ~~ \u2122 4 J = 104 lL. 4 2. \u2018ex. ~~ ry ry ~\u2014\u2014 ee Leypg\u2014p\u2014 |. 4 =. EEE 4 o 4 a \u00a9. ~~ 4 Vv 5 . a 2 Vv \u2014\u2014__. Ce ig ir OOo Ee | Se Tt \u2014_\u2014_\u2014\u2014_\u2014=_\u2014___ a NN _ O_O EE oo TE Exe} i e \u2014 \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 $I eS he a at . \u2014\u2014\u2014 Fine 2 4 4 9 t1 4 14 ay ee Oe Oe Oe _ ECE _ =| = \u2014 \u2014_\u2014_\u2014_\u2014\u2014_ Se \u2014_ TEE es S| #4 \u2014\u2014\u2014 oh 8 CE Ee ee | | \u2014 \u2014\u2014 ir er 4 1 13 1 1A \u2014 Ts | _\u2014\u2014\u2014 a | hey? rh 3 |} \u2014\u2014 | \u2014\u2014 \u2014 2 \u2014? EE EE | (4 \u2014\u2014\u2014 \u2014 \u2014 \u2014?\u2014 oo \u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014 D.C. al Fine",
+    "primary_instrument": "Cello",
+    "source_file_name": "83ddbd06-9c4a-43a3-9df2-07f9dfea8dd9.pdf",
+    "title": "Walking Home"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Walking Home"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:290d5e760cb172bffbe33d4b1f2d178b8e73be5acbd48024b439e1b37950e422",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "walking home",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "83ddbd06-9c4a-43a3-9df2-07f9dfea8dd9.pdf",
+        "title": "Walking Home"
+      },
+      "page_count": 2,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0568,
+          "has_staff_hint": true,
+          "horizontal_line_count": 46,
+          "page_number": 1,
+          "text_excerpt": "Walking Home => fegagee Sth < | seul ce",
+          "title_candidates": [
+            "Walking Home"
+          ],
+          "title_ocr_excerpt": "Walking Home",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0574,
+          "has_staff_hint": true,
+          "horizontal_line_count": 47,
+          "page_number": 2,
+          "text_excerpt": "Landler z im ky ef ff n 52> pe arco eS aE SaaS aeaee aa = ee ee i . fe wy 2 peta St D.C. al Fine",
+          "title_candidates": [
+            "Landler"
+          ],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Walking Home"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Walking Home",
+          "validation_warnings": []
+        },
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Landler"
+          ],
+          "multi_piece_page": false,
+          "page_end": 2,
+          "page_start": 2,
+          "primary_instrument": null,
+          "title": "Landler",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "55 Walking Home Je s20 Vv 1 ~ 4 1 4 5 1 \u2014~ 4 1 4 va hn ee ee 9 > i LL \u2014 4 vv 1 \u2014 4 1 ) 4 :"
+      },
+      {
+        "page_number": 2,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "56 Landler 4 v ~~ \u2122 4 J = 104 lL. 4 2. \u2018ex. ~~ ry ry ~\u2014\u2014 ee Leypg\u2014p\u2014 |. 4 =. EEE 4 o 4 a \u00a9. ~~ 4 Vv 5 . a 2 Vv \u2014\u2014__. Ce ig ir OOo Ee | Se Tt \u2014_\u2014_\u2014\u2014_\u2014=_\u2014___ a NN _ O_O EE oo TE Exe} i e \u2014 \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 $I eS he a at . \u2014\u2014\u2014 Fine 2 4 4 9 t1 4 14 ay ee Oe Oe Oe _ ECE _ =| = \u2014 \u2014_\u2014_\u2014_\u2014\u2014_ Se \u2014_ TEE es S| #4 \u2014\u2014\u2014 oh 8 CE Ee ee | | \u2014 \u2014\u2014 ir er 4 1 13 1 1A \u2014 Ts | _\u2014\u2014\u2014 a | hey? rh 3 |} \u2014\u2014 | \u2014\u2014 \u2014 2 \u2014? EE EE | (4 \u2014\u2014\u2014 \u2014 \u2014 \u2014?\u2014 oo \u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014 D.C. al Fine"
+      }
+    ],
+    "ocr_text_excerpt": "55 Walking Home Je s20 Vv 1 ~ 4 1 4 5 1 \u2014~ 4 1 4 va hn ee ee 9 > i LL \u2014 4 vv 1 \u2014 4 1 ) 4 : 56 Landler 4 v ~~ \u2122 4 J = 104 lL. 4 2. \u2018ex. ~~ ry ry ~\u2014\u2014 ee Leypg\u2014p\u2014 |. 4 =. EEE 4 o 4 a \u00a9. ~~ 4 Vv 5 . a 2 Vv \u2014\u2014__. Ce ig ir OOo Ee | Se Tt \u2014_\u2014_\u2014\u2014_\u2014=_\u2014___ a NN _ O_O EE oo TE Exe} i e \u2014 \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 $I eS he a at . \u2014\u2014\u2014 Fine 2 4 4 9 t1 4 14 ay ee Oe Oe Oe _ ECE _ =| = \u2014 \u2014_\u2014_\u2014_\u2014\u2014_ Se \u2014_ TEE es S| #4 \u2014\u2014\u2014 oh 8 CE Ee ee | | \u2014 \u2014\u2014 ir er 4 1 13 1 1A \u2014 Ts | _\u2014\u2014\u2014 a | hey? rh 3 |} \u2014\u2014 | \u2014\u2014 \u2014 2 \u2014? EE EE | (4 \u2014\u2014\u2014 \u2014 \u2014 \u2014?\u2014 oo \u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014 D.C. al Fine",
+    "title": "Walking Home"
+  },
+  "score_versions": {
+    "3a9d4bac-d953-4cb7-a666-7d7a5a7fd049": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "f5ed1a14-ff51-450a-bfd8-42ed17eacf95": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "3a9d4bac-d953-4cb7-a666-7d7a5a7fd049",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "walking home",
+  "source_book_fingerprint": "book_sha256:290d5e760cb172bffbe33d4b1f2d178b8e73be5acbd48024b439e1b37950e422",
+  "source_book_id": null,
+  "source_content_sha256": "290d5e760cb172bffbe33d4b1f2d178b8e73be5acbd48024b439e1b37950e422",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Walking Home",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "16901a4a-82e8-473f-97cf-46d73916416a",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "A Cloudy Day"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "c03272c0-344c-4313-96c0-3698529a5956.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "A Cloudy Day"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "A Cloudy Day"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "c03272c0-344c-4313-96c0-3698529a5956.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "A Cloudy Day"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:6936fe668181ce683319e27275f3016389194948486dfdc97198cb6f72221a21|pages:1-1|title:a cloudy day|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "a cloudy day",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "67b31f46-d340-48b7-85f0-96fbbf8e1728": {
+      "approved_by_parent": true,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "73ec5608-7ad5-46a8-8dbc-c9416c524a5f",
+      "student_default": true
+    },
+    "73ec5608-7ad5-46a8-8dbc-c9416c524a5f": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "cloudy day",
+  "source_book_fingerprint": "book_sha256:6936fe668181ce683319e27275f3016389194948486dfdc97198cb6f72221a21",
+  "source_book_id": "79243ac2-7df4-4f57-b300-1f036c889912",
+  "source_content_sha256": "6936fe668181ce683319e27275f3016389194948486dfdc97198cb6f72221a21",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "A Cloudy Day",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

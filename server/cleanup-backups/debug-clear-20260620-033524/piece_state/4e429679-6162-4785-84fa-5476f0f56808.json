@@ -1,0 +1,126 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "4e429679-6162-4785-84fa-5476f0f56808",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "62 Playing in the Park J 120 41 a 0 Ket eee Pa) _\u2014\u2014\u2014\u2014\u2014\u2014 ee A ee ee ee ee | f 3 SSS WP NU 2 2 5s oa tl | keteieers EO SS retin | yee! 8 ee | =a eS SS SS SS SN Fine 4-\u2014~ 4 -\u2014\u2014_ 4g 9 > \u2014\u2014 p FC A A A A A OW Se ee ee ee ie ee ee ae a ee \u2014\u2014\u2014\u2014__\u2014\u2014_ -. 2- === === == | | \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 4\u2014\u2014~ 4 \u2014_ 4 13 oy reset 0 a re re a ets eee a ee ae \u2014_\u2014_\u2014\u2014\u2014\u2014\u2014 ie eee ee \u2014\u2014 ee eee A ee BS re D.C. al Fine"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "62 Playing in the Park J 120 41 a 0 Ket eee Pa) _\u2014\u2014\u2014\u2014\u2014\u2014 ee A ee ee ee ee | f 3 SSS WP NU 2 2 5s oa tl | keteieers EO SS retin | yee! 8 ee | =a eS SS SS SS SN Fine 4-\u2014~ 4 -\u2014\u2014_ 4g 9 > \u2014\u2014 p FC A A A A A OW Se ee ee ee ie ee ee ae a ee \u2014\u2014\u2014\u2014__\u2014\u2014_ -. 2- === === == | | \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 4\u2014\u2014~ 4 \u2014_ 4 13 oy reset 0 a re re a ets eee a ee ae \u2014_\u2014_\u2014\u2014\u2014\u2014\u2014 ie eee ee \u2014\u2014 ee eee A ee BS re D.C. al Fine",
+    "primary_instrument": "Cello",
+    "source_file_name": "0c43f091-74ba-451f-8edb-18941682334b.pdf",
+    "title": "Playing in the Park"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Playing in the Park"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:0d7ee00c3a324bc65e60fda913d8911fa18038f2fe4e4e805e4b89ecc01a2556",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "playing in the park",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "0c43f091-74ba-451f-8edb-18941682334b.pdf",
+        "title": "Playing in the Park"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0637,
+          "has_staff_hint": true,
+          "horizontal_line_count": 55,
+          "page_number": 1,
+          "text_excerpt": "Playing in the Park dese L\u2014\u2014~ 4 4 o ft tee oe = = a",
+          "title_candidates": [
+            "Playing in the Park"
+          ],
+          "title_ocr_excerpt": "Playing in the Park",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Playing in the Park"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Playing in the Park",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "62 Playing in the Park J 120 41 a 0 Ket eee Pa) _\u2014\u2014\u2014\u2014\u2014\u2014 ee A ee ee ee ee | f 3 SSS WP NU 2 2 5s oa tl | keteieers EO SS retin | yee! 8 ee | =a eS SS SS SS SN Fine 4-\u2014~ 4 -\u2014\u2014_ 4g 9 > \u2014\u2014 p FC A A A A A OW Se ee ee ee ie ee ee ae a ee \u2014\u2014\u2014\u2014__\u2014\u2014_ -. 2- === === == | | \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 4\u2014\u2014~ 4 \u2014_ 4 13 oy reset 0 a re re a ets eee a ee ae \u2014_\u2014_\u2014\u2014\u2014\u2014\u2014 ie eee ee \u2014\u2014 ee eee A ee BS re D.C. al Fine"
+      }
+    ],
+    "ocr_text_excerpt": "62 Playing in the Park J 120 41 a 0 Ket eee Pa) _\u2014\u2014\u2014\u2014\u2014\u2014 ee A ee ee ee ee | f 3 SSS WP NU 2 2 5s oa tl | keteieers EO SS retin | yee! 8 ee | =a eS SS SS SS SN Fine 4-\u2014~ 4 -\u2014\u2014_ 4g 9 > \u2014\u2014 p FC A A A A A OW Se ee ee ee ie ee ee ae a ee \u2014\u2014\u2014\u2014__\u2014\u2014_ -. 2- === === == | | \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 4\u2014\u2014~ 4 \u2014_ 4 13 oy reset 0 a re re a ets eee a ee ae \u2014_\u2014_\u2014\u2014\u2014\u2014\u2014 ie eee ee \u2014\u2014 ee eee A ee BS re D.C. al Fine",
+    "title": "Playing in the Park"
+  },
+  "score_versions": {
+    "051bcf00-ad45-4957-9c00-4d42620836df": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "e1969b67-8b83-4bc9-af92-2810a8dd7588",
+      "student_default": true
+    },
+    "e1969b67-8b83-4bc9-af92-2810a8dd7588": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "playing in the park",
+  "source_book_fingerprint": "book_sha256:0d7ee00c3a324bc65e60fda913d8911fa18038f2fe4e4e805e4b89ecc01a2556",
+  "source_book_id": null,
+  "source_content_sha256": "0d7ee00c3a324bc65e60fda913d8911fa18038f2fe4e4e805e4b89ecc01a2556",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Playing in the Park",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

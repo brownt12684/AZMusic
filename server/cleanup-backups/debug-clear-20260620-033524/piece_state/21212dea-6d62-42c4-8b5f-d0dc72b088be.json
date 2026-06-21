@@ -1,0 +1,80 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "21212dea-6d62-42c4-8b5f-d0dc72b088be",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "The Heavy Highlander",
+      "Barcarole"
+    ],
+    "multi_piece_page": true,
+    "primary_instrument": "Cello",
+    "source_file_name": "77d18544-5e33-4c66-8a92-5a60efd867b0.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "The Heavy Highlander / Barcarole"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.8,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "The Heavy Highlander",
+          "Barcarole"
+        ],
+        "multi_piece_page": true,
+        "primary_instrument": "Cello",
+        "source_file_name": "77d18544-5e33-4c66-8a92-5a60efd867b0.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "The Heavy Highlander / Barcarole"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:be11912f6d7554e25292cc99a5a70a20faee75a0311db14a397ebffa01925a91|pages:1-1|title:the heavy highlander barcarole|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "the heavy highlander barcarole",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "20b40a69-065c-44f9-b895-eaa75fcf2c99": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "4cb06ee9-bbdf-4062-935e-30940c64e69a": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "20b40a69-065c-44f9-b895-eaa75fcf2c99",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "heavy highlander barcarole",
+  "source_book_fingerprint": "book_sha256:be11912f6d7554e25292cc99a5a70a20faee75a0311db14a397ebffa01925a91",
+  "source_book_id": "832178c0-9dd6-48cb-b7ea-9b01f3d4801d",
+  "source_content_sha256": "be11912f6d7554e25292cc99a5a70a20faee75a0311db14a397ebffa01925a91",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.8,
+  "title": "The Heavy Highlander / Barcarole",
+  "validation_warnings": [
+    "Multiple short pieces detected on one page; kept together as one shared page item."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

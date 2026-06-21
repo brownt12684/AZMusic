@@ -1,0 +1,126 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "71c36f4a-7972-48fb-ad5b-0381b377e951",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "63 I Got the Blues, Baby 5] FA 7 = 104 ol, 2 ke > Ast 2 ie > Oita et i re EH a a So 3. eS a a = \u2014 = a Sa Ff [got the} blues ba-by\u2014 _I_ got the ba-by\u2014 I got the sempre pizz. a SS SS ee Ss | LE SE TS SS ST SE OS SS SN SS SS SE SE OO | EAS 6. hr FS he te i eg i re \u00a2 i\u2014 FA yO 5 = 4 ~ ol rey he o> = 1 1 8 29 1 _OO EE a EE a 7 a == a po \u201cew ele =\u201c pt \u2014 \u2014 Lat \u2014} \u2014 i hr re rh <tr 8 rr \u00b0 4 ia) 4 5 \u2014 1 \u2014 \u2014 \u201ceye NC EE OS -\u2014\u2014 \u20143\u2014 \u2014=3\u2014 \u2014 a) a a cel - lo play- in\u2019 blu - es__ Yeah, they\u2019re the | prac - tic-in..."
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "63 I Got the Blues, Baby 5] FA 7 = 104 ol, 2 ke > Ast 2 ie > Oita et i re EH a a So 3. eS a a = \u2014 = a Sa Ff [got the} blues ba-by\u2014 _I_ got the ba-by\u2014 I got the sempre pizz. a SS SS ee Ss | LE SE TS SS ST SE OS SS SN SS SS SE SE OO | EAS 6. hr FS he te i eg i re \u00a2 i\u2014 FA yO 5 = 4 ~ ol rey he o> = 1 1 8 29 1 _OO EE a EE a 7 a == a po \u201cew ele =\u201c pt \u2014 \u2014 Lat \u2014} \u2014 i hr re rh <tr 8 rr \u00b0 4 ia) 4 5 \u2014 1 \u2014 \u2014 \u201ceye NC EE OS -\u2014\u2014 \u20143\u2014 \u2014=3\u2014 \u2014 a) a a cel - lo play- in\u2019 blu - es__ Yeah, they\u2019re the | prac - tic-in\u2019 my shift- ing piece ey \u2014 \u2014 \u2014 \u2014\u2014\u2014 \u2014 \u2014 OR eee Ee i ri 9 \u2014 ts 4 . lo 12 2 ol \u2014 \u2014 a oy 2 2 1 2 EE \u2014\u2014\u2014 | -\u2014\u2014 \u20143\u2014 o3> 3 a a 4 blu- es__ I got the| blues I got \u2019em| bad T got the| blues vont | she a eS es a es a ss st UTE EEE Ft \u2014\u2014 | hr | a 7g",
+    "primary_instrument": "Cello",
+    "source_file_name": "54782a18-990d-4dab-8ddd-9d4ac3096413.pdf",
+    "title": "I Got the Blues, Baby"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "I Got the Blues, Baby"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:a681c6043bd49ac6c5d69b7961ed47c6142a7201ae8d1508d209f9147fb15c7a",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "i got the blues baby",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "54782a18-990d-4dab-8ddd-9d4ac3096413.pdf",
+        "title": "I Got the Blues, Baby"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0578,
+          "has_staff_hint": true,
+          "horizontal_line_count": 57,
+          "page_number": 1,
+          "text_excerpt": "63 I Got the Blues, Baby ieee ba-by\u2014 _I got the} blues ba-by\u2014 I got the \u00b0 4 ia) 4 o ffftft \u00a3 sf 4 FRESE SE = 3 \u2014s) \u2014 a a a) cel - lo play- in\u2019 blu - es__ Yeah, they\u2019re the | prac - tic-in\u2019 my shift- ing piece blu- es__ I got the",
+          "title_candidates": [
+            "I Got the Blues, Baby"
+          ],
+          "title_ocr_excerpt": "I Got the Blues, Baby",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "I Got the Blues, Baby"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "I Got the Blues, Baby",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "63 I Got the Blues, Baby 5] FA 7 = 104 ol, 2 ke > Ast 2 ie > Oita et i re EH a a So 3. eS a a = \u2014 = a Sa Ff [got the} blues ba-by\u2014 _I_ got the ba-by\u2014 I got the sempre pizz. a SS SS ee Ss | LE SE TS SS ST SE OS SS SN SS SS SE SE OO | EAS 6. hr FS he te i eg i re \u00a2 i\u2014 FA yO 5 = 4 ~ ol rey he o> = 1 1 8 29 1 _OO EE a EE a 7 a == a po \u201cew ele =\u201c pt \u2014 \u2014 Lat \u2014} \u2014 i hr re rh <tr 8 rr \u00b0 4 ia) 4 5 \u2014 1 \u2014 \u2014 \u201ceye NC EE OS -\u2014\u2014 \u20143\u2014 \u2014=3\u2014 \u2014 a) a a cel - lo play- in\u2019 blu - es__ Yeah, they\u2019re the | prac - tic-in..."
+      }
+    ],
+    "ocr_text_excerpt": "63 I Got the Blues, Baby 5] FA 7 = 104 ol, 2 ke > Ast 2 ie > Oita et i re EH a a So 3. eS a a = \u2014 = a Sa Ff [got the} blues ba-by\u2014 _I_ got the ba-by\u2014 I got the sempre pizz. a SS SS ee Ss | LE SE TS SS ST SE OS SS SN SS SS SE SE OO | EAS 6. hr FS he te i eg i re \u00a2 i\u2014 FA yO 5 = 4 ~ ol rey he o> = 1 1 8 29 1 _OO EE a EE a 7 a == a po \u201cew ele =\u201c pt \u2014 \u2014 Lat \u2014} \u2014 i hr re rh <tr 8 rr \u00b0 4 ia) 4 5 \u2014 1 \u2014 \u2014 \u201ceye NC EE OS -\u2014\u2014 \u20143\u2014 \u2014=3\u2014 \u2014 a) a a cel - lo play- in\u2019 blu - es__ Yeah, they\u2019re the | prac - tic-in\u2019 my shift- ing piece ey \u2014 \u2014 \u2014 \u2014\u2014\u2014 \u2014 \u2014 OR eee Ee i ri 9 \u2014 ts 4 . lo 12 2 ol \u2014 \u2014 a oy 2 2 1 2 EE \u2014\u2014\u2014 | -\u2014\u2014 \u20143\u2014 o3> 3 a a 4 blu- es__ I got the| blues I got \u2019em| bad T got the| blues vont | she a eS es a es a ss st UTE EEE Ft \u2014\u2014 | hr | a 7g",
+    "title": "I Got the Blues, Baby"
+  },
+  "score_versions": {
+    "8c7d3500-7aaf-4af2-9e7f-fe3f8f3e620e": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "bcae3136-168f-4d36-ab75-5b06dcdaf512": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "8c7d3500-7aaf-4af2-9e7f-fe3f8f3e620e",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "i got the blues baby",
+  "source_book_fingerprint": "book_sha256:a681c6043bd49ac6c5d69b7961ed47c6142a7201ae8d1508d209f9147fb15c7a",
+  "source_book_id": null,
+  "source_content_sha256": "a681c6043bd49ac6c5d69b7961ed47c6142a7201ae8d1508d209f9147fb15c7a",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "I Got the Blues, Baby",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "5b53eb99-2d9b-44e7-8adf-7f454e87a8e1",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "The Irish Tenor"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "1c5e4dd6-215a-4bc7-b8e4-135e6fc127fe.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "The Irish Tenor"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "The Irish Tenor"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "1c5e4dd6-215a-4bc7-b8e4-135e6fc127fe.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "The Irish Tenor"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:e2d10a60c44b9d0f9e3c86184bca2cf927a239b2e7922cbbf446a0131193bb94|pages:1-1|title:the irish tenor|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "the irish tenor",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "512ef0ce-fbf4-40a4-b56d-690a85c9782e": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "b4b1340a-5f25-4ae5-9bf1-ac28c561ed54": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "512ef0ce-fbf4-40a4-b56d-690a85c9782e",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "irish tenor",
+  "source_book_fingerprint": "book_sha256:e2d10a60c44b9d0f9e3c86184bca2cf927a239b2e7922cbbf446a0131193bb94",
+  "source_book_id": "49cf0fcc-50eb-4e33-9a09-3ed98b6c2ec7",
+  "source_content_sha256": "e2d10a60c44b9d0f9e3c86184bca2cf927a239b2e7922cbbf446a0131193bb94",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "The Irish Tenor",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

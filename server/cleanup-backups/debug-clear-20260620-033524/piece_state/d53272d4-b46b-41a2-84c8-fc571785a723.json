@@ -1,0 +1,80 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "d53272d4-b46b-41a2-84c8-fc571785a723",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Half Position Serenade",
+      "The Shark"
+    ],
+    "multi_piece_page": true,
+    "primary_instrument": "Cello",
+    "source_file_name": "1f843f26-9f7d-4526-b53f-c2ee41d67575.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Half Position Serenade / The Shark"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.8,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Half Position Serenade",
+          "The Shark"
+        ],
+        "multi_piece_page": true,
+        "primary_instrument": "Cello",
+        "source_file_name": "1f843f26-9f7d-4526-b53f-c2ee41d67575.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Half Position Serenade / The Shark"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:ecb4c1e45405562dd82c15e47e60b4f79848e7a0637f07b1585d1c30acafad08|pages:1-1|title:half position serenade the shark|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "half position serenade the shark",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "4aa05a90-75ef-4779-ae04-8f02a24d03b1": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "85f68c31-4cdc-4dea-8c60-bc672613107f": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "4aa05a90-75ef-4779-ae04-8f02a24d03b1",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "half position serenade the shark",
+  "source_book_fingerprint": "book_sha256:ecb4c1e45405562dd82c15e47e60b4f79848e7a0637f07b1585d1c30acafad08",
+  "source_book_id": "a6b8ea8f-1809-4d1e-9e86-c73c7060b2fc",
+  "source_content_sha256": "ecb4c1e45405562dd82c15e47e60b4f79848e7a0637f07b1585d1c30acafad08",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.8,
+  "title": "Half Position Serenade / The Shark",
+  "validation_warnings": [
+    "Multiple short pieces detected on one page; kept together as one shared page item."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "b2204ab6-3b1f-4e0f-a82c-6ac7c79d7a8a",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Busy Bees"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "cd6b26d0-87a8-4090-8a93-8dc741b8e38f.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Busy Bees"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Busy Bees"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "cd6b26d0-87a8-4090-8a93-8dc741b8e38f.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Busy Bees"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:afa18c8991459edf91a36b87385ca4e2d0c63fec9cce520dca6ee43707c4e8a7|pages:1-1|title:busy bees|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "busy bees",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "2ac89c88-e284-420e-b5bd-80e1ff7db18c": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "46ed3149-06d5-4ad1-a989-3675ad70e3fa",
+      "student_default": true
+    },
+    "46ed3149-06d5-4ad1-a989-3675ad70e3fa": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "busy bees",
+  "source_book_fingerprint": "book_sha256:afa18c8991459edf91a36b87385ca4e2d0c63fec9cce520dca6ee43707c4e8a7",
+  "source_book_id": "4933293b-a452-46a7-b775-13c19df3e952",
+  "source_content_sha256": "afa18c8991459edf91a36b87385ca4e2d0c63fec9cce520dca6ee43707c4e8a7",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "Busy Bees",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

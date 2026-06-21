@@ -1,0 +1,80 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "0bba9b08-c417-4a22-99d2-ddd6da571906",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "The Tiny Ballerina",
+    "contained_piece_titles": [
+      "Bugle Call",
+      "The Tiny Ballerina"
+    ],
+    "multi_piece_page": true,
+    "primary_instrument": "Cello",
+    "source_file_name": "74e4c2d0-96c1-4fd3-a781-9fcc34c6cfdb.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Bugle Call / The Tiny Ballerina"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.8,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "The Tiny Ballerina",
+        "contained_piece_titles": [
+          "Bugle Call",
+          "The Tiny Ballerina"
+        ],
+        "multi_piece_page": true,
+        "primary_instrument": "Cello",
+        "source_file_name": "74e4c2d0-96c1-4fd3-a781-9fcc34c6cfdb.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Bugle Call / The Tiny Ballerina"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "The Tiny Ballerina",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:8df5297753980b575d97a4d32897d85ccf5dc90fc464c25240e21d798b3310cd|pages:1-1|title:bugle call the tiny ballerina|composer:the tiny ballerina|instrument:cello",
+  "normalized_composer": "the tiny ballerina",
+  "normalized_title": "bugle call the tiny ballerina",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "552c8ab5-e240-4356-be36-175a25d081bd": {
+      "approved_by_parent": true,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "8c380cff-ebda-4297-b23d-f5b131f17cb5",
+      "student_default": true
+    },
+    "8c380cff-ebda-4297-b23d-f5b131f17cb5": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "tiny ballerina",
+  "sort_title": "bugle call the tiny ballerina",
+  "source_book_fingerprint": "book_sha256:8df5297753980b575d97a4d32897d85ccf5dc90fc464c25240e21d798b3310cd",
+  "source_book_id": "c46b7735-0cec-4a8b-bd25-848366dc94f2",
+  "source_content_sha256": "8df5297753980b575d97a4d32897d85ccf5dc90fc464c25240e21d798b3310cd",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.8,
+  "title": "Bugle Call / The Tiny Ballerina",
+  "validation_warnings": [
+    "Multiple short pieces detected on one page; kept together as one shared page item."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

@@ -1,0 +1,126 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "d659b166-2758-461f-b168-e4fdaaa09334",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "37 Feeling Fine J Avi ge! =69 Vv Vv - vmyvy - v <= ee tae Fit eg see et ty tee gy . Det PERG Pe ee ee Ee: a Se aS ce 6 ee al EE [ss \u2014 [OS i \u2014 > SE ee ee err A SS ST SS eae ws) 4 H 4 1 v4 5 \u201c~~ Y \u2014 . e SS eS a ee 2 ee ee | Lf \u2014 | \u2014_\u2014 a py et EE FS EES \u2014\u2014\u2014\u2014\u2014\u2014_\u2014\u2014_\u2014\u2014\u2014_\u2014\u2014\u2014\u2014 \u00b0 ss - Fine ve ~ Vy 4~ 9 rs 3 Nyt yy W vy \u00b0 qe SEE Pt pee te Pe Oo ye feo LS te on de fee Meg 9 fe 2 ee ee ee ae in] P O a | es es oe ree ee ee eee ee ef eee SR ee a a \u2014\u2014\u2014\u2014 ee ee ee ee ee ee 4 v4 - >V 4 Vv 4 13 \u201cee e 2 4V V0 nose..."
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "37 Feeling Fine J Avi ge! =69 Vv Vv - vmyvy - v <= ee tae Fit eg see et ty tee gy . Det PERG Pe ee ee Ee: a Se aS ce 6 ee al EE [ss \u2014 [OS i \u2014 > SE ee ee err A SS ST SS eae ws) 4 H 4 1 v4 5 \u201c~~ Y \u2014 . e SS eS a ee 2 ee ee | Lf \u2014 | \u2014_\u2014 a py et EE FS EES \u2014\u2014\u2014\u2014\u2014\u2014_\u2014\u2014_\u2014\u2014\u2014_\u2014\u2014\u2014\u2014 \u00b0 ss - Fine ve ~ Vy 4~ 9 rs 3 Nyt yy W vy \u00b0 qe SEE Pt pee te Pe Oo ye feo LS te on de fee Meg 9 fe 2 ee ee ee ae in] P O a | es es oe ree ee ee eee ee ef eee SR ee a a \u2014\u2014\u2014\u2014 ee ee ee ee ee ee 4 v4 - >V 4 Vv 4 13 \u201cee e 2 4V V0 nose Ee ge oe ete SS ee SS ee eS ee ee es SO eS a Se es! ee at \u2014| \u2014 7 i? \u2014\u2014 \u2014 + \u2014f i J i ee eee mS * D.C. al Fine",
+    "primary_instrument": "Cello",
+    "source_file_name": "9df9a84a-f5a2-4868-9098-bc2385e286c1.pdf",
+    "title": "Feeling Fine"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Feeling Fine"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:ae9d15c452cc1f5e57c6b929e4766c20ecadad1407f40c7e793767955e10abc7",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "feeling fine",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "9df9a84a-f5a2-4868-9098-bc2385e286c1.pdf",
+        "title": "Feeling Fine"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0729,
+          "has_staff_hint": true,
+          "horizontal_line_count": 44,
+          "page_number": 1,
+          "text_excerpt": "37 Feeling Fine * D.C. al Fine",
+          "title_candidates": [
+            "Feeling Fine"
+          ],
+          "title_ocr_excerpt": "Feeling Fine",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Feeling Fine"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Feeling Fine",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "37 Feeling Fine J Avi ge! =69 Vv Vv - vmyvy - v <= ee tae Fit eg see et ty tee gy . Det PERG Pe ee ee Ee: a Se aS ce 6 ee al EE [ss \u2014 [OS i \u2014 > SE ee ee err A SS ST SS eae ws) 4 H 4 1 v4 5 \u201c~~ Y \u2014 . e SS eS a ee 2 ee ee | Lf \u2014 | \u2014_\u2014 a py et EE FS EES \u2014\u2014\u2014\u2014\u2014\u2014_\u2014\u2014_\u2014\u2014\u2014_\u2014\u2014\u2014\u2014 \u00b0 ss - Fine ve ~ Vy 4~ 9 rs 3 Nyt yy W vy \u00b0 qe SEE Pt pee te Pe Oo ye feo LS te on de fee Meg 9 fe 2 ee ee ee ae in] P O a | es es oe ree ee ee eee ee ef eee SR ee a a \u2014\u2014\u2014\u2014 ee ee ee ee ee ee 4 v4 - >V 4 Vv 4 13 \u201cee e 2 4V V0 nose..."
+      }
+    ],
+    "ocr_text_excerpt": "37 Feeling Fine J Avi ge! =69 Vv Vv - vmyvy - v <= ee tae Fit eg see et ty tee gy . Det PERG Pe ee ee Ee: a Se aS ce 6 ee al EE [ss \u2014 [OS i \u2014 > SE ee ee err A SS ST SS eae ws) 4 H 4 1 v4 5 \u201c~~ Y \u2014 . e SS eS a ee 2 ee ee | Lf \u2014 | \u2014_\u2014 a py et EE FS EES \u2014\u2014\u2014\u2014\u2014\u2014_\u2014\u2014_\u2014\u2014\u2014_\u2014\u2014\u2014\u2014 \u00b0 ss - Fine ve ~ Vy 4~ 9 rs 3 Nyt yy W vy \u00b0 qe SEE Pt pee te Pe Oo ye feo LS te on de fee Meg 9 fe 2 ee ee ee ae in] P O a | es es oe ree ee ee eee ee ef eee SR ee a a \u2014\u2014\u2014\u2014 ee ee ee ee ee ee 4 v4 - >V 4 Vv 4 13 \u201cee e 2 4V V0 nose Ee ge oe ete SS ee SS ee eS ee ee es SO eS a Se es! ee at \u2014| \u2014 7 i? \u2014\u2014 \u2014 + \u2014f i J i ee eee mS * D.C. al Fine",
+    "title": "Feeling Fine"
+  },
+  "score_versions": {
+    "4abfcc07-b1ec-4f83-b288-6837b5c206e5": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "a80cdaea-ac70-4ce9-b1d9-7049c959d93f",
+      "student_default": true
+    },
+    "a80cdaea-ac70-4ce9-b1d9-7049c959d93f": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "feeling fine",
+  "source_book_fingerprint": "book_sha256:ae9d15c452cc1f5e57c6b929e4766c20ecadad1407f40c7e793767955e10abc7",
+  "source_book_id": null,
+  "source_content_sha256": "ae9d15c452cc1f5e57c6b929e4766c20ecadad1407f40c7e793767955e10abc7",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Feeling Fine",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

@@ -1,0 +1,131 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "c46b7735-0cec-4a8b-bd25-848366dc94f2",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "The Tiny Ballerina",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "45 Bugle Call ! Vv = 2 4 = 66 Ox Da aD lon la > a ft ft i eo eS a! ae 2 SS \u2014\u2014\u2014 | Se a ee Te oo eee eS ee a 4 o: we 2 <_\u2122~N_ ie et SS \u2014\u2014 ne _ ET! Se Se es ee oe a a a | SE A PS SS A SH A WH Oe ee? ee ee \u2014___1 a ee eae meee meee lee eee Note: \u201cToy Soldiers\u201d also can be fingered in third position. The Tiny Ballerina 2 deve y xl 4 4 xi v ey ye ef ip ef i i SS ee EE \u2014\u2014\u2014\u2014\u2014\u2014\u2014 a \u2014\u2014 i mp se oe ee a ee ae o_o a a EE) > ES A | a! SS a ee a 5 Coy ef i rr oO ee a a en! SS SE \u2014\u2014 A eo i \u2014\u2014\u2014\u2014\u2014\u2014 a a et"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "45 Bugle Call ! Vv = 2 4 = 66 Ox Da aD lon la > a ft ft i eo eS a! ae 2 SS \u2014\u2014\u2014 | Se a ee Te oo eee eS ee a 4 o: we 2 <_\u2122~N_ ie et SS \u2014\u2014 ne _ ET! Se Se es ee oe a a a | SE A PS SS A SH A WH Oe ee? ee ee \u2014___1 a ee eae meee meee lee eee Note: \u201cToy Soldiers\u201d also can be fingered in third position. The Tiny Ballerina 2 deve y xl 4 4 xi v ey ye ef ip ef i i SS ee EE \u2014\u2014\u2014\u2014\u2014\u2014\u2014 a \u2014\u2014 i mp se oe ee a ee ae o_o a a EE) > ES A | a! SS a ee a 5 Coy ef i rr oO ee a a en! SS SE \u2014\u2014 A eo i \u2014\u2014\u2014\u2014\u2014\u2014 a a et",
+    "primary_instrument": "Cello",
+    "source_file_name": "74e4c2d0-96c1-4fd3-a781-9fcc34c6cfdb.pdf",
+    "title": "Bugle Call"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Bugle Call"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:8df5297753980b575d97a4d32897d85ccf5dc90fc464c25240e21d798b3310cd",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "the tiny ballerina bugle call",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "composer": "The Tiny Ballerina",
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "74e4c2d0-96c1-4fd3-a781-9fcc34c6cfdb.pdf",
+        "title": "Bugle Call"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0657,
+          "has_staff_hint": true,
+          "horizontal_line_count": 45,
+          "page_number": 1,
+          "text_excerpt": "45 Bugle Call 4 14 o\u2014\u2122~, lant :. io Lal Pi3 ial Pls oh Bde Bap Bs Bebo jo Sv \u2014\u2019 \u2019 Note: \u201cToy Soldiers\u201d also can be fingered in third position. The Tiny Ballerina",
+          "title_candidates": [
+            "Bugle Call",
+            "The Tiny Ballerina"
+          ],
+          "title_ocr_excerpt": "Bugle Call The Tiny Ballerina",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": "The Tiny Ballerina",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "Bugle Call",
+            "The Tiny Ballerina"
+          ],
+          "multi_piece_page": true,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Bugle Call / The Tiny Ballerina",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "45 Bugle Call ! Vv = 2 4 = 66 Ox Da aD lon la > a ft ft i eo eS a! ae 2 SS \u2014\u2014\u2014 | Se a ee Te oo eee eS ee a 4 o: we 2 <_\u2122~N_ ie et SS \u2014\u2014 ne _ ET! Se Se es ee oe a a a | SE A PS SS A SH A WH Oe ee? ee ee \u2014___1 a ee eae meee meee lee eee Note: \u201cToy Soldiers\u201d also can be fingered in third position. The Tiny Ballerina 2 deve y xl 4 4 xi v ey ye ef ip ef i i SS ee EE \u2014\u2014\u2014\u2014\u2014\u2014\u2014 a \u2014\u2014 i mp se oe ee a ee ae o_o a a EE) > ES A | a! SS a ee a 5 Coy ef i rr oO ee a a en! SS SE \u2014\u2014 A eo i \u2014\u2014\u2014\u2014\u2014\u2014 a a et"
+      }
+    ],
+    "ocr_text_excerpt": "45 Bugle Call ! Vv = 2 4 = 66 Ox Da aD lon la > a ft ft i eo eS a! ae 2 SS \u2014\u2014\u2014 | Se a ee Te oo eee eS ee a 4 o: we 2 <_\u2122~N_ ie et SS \u2014\u2014 ne _ ET! Se Se es ee oe a a a | SE A PS SS A SH A WH Oe ee? ee ee \u2014___1 a ee eae meee meee lee eee Note: \u201cToy Soldiers\u201d also can be fingered in third position. The Tiny Ballerina 2 deve y xl 4 4 xi v ey ye ef ip ef i i SS ee EE \u2014\u2014\u2014\u2014\u2014\u2014\u2014 a \u2014\u2014 i mp se oe ee a ee ae o_o a a EE) > ES A | a! SS a ee a 5 Coy ef i rr oO ee a a en! SS SE \u2014\u2014 A eo i \u2014\u2014\u2014\u2014\u2014\u2014 a a et",
+    "title": "Bugle Call"
+  },
+  "score_versions": {
+    "c47dfc69-71dc-42f1-a948-2ead462a2d30": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "d6f5d342-d885-4efa-9bdb-a1ca3c208b3c": {
+      "approved_by_parent": true,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "c47dfc69-71dc-42f1-a948-2ead462a2d30",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "tiny ballerina bugle call",
+  "source_book_fingerprint": "book_sha256:8df5297753980b575d97a4d32897d85ccf5dc90fc464c25240e21d798b3310cd",
+  "source_book_id": null,
+  "source_content_sha256": "8df5297753980b575d97a4d32897d85ccf5dc90fc464c25240e21d798b3310cd",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "The Tiny Ballerina / Bugle Call",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

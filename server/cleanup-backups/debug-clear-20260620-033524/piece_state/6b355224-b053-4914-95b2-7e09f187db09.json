@@ -1,0 +1,128 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "6b355224-b053-4914-95b2-7e09f187db09",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "8 5 ms 4 2 1 24 4 = 192 0 0 se op op Fh ir FO fe Fr a O_o | SEE oe ee f Ms vv Eo ES _ OE EE Ee EEE EEE EE 5 4 2 aa 2 (43 1. ; \u2014 Ft? _ EEE et ECE a i ES eS eS ee Se a - a a OEE Cl Ee a a a as Fine 4 9 0 4 9 2 \u2014 40 bi 2 ; EEO EE ee oo | 2 ial D a | T_T EOE CO at Ee es 13 4 2 4 SS \u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 VE | = \u2014 SS \u2014\u2014\u2014\u2014_\u2014\u2014\u2014\u2014\u2014\u2014 a a a \u2014\u2014 a a a oe oe oe o_o \u201c7 8 . _ 1. 8 \u00b0 \u201c. 8 . . . . . \u2014\u2014\u2014\u2014\u2014_ D.C. al Fine"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "8 5 ms 4 2 1 24 4 = 192 0 0 se op op Fh ir FO fe Fr a O_o | SEE oe ee f Ms vv Eo ES _ OE EE Ee EEE EEE EE 5 4 2 aa 2 (43 1. ; \u2014 Ft? _ EEE et ECE a i ES eS eS ee Se a - a a OEE Cl Ee a a a as Fine 4 9 0 4 9 2 \u2014 40 bi 2 ; EEO EE ee oo | 2 ial D a | T_T EOE CO at Ee es 13 4 2 4 SS \u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 VE | = \u2014 SS \u2014\u2014\u2014\u2014_\u2014\u2014\u2014\u2014\u2014\u2014 a a a \u2014\u2014 a a a oe oe oe o_o \u201c7 8 . _ 1. 8 \u00b0 \u201c. 8 . . . . . \u2014\u2014\u2014\u2014\u2014_ D.C. al Fine",
+    "opus": "op Fh ir",
+    "primary_instrument": "Cello",
+    "source_file_name": "bf90c82b-9634-47f0-8696-888d8cb12e8a.pdf",
+    "title": "5 ms 4 2 1 24 4"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "opus": "op Fh ir",
+        "title": "5 ms 4 2 1 24 4"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:15c09c76d642fa5b59fc2a7116be687904a9fcaccdc3366c64165e3f273db1f7",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "march",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "bf90c82b-9634-47f0-8696-888d8cb12e8a.pdf"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0576,
+          "has_staff_hint": true,
+          "horizontal_line_count": 45,
+          "page_number": 1,
+          "text_excerpt": "",
+          "title_candidates": [
+            "March"
+          ],
+          "title_ocr_excerpt": "March",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "March"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "March",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "8 5 ms 4 2 1 24 4 = 192 0 0 se op op Fh ir FO fe Fr a O_o | SEE oe ee f Ms vv Eo ES _ OE EE Ee EEE EEE EE 5 4 2 aa 2 (43 1. ; \u2014 Ft? _ EEE et ECE a i ES eS eS ee Se a - a a OEE Cl Ee a a a as Fine 4 9 0 4 9 2 \u2014 40 bi 2 ; EEO EE ee oo | 2 ial D a | T_T EOE CO at Ee es 13 4 2 4 SS \u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 VE | = \u2014 SS \u2014\u2014\u2014\u2014_\u2014\u2014\u2014\u2014\u2014\u2014 a a a \u2014\u2014 a a a oe oe oe o_o \u201c7 8 . _ 1. 8 \u00b0 \u201c. 8 . . . . . \u2014\u2014\u2014\u2014\u2014_ D.C. al Fine"
+      }
+    ],
+    "ocr_text_excerpt": "8 5 ms 4 2 1 24 4 = 192 0 0 se op op Fh ir FO fe Fr a O_o | SEE oe ee f Ms vv Eo ES _ OE EE Ee EEE EEE EE 5 4 2 aa 2 (43 1. ; \u2014 Ft? _ EEE et ECE a i ES eS eS ee Se a - a a OEE Cl Ee a a a as Fine 4 9 0 4 9 2 \u2014 40 bi 2 ; EEO EE ee oo | 2 ial D a | T_T EOE CO at Ee es 13 4 2 4 SS \u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 VE | = \u2014 SS \u2014\u2014\u2014\u2014_\u2014\u2014\u2014\u2014\u2014\u2014 a a a \u2014\u2014 a a a oe oe oe o_o \u201c7 8 . _ 1. 8 \u00b0 \u201c. 8 . . . . . \u2014\u2014\u2014\u2014\u2014_ D.C. al Fine",
+    "opus": "op Fh ir",
+    "title": "5 ms 4 2 1 24 4"
+  },
+  "score_versions": {
+    "bfc7c527-64d9-4504-baca-9cfe0c241006": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "f8307b90-b432-4e68-a52d-d074236d6400",
+      "student_default": true
+    },
+    "f8307b90-b432-4e68-a52d-d074236d6400": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "march",
+  "source_book_fingerprint": "book_sha256:15c09c76d642fa5b59fc2a7116be687904a9fcaccdc3366c64165e3f273db1f7",
+  "source_book_id": null,
+  "source_content_sha256": "15c09c76d642fa5b59fc2a7116be687904a9fcaccdc3366c64165e3f273db1f7",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "March",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

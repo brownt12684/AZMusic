@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "b31a8b31-dd34-4c0e-a43e-56fb083518e7",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Etude"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "167485f3-3826-4250-b56b-c7ad49a3fc5b.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Etude"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Etude"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "167485f3-3826-4250-b56b-c7ad49a3fc5b.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Etude"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:83093e4644c14045f37b394c66188d3d993c1eb3b8f0bcaf672a0a4b6b94c68a|pages:1-1|title:etude|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "etude",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "3f6823c9-29f8-4e70-acea-a0d5e01ed372": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "55d17e2f-e669-43a2-bb2a-8c08931ba00a": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "3f6823c9-29f8-4e70-acea-a0d5e01ed372",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "etude",
+  "source_book_fingerprint": "book_sha256:83093e4644c14045f37b394c66188d3d993c1eb3b8f0bcaf672a0a4b6b94c68a",
+  "source_book_id": "059f946d-0d78-4849-b685-e9ab6b79fc24",
+  "source_content_sha256": "83093e4644c14045f37b394c66188d3d993c1eb3b8f0bcaf672a0a4b6b94c68a",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "Etude",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

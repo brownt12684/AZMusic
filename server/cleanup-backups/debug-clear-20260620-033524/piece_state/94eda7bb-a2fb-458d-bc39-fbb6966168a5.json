@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "94eda7bb-a2fb-458d-bc39-fbb6966168a5",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "The Haunted House"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "7f7e8987-6fc8-4b7f-a3ac-3c7fe778543f.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "The Haunted House"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "The Haunted House"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "7f7e8987-6fc8-4b7f-a3ac-3c7fe778543f.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "The Haunted House"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:e03be71d7bd5fa70810e5ecf456db5eaf4bfacba75389c2b16e2c733542c326e|pages:1-1|title:the haunted house|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "the haunted house",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "9f862158-c733-46fa-b5ee-5524cadbad99": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "f44611a4-7fe7-4337-9109-8da9d6bf9d20",
+      "student_default": true
+    },
+    "f44611a4-7fe7-4337-9109-8da9d6bf9d20": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "haunted house",
+  "source_book_fingerprint": "book_sha256:e03be71d7bd5fa70810e5ecf456db5eaf4bfacba75389c2b16e2c733542c326e",
+  "source_book_id": "ed5ebe30-2728-4ca8-bcc1-c82f435eb93a",
+  "source_content_sha256": "e03be71d7bd5fa70810e5ecf456db5eaf4bfacba75389c2b16e2c733542c326e",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "The Haunted House",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

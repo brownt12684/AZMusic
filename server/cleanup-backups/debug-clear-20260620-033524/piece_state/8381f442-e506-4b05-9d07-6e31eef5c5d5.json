@@ -1,0 +1,126 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "8381f442-e506-4b05-9d07-6e31eef5c5d5",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "40 \u2018 ? The Hippopotamus\u2019 Dance 4-120 i o 21 4 2 3 ~Oo 02 30 EE ES SS \u2014\u2014\u2014_\u2014\u2014 _\u2014\u2014\u2014\u2014\u2014 a \u2014\u2014 ee es ee ee Se ee ee ee ee SS SS EE EE EE ES ESE EEE 5 0 ; u 4 2 3 o ) ? 3 0 rey 0 meg gg) __g__ -_e\u2014\u00bb\u2014\u2014 of \u2014o\u2014 # |\u00bb | -\u00bb 6 7} 9 |\u00bb \u2014__ \u2014 a oo oo a So a ot oo oo a |, ,| | ,,| CS \u2014\u2014 oe \u2014\u2014 id 9 zn 23 0 2 3.0 ye? he SS ee \u2014 oF 7 SS. = S55 == SSS SS _\u2014_\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014\u2014 _TETETETEEEEE EEE Ee B ? 3 4 0 \u2014 0 yy hy ae > eo \u2014\u2014\u2014\u2014\u2014\u2014 oe eet ey \u2014 oo \u2014\u2014 i \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014\u2014"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "40 \u2018 ? The Hippopotamus\u2019 Dance 4-120 i o 21 4 2 3 ~Oo 02 30 EE ES SS \u2014\u2014\u2014_\u2014\u2014 _\u2014\u2014\u2014\u2014\u2014 a \u2014\u2014 ee es ee ee Se ee ee ee ee SS SS EE EE EE ES ESE EEE 5 0 ; u 4 2 3 o ) ? 3 0 rey 0 meg gg) __g__ -_e\u2014\u00bb\u2014\u2014 of \u2014o\u2014 # |\u00bb | -\u00bb 6 7} 9 |\u00bb \u2014__ \u2014 a oo oo a So a ot oo oo a |, ,| | ,,| CS \u2014\u2014 oe \u2014\u2014 id 9 zn 23 0 2 3.0 ye? he SS ee \u2014 oF 7 SS. = S55 == SSS SS _\u2014_\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014\u2014 _TETETETEEEEE EEE Ee B ? 3 4 0 \u2014 0 yy hy ae > eo \u2014\u2014\u2014\u2014\u2014\u2014 oe eet ey \u2014 oo \u2014\u2014 i \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014\u2014",
+    "primary_instrument": "Cello",
+    "source_file_name": "de3e34a0-3c6e-4113-94ee-d364aecab15a.pdf",
+    "title": "The Hippopotamus\u2019 Dance"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "The Hippopotamus\u2019 Dance"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:3452a270d4a5cab2afc88b13602cb729660568b4863cd16fca9c489fb96fe4bc",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "the hippopotamus dance",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "de3e34a0-3c6e-4113-94ee-d364aecab15a.pdf",
+        "title": "The Hippopotamus\u2019 Dance"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0638,
+          "has_staff_hint": true,
+          "horizontal_line_count": 45,
+          "page_number": 1,
+          "text_excerpt": "The Hippopotamus\u2019 Dance",
+          "title_candidates": [
+            "The Hippopotamus\u2019 Dance"
+          ],
+          "title_ocr_excerpt": "The Hippopotamus\u2019 Dance",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "The Hippopotamus\u2019 Dance"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "The Hippopotamus\u2019 Dance",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "40 \u2018 ? The Hippopotamus\u2019 Dance 4-120 i o 21 4 2 3 ~Oo 02 30 EE ES SS \u2014\u2014\u2014_\u2014\u2014 _\u2014\u2014\u2014\u2014\u2014 a \u2014\u2014 ee es ee ee Se ee ee ee ee SS SS EE EE EE ES ESE EEE 5 0 ; u 4 2 3 o ) ? 3 0 rey 0 meg gg) __g__ -_e\u2014\u00bb\u2014\u2014 of \u2014o\u2014 # |\u00bb | -\u00bb 6 7} 9 |\u00bb \u2014__ \u2014 a oo oo a So a ot oo oo a |, ,| | ,,| CS \u2014\u2014 oe \u2014\u2014 id 9 zn 23 0 2 3.0 ye? he SS ee \u2014 oF 7 SS. = S55 == SSS SS _\u2014_\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014\u2014 _TETETETEEEEE EEE Ee B ? 3 4 0 \u2014 0 yy hy ae > eo \u2014\u2014\u2014\u2014\u2014\u2014 oe eet ey \u2014 oo \u2014\u2014 i \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014\u2014"
+      }
+    ],
+    "ocr_text_excerpt": "40 \u2018 ? The Hippopotamus\u2019 Dance 4-120 i o 21 4 2 3 ~Oo 02 30 EE ES SS \u2014\u2014\u2014_\u2014\u2014 _\u2014\u2014\u2014\u2014\u2014 a \u2014\u2014 ee es ee ee Se ee ee ee ee SS SS EE EE EE ES ESE EEE 5 0 ; u 4 2 3 o ) ? 3 0 rey 0 meg gg) __g__ -_e\u2014\u00bb\u2014\u2014 of \u2014o\u2014 # |\u00bb | -\u00bb 6 7} 9 |\u00bb \u2014__ \u2014 a oo oo a So a ot oo oo a |, ,| | ,,| CS \u2014\u2014 oe \u2014\u2014 id 9 zn 23 0 2 3.0 ye? he SS ee \u2014 oF 7 SS. = S55 == SSS SS _\u2014_\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014\u2014 _TETETETEEEEE EEE Ee B ? 3 4 0 \u2014 0 yy hy ae > eo \u2014\u2014\u2014\u2014\u2014\u2014 oe eet ey \u2014 oo \u2014\u2014 i \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014\u2014",
+    "title": "The Hippopotamus\u2019 Dance"
+  },
+  "score_versions": {
+    "41eeb105-507d-4341-84ce-5667afccd022": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "578c5984-02f2-4923-87e0-3405e7bfa771": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "41eeb105-507d-4341-84ce-5667afccd022",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "hippopotamus dance",
+  "source_book_fingerprint": "book_sha256:3452a270d4a5cab2afc88b13602cb729660568b4863cd16fca9c489fb96fe4bc",
+  "source_book_id": null,
+  "source_content_sha256": "3452a270d4a5cab2afc88b13602cb729660568b4863cd16fca9c489fb96fe4bc",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "The Hippopotamus\u2019 Dance",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

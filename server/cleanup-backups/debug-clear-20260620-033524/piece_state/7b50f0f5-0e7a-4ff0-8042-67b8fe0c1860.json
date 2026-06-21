@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "7b50f0f5-0e7a-4ff0-8042-67b8fe0c1860",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Melancholy"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "7c9ab1f3-6bc9-47ba-a546-11d42b627844.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Melancholy"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Melancholy"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "7c9ab1f3-6bc9-47ba-a546-11d42b627844.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Melancholy"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:155acfea748e0ac37319be4938df8882f750307462b8a322b1bd649845f8d1fb|pages:1-1|title:melancholy|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "melancholy",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "0854bad5-5590-4bae-a696-b8e2314ca5f8": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "0ab8115f-1305-43d1-b78e-f260bcbc972b",
+      "student_default": true
+    },
+    "0ab8115f-1305-43d1-b78e-f260bcbc972b": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "melancholy",
+  "source_book_fingerprint": "book_sha256:155acfea748e0ac37319be4938df8882f750307462b8a322b1bd649845f8d1fb",
+  "source_book_id": "62019502-4f46-494f-a009-111470a0b451",
+  "source_content_sha256": "155acfea748e0ac37319be4938df8882f750307462b8a322b1bd649845f8d1fb",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "Melancholy",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

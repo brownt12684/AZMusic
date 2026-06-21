@@ -1,0 +1,130 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "02171eb5-485c-4034-8987-a6ac17cea980",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "38 The Troubadour 12 =104 to, 0 2 1 1 o 2 Li\u00bb 4 SSE ee oS \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 oe ee ee a a a as es ae mp ae | sempre =~. |, bk. bf | Leyecante p ____p _ So \u2014 Ss es ee Sees a es 5 Sameera ee SS oe ees 9 ee ees Seer TOE Cs Ss of 5 1, 0 2 3 4 F , 2 es ee ee SSS a A, gn a ee a ee ie ee ee ee ee ee ee oe ee ee a ee ee | | | SS ee os os ee ee ee eet [PE gp [Age pf tg a * see the note on \u201cThe Invisible Target\u201d Hoedown - Vv vv J 100 lo 242 4 2 \u00a32 3 9 2 vy 301 Seto A A ede ge le a Eh @ ep oe ge ee es as ss eS S..."
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "38 The Troubadour 12 =104 to, 0 2 1 1 o 2 Li\u00bb 4 SSE ee oS \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 oe ee ee a a a as es ae mp ae | sempre =~. |, bk. bf | Leyecante p ____p _ So \u2014 Ss es ee Sees a es 5 Sameera ee SS oe ees 9 ee ees Seer TOE Cs Ss of 5 1, 0 2 3 4 F , 2 es ee ee SSS a A, gn a ee a ee ie ee ee ee ee ee ee oe ee ee a ee ee | | | SS ee os os ee ee ee eet [PE gp [Age pf tg a * see the note on \u201cThe Invisible Target\u201d Hoedown - Vv vv J 100 lo 242 4 2 \u00a32 3 9 2 vy 301 Seto A A ede ge le a Eh @ ep oe ge ee es as ss eS Se a vo, 1Y Leys} te ete et i ye sp a a ee a ee a Se ee es eee Se ese A Se ee es ee a eS a eS 5 o 2 v_), ' 201 ~=\u00ab2~\u00ab4 1 oye oe oe 080g Sa se SE ESS] 2 \u2014 ee ee ee ee ee ee ee Ne See EE ee El ye i et S\u2014\u2014\u2014\u2014_\u2014_\u2014\u2014 -2\u2014} <7 \u2014\u2014\u2014 a",
+    "primary_instrument": "Cello",
+    "source_file_name": "d62b2576-04f4-4573-9e61-934df520e863.pdf",
+    "title": "The Troubadour"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "The Troubadour"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:ac16eba309ae20d0deffe69a5c1cf7b0d8bd002871154461bdb7bb00e11afcd1",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "the troubadour hoedown",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "d62b2576-04f4-4573-9e61-934df520e863.pdf",
+        "title": "The Troubadour"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0597,
+          "has_staff_hint": true,
+          "horizontal_line_count": 44,
+          "page_number": 1,
+          "text_excerpt": "The Troubadour * see the note on \u201cThe Invisible Target\u201d Hoedown",
+          "title_candidates": [
+            "The Troubadour",
+            "Hoedown"
+          ],
+          "title_ocr_excerpt": "The Troubadour Hoedown",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "The Troubadour",
+            "Hoedown"
+          ],
+          "multi_piece_page": true,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "The Troubadour / Hoedown",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "38 The Troubadour 12 =104 to, 0 2 1 1 o 2 Li\u00bb 4 SSE ee oS \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 oe ee ee a a a as es ae mp ae | sempre =~. |, bk. bf | Leyecante p ____p _ So \u2014 Ss es ee Sees a es 5 Sameera ee SS oe ees 9 ee ees Seer TOE Cs Ss of 5 1, 0 2 3 4 F , 2 es ee ee SSS a A, gn a ee a ee ie ee ee ee ee ee ee oe ee ee a ee ee | | | SS ee os os ee ee ee eet [PE gp [Age pf tg a * see the note on \u201cThe Invisible Target\u201d Hoedown - Vv vv J 100 lo 242 4 2 \u00a32 3 9 2 vy 301 Seto A A ede ge le a Eh @ ep oe ge ee es as ss eS S..."
+      }
+    ],
+    "ocr_text_excerpt": "38 The Troubadour 12 =104 to, 0 2 1 1 o 2 Li\u00bb 4 SSE ee oS \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 oe ee ee a a a as es ae mp ae | sempre =~. |, bk. bf | Leyecante p ____p _ So \u2014 Ss es ee Sees a es 5 Sameera ee SS oe ees 9 ee ees Seer TOE Cs Ss of 5 1, 0 2 3 4 F , 2 es ee ee SSS a A, gn a ee a ee ie ee ee ee ee ee ee oe ee ee a ee ee | | | SS ee os os ee ee ee eet [PE gp [Age pf tg a * see the note on \u201cThe Invisible Target\u201d Hoedown - Vv vv J 100 lo 242 4 2 \u00a32 3 9 2 vy 301 Seto A A ede ge le a Eh @ ep oe ge ee es as ss eS Se a vo, 1Y Leys} te ete et i ye sp a a ee a ee a Se ee es eee Se ese A Se ee es ee a eS a eS 5 o 2 v_), ' 201 ~=\u00ab2~\u00ab4 1 oye oe oe 080g Sa se SE ESS] 2 \u2014 ee ee ee ee ee ee ee Ne See EE ee El ye i et S\u2014\u2014\u2014\u2014_\u2014_\u2014\u2014 -2\u2014} <7 \u2014\u2014\u2014 a",
+    "title": "The Troubadour"
+  },
+  "score_versions": {
+    "51ea3e7f-a312-46e6-b144-01dd448dd149": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "f97d30bb-c30f-4d70-99e8-bd1a702d210a",
+      "student_default": true
+    },
+    "f97d30bb-c30f-4d70-99e8-bd1a702d210a": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "troubadour hoedown",
+  "source_book_fingerprint": "book_sha256:ac16eba309ae20d0deffe69a5c1cf7b0d8bd002871154461bdb7bb00e11afcd1",
+  "source_book_id": null,
+  "source_content_sha256": "ac16eba309ae20d0deffe69a5c1cf7b0d8bd002871154461bdb7bb00e11afcd1",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "The Troubadour / Hoedown",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

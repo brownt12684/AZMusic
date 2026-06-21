@@ -1,0 +1,126 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "62019502-4f46-494f-a009-111470a0b451",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "59 Melancholy 4 x1 J m4 a \u2014> 4 Ri 2 =80 2 a peta FF i _ \u00a2, 9 Fife fp ___ SS | Se ee | EOE mf mS y VY Ss A i rer er i 8 te eT 8 eS a Se ; 4 \u2014\u2014~ 3 ; ; \u2014 reek pip iF ip + if fe _ 6 sp, | _ eT! _ Oo on et Se \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 _ Ee Es! Fine 9 4 1 Yee. 0 1 2 yt ee ee ae \u2014 ee ee fs a a ee ee ee es ee et FS TS A Sc | o_o \u2014\u2014 4 4 \u2014 \u00b0 > 13 4 ~~ lL, eye ae ft te eg SS at eet So oo ee oe es _\u2014 Vv a EE \u2014\u2014\u2014\u2014 | D.C. al Fine"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "59 Melancholy 4 x1 J m4 a \u2014> 4 Ri 2 =80 2 a peta FF i _ \u00a2, 9 Fife fp ___ SS | Se ee | EOE mf mS y VY Ss A i rer er i 8 te eT 8 eS a Se ; 4 \u2014\u2014~ 3 ; ; \u2014 reek pip iF ip + if fe _ 6 sp, | _ eT! _ Oo on et Se \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 _ Ee Es! Fine 9 4 1 Yee. 0 1 2 yt ee ee ae \u2014 ee ee fs a a ee ee ee es ee et FS TS A Sc | o_o \u2014\u2014 4 4 \u2014 \u00b0 > 13 4 ~~ lL, eye ae ft te eg SS at eet So oo ee oe es _\u2014 Vv a EE \u2014\u2014\u2014\u2014 | D.C. al Fine",
+    "primary_instrument": "Cello",
+    "source_file_name": "7c9ab1f3-6bc9-47ba-a546-11d42b627844.pdf",
+    "title": "Melancholy"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Melancholy"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:155acfea748e0ac37319be4938df8882f750307462b8a322b1bd649845f8d1fb",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "melancholy",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "7c9ab1f3-6bc9-47ba-a546-11d42b627844.pdf",
+        "title": "Melancholy"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0585,
+          "has_staff_hint": true,
+          "horizontal_line_count": 48,
+          "page_number": 1,
+          "text_excerpt": "Melancholy D.C. al Fine",
+          "title_candidates": [
+            "Melancholy"
+          ],
+          "title_ocr_excerpt": "Melancholy",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Melancholy"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Melancholy",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "59 Melancholy 4 x1 J m4 a \u2014> 4 Ri 2 =80 2 a peta FF i _ \u00a2, 9 Fife fp ___ SS | Se ee | EOE mf mS y VY Ss A i rer er i 8 te eT 8 eS a Se ; 4 \u2014\u2014~ 3 ; ; \u2014 reek pip iF ip + if fe _ 6 sp, | _ eT! _ Oo on et Se \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 _ Ee Es! Fine 9 4 1 Yee. 0 1 2 yt ee ee ae \u2014 ee ee fs a a ee ee ee es ee et FS TS A Sc | o_o \u2014\u2014 4 4 \u2014 \u00b0 > 13 4 ~~ lL, eye ae ft te eg SS at eet So oo ee oe es _\u2014 Vv a EE \u2014\u2014\u2014\u2014 | D.C. al Fine"
+      }
+    ],
+    "ocr_text_excerpt": "59 Melancholy 4 x1 J m4 a \u2014> 4 Ri 2 =80 2 a peta FF i _ \u00a2, 9 Fife fp ___ SS | Se ee | EOE mf mS y VY Ss A i rer er i 8 te eT 8 eS a Se ; 4 \u2014\u2014~ 3 ; ; \u2014 reek pip iF ip + if fe _ 6 sp, | _ eT! _ Oo on et Se \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 _ Ee Es! Fine 9 4 1 Yee. 0 1 2 yt ee ee ae \u2014 ee ee fs a a ee ee ee es ee et FS TS A Sc | o_o \u2014\u2014 4 4 \u2014 \u00b0 > 13 4 ~~ lL, eye ae ft te eg SS at eet So oo ee oe es _\u2014 Vv a EE \u2014\u2014\u2014\u2014 | D.C. al Fine",
+    "title": "Melancholy"
+  },
+  "score_versions": {
+    "b9b9958e-028a-4013-be04-edcbe9bebfed": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "db6ac1a8-928c-400d-a6c2-65c1d158a187",
+      "student_default": true
+    },
+    "db6ac1a8-928c-400d-a6c2-65c1d158a187": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "melancholy",
+  "source_book_fingerprint": "book_sha256:155acfea748e0ac37319be4938df8882f750307462b8a322b1bd649845f8d1fb",
+  "source_book_id": null,
+  "source_content_sha256": "155acfea748e0ac37319be4938df8882f750307462b8a322b1bd649845f8d1fb",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Melancholy",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

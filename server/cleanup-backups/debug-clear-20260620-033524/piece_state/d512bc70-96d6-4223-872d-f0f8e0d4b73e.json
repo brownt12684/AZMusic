@@ -1,0 +1,126 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "d512bc70-96d6-4223-872d-f0f8e0d4b73e",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "46 Jig J Vv 42a a 4 2 24 2 .= 84 2 So. ot > eee ee ee eee SS \u2014\u2014 es eS a oS a a eee bey 19 | 9 OE hE aS aS a a, i eS eS Se as ae | SS A ., eS a a, 5S Se es Ss | 5 \u2014_ \u2014\u2014\u2014_- 4 2 4 vp tPF Of ee ee pet SS A 5 ee ee ee ee le! CEE Fine Vv 1 x2 a ~ \u2014 SS \u2014\u2014\u2014\u2014 a ee oe ee _. ee ee ee ee re Ee \u2014\u2014\u2014 So rl Ee es a a | | ee eee OEE EE TT \u2014 Ee Se \u2014\u2014 | 13 L\u2014 3 x4 EE || \u2014 i \u2014\u2014\u2014 ro \u2014 we CT ee =\" = OS} , D.C. al Fine"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "46 Jig J Vv 42a a 4 2 24 2 .= 84 2 So. ot > eee ee ee eee SS \u2014\u2014 es eS a oS a a eee bey 19 | 9 OE hE aS aS a a, i eS eS Se as ae | SS A ., eS a a, 5S Se es Ss | 5 \u2014_ \u2014\u2014\u2014_- 4 2 4 vp tPF Of ee ee pet SS A 5 ee ee ee ee le! CEE Fine Vv 1 x2 a ~ \u2014 SS \u2014\u2014\u2014\u2014 a ee oe ee _. ee ee ee ee re Ee \u2014\u2014\u2014 So rl Ee es a a | | ee eee OEE EE TT \u2014 Ee Se \u2014\u2014 | 13 L\u2014 3 x4 EE || \u2014 i \u2014\u2014\u2014 ro \u2014 we CT ee =\" = OS} , D.C. al Fine",
+    "primary_instrument": "Cello",
+    "source_file_name": "88270970-1861-424a-bcac-636854209d0f.pdf",
+    "title": "Fine"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Jig"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:ac0dee1342f1bdf59325fb0e32d488efaa7681e91a7f7998e91987ecc4cb5708",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "jig",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "88270970-1861-424a-bcac-636854209d0f.pdf",
+        "title": "Fine"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0617,
+          "has_staff_hint": true,
+          "horizontal_line_count": 41,
+          "page_number": 1,
+          "text_excerpt": "Fine",
+          "title_candidates": [
+            "Jig"
+          ],
+          "title_ocr_excerpt": "Jig",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Jig"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Jig",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "46 Jig J Vv 42a a 4 2 24 2 .= 84 2 So. ot > eee ee ee eee SS \u2014\u2014 es eS a oS a a eee bey 19 | 9 OE hE aS aS a a, i eS eS Se as ae | SS A ., eS a a, 5S Se es Ss | 5 \u2014_ \u2014\u2014\u2014_- 4 2 4 vp tPF Of ee ee pet SS A 5 ee ee ee ee le! CEE Fine Vv 1 x2 a ~ \u2014 SS \u2014\u2014\u2014\u2014 a ee oe ee _. ee ee ee ee re Ee \u2014\u2014\u2014 So rl Ee es a a | | ee eee OEE EE TT \u2014 Ee Se \u2014\u2014 | 13 L\u2014 3 x4 EE || \u2014 i \u2014\u2014\u2014 ro \u2014 we CT ee =\" = OS} , D.C. al Fine"
+      }
+    ],
+    "ocr_text_excerpt": "46 Jig J Vv 42a a 4 2 24 2 .= 84 2 So. ot > eee ee ee eee SS \u2014\u2014 es eS a oS a a eee bey 19 | 9 OE hE aS aS a a, i eS eS Se as ae | SS A ., eS a a, 5S Se es Ss | 5 \u2014_ \u2014\u2014\u2014_- 4 2 4 vp tPF Of ee ee pet SS A 5 ee ee ee ee le! CEE Fine Vv 1 x2 a ~ \u2014 SS \u2014\u2014\u2014\u2014 a ee oe ee _. ee ee ee ee re Ee \u2014\u2014\u2014 So rl Ee es a a | | ee eee OEE EE TT \u2014 Ee Se \u2014\u2014 | 13 L\u2014 3 x4 EE || \u2014 i \u2014\u2014\u2014 ro \u2014 we CT ee =\" = OS} , D.C. al Fine",
+    "title": "Jig"
+  },
+  "score_versions": {
+    "00c92666-e872-4ff8-b0ef-c4ebe9b21fa8": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "74039f6d-1363-47f9-9946-3dce49f38c20",
+      "student_default": true
+    },
+    "74039f6d-1363-47f9-9946-3dce49f38c20": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "jig",
+  "source_book_fingerprint": "book_sha256:ac0dee1342f1bdf59325fb0e32d488efaa7681e91a7f7998e91987ecc4cb5708",
+  "source_book_id": null,
+  "source_content_sha256": "ac0dee1342f1bdf59325fb0e32d488efaa7681e91a7f7998e91987ecc4cb5708",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Jig",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

@@ -1,0 +1,126 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "4933293b-a452-46a7-b775-13c19df3e952",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "34 Busy Bees J \u201c~ a) = 160 40304010 pee et a fp fp \u2014 fe ght gt fF oS \u2014S=\u2014\u2014 SS ee ee ee ee pee ee ee ee ee ee ee eae aes YS oe) Y Y f fa Se eS a ee eS a os os So os |_| eS ee ee eS ee ee eee ee Se 4 0 \\ $ 40 ss \u20180 0 oye SS ee ee ee ee ee et ee ee ee ee ol eg en St wo WO VS VY Y voy pyc fh tg ee 296 _\u2014 ES Fine 4 3 4 9 4 Yo teN \\ on 014 00s Fe pt 9 i | ae a A SS A SS A TS SS TS SS A A SS A SS A NS ST AS SS | A [4p po eee Le LS I LE LE LL LL LS - eS 7 ee a SS eS a - eS 5 ee nn nn St a a St So \u2014\u2014\u2014\u2014\u2014..."
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "34 Busy Bees J \u201c~ a) = 160 40304010 pee et a fp fp \u2014 fe ght gt fF oS \u2014S=\u2014\u2014 SS ee ee ee ee pee ee ee ee ee ee ee eae aes YS oe) Y Y f fa Se eS a ee eS a os os So os |_| eS ee ee eS ee ee eee ee Se 4 0 \\ $ 40 ss \u20180 0 oye SS ee ee ee ee ee et ee ee ee ee ol eg en St wo WO VS VY Y voy pyc fh tg ee 296 _\u2014 ES Fine 4 3 4 9 4 Yo teN \\ on 014 00s Fe pt 9 i | ae a A SS A SS A TS SS TS SS A A SS A SS A NS ST AS SS | A [4p po eee Le LS I LE LE LL LL LS - eS 7 ee a SS eS a - eS 5 ee nn nn St a a St So \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 B of #\\ te >\u00bb \\ o Y Cyt TS So Te TT SS \u2014\u2014\u2014\u2014\u2014 = \u2014 SS = SS es a a eS | el eel it | Spyro fe gp Se me > Sg es a ae a a et ee a Se ee oe oe Ss oo! Ep et D.C. al Fine",
+    "primary_instrument": "Cello",
+    "source_file_name": "cd6b26d0-87a8-4090-8a93-8dc741b8e38f.pdf",
+    "title": "Busy Bees"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Busy Bees"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:afa18c8991459edf91a36b87385ca4e2d0c63fec9cce520dca6ee43707c4e8a7",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "busy bees",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "cd6b26d0-87a8-4090-8a93-8dc741b8e38f.pdf",
+        "title": "Busy Bees"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0709,
+          "has_staff_hint": true,
+          "horizontal_line_count": 43,
+          "page_number": 1,
+          "text_excerpt": "Busy Bees 5 see eat tivieinte",
+          "title_candidates": [
+            "Busy Bees"
+          ],
+          "title_ocr_excerpt": "Busy Bees",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Busy Bees"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Busy Bees",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "34 Busy Bees J \u201c~ a) = 160 40304010 pee et a fp fp \u2014 fe ght gt fF oS \u2014S=\u2014\u2014 SS ee ee ee ee pee ee ee ee ee ee ee eae aes YS oe) Y Y f fa Se eS a ee eS a os os So os |_| eS ee ee eS ee ee eee ee Se 4 0 \\ $ 40 ss \u20180 0 oye SS ee ee ee ee ee et ee ee ee ee ol eg en St wo WO VS VY Y voy pyc fh tg ee 296 _\u2014 ES Fine 4 3 4 9 4 Yo teN \\ on 014 00s Fe pt 9 i | ae a A SS A SS A TS SS TS SS A A SS A SS A NS ST AS SS | A [4p po eee Le LS I LE LE LL LL LS - eS 7 ee a SS eS a - eS 5 ee nn nn St a a St So \u2014\u2014\u2014\u2014\u2014..."
+      }
+    ],
+    "ocr_text_excerpt": "34 Busy Bees J \u201c~ a) = 160 40304010 pee et a fp fp \u2014 fe ght gt fF oS \u2014S=\u2014\u2014 SS ee ee ee ee pee ee ee ee ee ee ee eae aes YS oe) Y Y f fa Se eS a ee eS a os os So os |_| eS ee ee eS ee ee eee ee Se 4 0 \\ $ 40 ss \u20180 0 oye SS ee ee ee ee ee et ee ee ee ee ol eg en St wo WO VS VY Y voy pyc fh tg ee 296 _\u2014 ES Fine 4 3 4 9 4 Yo teN \\ on 014 00s Fe pt 9 i | ae a A SS A SS A TS SS TS SS A A SS A SS A NS ST AS SS | A [4p po eee Le LS I LE LE LL LL LS - eS 7 ee a SS eS a - eS 5 ee nn nn St a a St So \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 B of #\\ te >\u00bb \\ o Y Cyt TS So Te TT SS \u2014\u2014\u2014\u2014\u2014 = \u2014 SS = SS es a a eS | el eel it | Spyro fe gp Se me > Sg es a ae a a et ee a Se ee oe oe Ss oo! Ep et D.C. al Fine",
+    "title": "Busy Bees"
+  },
+  "score_versions": {
+    "1a29fb19-f333-42cd-bbf9-8eed4a18913c": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "6ea6298d-8ff1-4277-a8c6-724ee4fbf791": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "1a29fb19-f333-42cd-bbf9-8eed4a18913c",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "busy bees",
+  "source_book_fingerprint": "book_sha256:afa18c8991459edf91a36b87385ca4e2d0c63fec9cce520dca6ee43707c4e8a7",
+  "source_book_id": null,
+  "source_content_sha256": "afa18c8991459edf91a36b87385ca4e2d0c63fec9cce520dca6ee43707c4e8a7",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Busy Bees",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

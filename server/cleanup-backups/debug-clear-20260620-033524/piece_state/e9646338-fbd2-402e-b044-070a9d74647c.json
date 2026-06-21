@@ -1,0 +1,78 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "e9646338-fbd2-402e-b044-070a9d74647c",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Untitled piece page 1"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "a7f88bff-3794-4984-9674-f1f1044776d4.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Untitled piece page 1"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.55,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Untitled piece page 1"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "a7f88bff-3794-4984-9674-f1f1044776d4.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Untitled piece page 1"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:11c0656f2c5eb0a25247c00bf3a1f0c48f0a9e718cbdd5f1faad428392f3f5ed|pages:1-1|title:untitled piece page 1|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "untitled piece page 1",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "0f7e13c3-a171-49da-bdb0-66a1cb0af74d": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "aa28c90c-67fa-48bc-b912-308b845adffa": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "0f7e13c3-a171-49da-bdb0-66a1cb0af74d",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "untitled piece page 1",
+  "source_book_fingerprint": "book_sha256:11c0656f2c5eb0a25247c00bf3a1f0c48f0a9e718cbdd5f1faad428392f3f5ed",
+  "source_book_id": "9c4e1359-e823-4381-8355-0ba795aa2115",
+  "source_content_sha256": "11c0656f2c5eb0a25247c00bf3a1f0c48f0a9e718cbdd5f1faad428392f3f5ed",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.55,
+  "title": "Untitled piece page 1",
+  "validation_warnings": [
+    "No reliable title was detected on the first music page."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

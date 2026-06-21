@@ -1,0 +1,80 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "401b0676-6998-458b-90d4-c76b5bb49126",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Pachyderm Parade",
+    "contained_piece_titles": [
+      "The Invisible Target",
+      "Pachyderm Parade"
+    ],
+    "multi_piece_page": true,
+    "primary_instrument": "Cello",
+    "source_file_name": "d9942c94-c455-4163-8b30-70e0b7abd17c.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "The Invisible Target / Pachyderm Parade"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.8,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Pachyderm Parade",
+        "contained_piece_titles": [
+          "The Invisible Target",
+          "Pachyderm Parade"
+        ],
+        "multi_piece_page": true,
+        "primary_instrument": "Cello",
+        "source_file_name": "d9942c94-c455-4163-8b30-70e0b7abd17c.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "The Invisible Target / Pachyderm Parade"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Pachyderm Parade",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:fe83b1f67195faa7d856933c12fba0827f9b8ce23a1cd2961ce215ef44d526bb|pages:1-1|title:the invisible target pachyderm parade|composer:pachyderm parade|instrument:cello",
+  "normalized_composer": "pachyderm parade",
+  "normalized_title": "the invisible target pachyderm parade",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "7c55b4c1-a093-40b4-ac4e-4fddd3cdef9e": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "dc3bcbd5-a8cd-447a-bd1f-a7aa35f25bf6": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "7c55b4c1-a093-40b4-ac4e-4fddd3cdef9e",
+      "student_default": true
+    }
+  },
+  "sort_composer": "pachyderm parade",
+  "sort_title": "invisible target pachyderm parade",
+  "source_book_fingerprint": "book_sha256:fe83b1f67195faa7d856933c12fba0827f9b8ce23a1cd2961ce215ef44d526bb",
+  "source_book_id": "79f1196c-1aa7-4d97-a35a-7d4789d88eb0",
+  "source_content_sha256": "fe83b1f67195faa7d856933c12fba0827f9b8ce23a1cd2961ce215ef44d526bb",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.8,
+  "title": "The Invisible Target / Pachyderm Parade",
+  "validation_warnings": [
+    "Multiple short pieces detected on one page; kept together as one shared page item."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

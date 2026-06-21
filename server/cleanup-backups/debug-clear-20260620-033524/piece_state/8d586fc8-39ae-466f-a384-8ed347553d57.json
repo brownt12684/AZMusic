@@ -1,0 +1,137 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "8d586fc8-39ae-466f-a384-8ed347553d57",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "The Big Kangaroo",
+    "key_signature": "A Minor",
+    "ocr_confidence": 0.78,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "32 A Minor Melody de s08 o 1 BN 4 9 5 nr 4 2 eS SSS SEE 5 o 1 \u2014 4 0 _ oO 1 ow 4 The Big Kangaroo ] 4 4 4 4 4, =96 \u00b0 \u00b0 3 4 3 4 9 Se eee a sees sere ee oe ee 4 4 4 4 4 4 5 1 0 4 969 rpg a Se ST _\u2014_\u2014\u2014\u2014 Lost (Cat At ep foe F | Ee 2 | SS SSS SB"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "32 A Minor Melody de s08 o 1 BN 4 9 5 nr 4 2 eS SSS SEE 5 o 1 \u2014 4 0 _ oO 1 ow 4 The Big Kangaroo ] 4 4 4 4 4, =96 \u00b0 \u00b0 3 4 3 4 9 Se eee a sees sere ee oe ee 4 4 4 4 4 4 5 1 0 4 969 rpg a Se ST _\u2014_\u2014\u2014\u2014 Lost (Cat At ep foe F | Ee 2 | SS SSS SB",
+    "primary_instrument": "Cello",
+    "source_file_name": "328e5318-424f-41cc-b70f-db13d3bda8e9.pdf",
+    "title": "A Minor Melody"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.78,
+      "fields": {
+        "composer": "The Big Kangaroo",
+        "key_signature": "A Minor",
+        "title": "A Minor Melody"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:fd22b43822af24689396f0eb0e977036ef72dc69465289baf68a22a73b4b0c44",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "a minor melody the big kangaroo",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "composer": "The Big Kangaroo",
+        "key_signature": "A Minor",
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "328e5318-424f-41cc-b70f-db13d3bda8e9.pdf",
+        "title": "A Minor Melody"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0644,
+          "has_staff_hint": true,
+          "horizontal_line_count": 44,
+          "page_number": 1,
+          "text_excerpt": "32 A Minor Melody The Big Kangaroo i : : ? ? 2 3 4 3 4 9 : = f he E eee",
+          "title_candidates": [
+            "A Minor Melody",
+            "The Big Kangaroo"
+          ],
+          "title_ocr_excerpt": "A Minor Melody The Big Kangaroo",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": "The Big Kangaroo",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "A Minor Melody",
+            "The Big Kangaroo"
+          ],
+          "multi_piece_page": true,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "A Minor Melody / The Big Kangaroo",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        }
+      ],
+      "warnings": []
+    },
+    "composer": "The Big Kangaroo",
+    "key_signature": "A Minor",
+    "ocr_confidence": 0.78,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "32 A Minor Melody de s08 o 1 BN 4 9 5 nr 4 2 eS SSS SEE 5 o 1 \u2014 4 0 _ oO 1 ow 4 The Big Kangaroo ] 4 4 4 4 4, =96 \u00b0 \u00b0 3 4 3 4 9 Se eee a sees sere ee oe ee 4 4 4 4 4 4 5 1 0 4 969 rpg a Se ST _\u2014_\u2014\u2014\u2014 Lost (Cat At ep foe F | Ee 2 | SS SSS SB"
+      }
+    ],
+    "ocr_text_excerpt": "32 A Minor Melody de s08 o 1 BN 4 9 5 nr 4 2 eS SSS SEE 5 o 1 \u2014 4 0 _ oO 1 ow 4 The Big Kangaroo ] 4 4 4 4 4, =96 \u00b0 \u00b0 3 4 3 4 9 Se eee a sees sere ee oe ee 4 4 4 4 4 4 5 1 0 4 969 rpg a Se ST _\u2014_\u2014\u2014\u2014 Lost (Cat At ep foe F | Ee 2 | SS SSS SB",
+    "title": "A Minor Melody"
+  },
+  "score_versions": {
+    "8a78fadf-918c-4317-bad7-39cf872a2ec4": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "dfa55108-4964-4452-86fc-be186d5aaba5": {
+      "approved_by_parent": true,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "8a78fadf-918c-4317-bad7-39cf872a2ec4",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "minor melody the big kangaroo",
+  "source_book_fingerprint": "book_sha256:fd22b43822af24689396f0eb0e977036ef72dc69465289baf68a22a73b4b0c44",
+  "source_book_id": null,
+  "source_content_sha256": "fd22b43822af24689396f0eb0e977036ef72dc69465289baf68a22a73b4b0c44",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "A Minor Melody / The Big Kangaroo",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

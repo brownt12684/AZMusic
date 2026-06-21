@@ -1,0 +1,126 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "86647821-78b3-42d6-bc39-4e82dc2f7428",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "27 Sicilienne bh 5 4.034 3 = 144 . 4 3, 1 041 a yt pe i i ip ht oe eS ee | a mf Sempre pizz. Z| A. A \u2014 \u2014 al 2 SS a ce ee | EA a SE a ae et a a a SS ae en ana ae 5 . 1 ee il en ee A | a SS A A \u2014 _ S _\u2014\u2014\u2014\u2014\u2014\u2014\u2014 oo oo ee \u2014 a a \u2014 Se 2 2 pe \u2014 Fine Vv 3 x2 B 4 ~, ey oe no ee ee SS oot a \u2014 eee eee ee 8 ee Ee ee SS \u2014 \u2014\u2014 a a eo se se oe a a oe a a a ee ee ee ee 1 13 a ee 4 \u2014 Se oS \u2014\u2014\u2014 O_O eS | i hd ee Se \u2014 a or aa SS \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014 7 D.C. al Fine"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "27 Sicilienne bh 5 4.034 3 = 144 . 4 3, 1 041 a yt pe i i ip ht oe eS ee | a mf Sempre pizz. Z| A. A \u2014 \u2014 al 2 SS a ce ee | EA a SE a ae et a a a SS ae en ana ae 5 . 1 ee il en ee A | a SS A A \u2014 _ S _\u2014\u2014\u2014\u2014\u2014\u2014\u2014 oo oo ee \u2014 a a \u2014 Se 2 2 pe \u2014 Fine Vv 3 x2 B 4 ~, ey oe no ee ee SS oot a \u2014 eee eee ee 8 ee Ee ee SS \u2014 \u2014\u2014 a a eo se se oe a a oe a a a ee ee ee ee 1 13 a ee 4 \u2014 Se oS \u2014\u2014\u2014 O_O eS | i hd ee Se \u2014 a or aa SS \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014 7 D.C. al Fine",
+    "primary_instrument": "Cello",
+    "source_file_name": "0a9852a7-4cec-433e-9be1-d8b138fe15db.pdf",
+    "title": "Sicilienne"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Sicilienne"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:9b86f2f4af532c041f648e006ef0100ce3cd078a191494b967f0733a2735599f",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "sicilienne",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "0a9852a7-4cec-433e-9be1-d8b138fe15db.pdf",
+        "title": "Sicilienne"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0705,
+          "has_staff_hint": true,
+          "horizontal_line_count": 44,
+          "page_number": 1,
+          "text_excerpt": "Sicilienne",
+          "title_candidates": [
+            "Sicilienne"
+          ],
+          "title_ocr_excerpt": "Sicilienne",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Sicilienne"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Sicilienne",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "27 Sicilienne bh 5 4.034 3 = 144 . 4 3, 1 041 a yt pe i i ip ht oe eS ee | a mf Sempre pizz. Z| A. A \u2014 \u2014 al 2 SS a ce ee | EA a SE a ae et a a a SS ae en ana ae 5 . 1 ee il en ee A | a SS A A \u2014 _ S _\u2014\u2014\u2014\u2014\u2014\u2014\u2014 oo oo ee \u2014 a a \u2014 Se 2 2 pe \u2014 Fine Vv 3 x2 B 4 ~, ey oe no ee ee SS oot a \u2014 eee eee ee 8 ee Ee ee SS \u2014 \u2014\u2014 a a eo se se oe a a oe a a a ee ee ee ee 1 13 a ee 4 \u2014 Se oS \u2014\u2014\u2014 O_O eS | i hd ee Se \u2014 a or aa SS \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014 7 D.C. al Fine"
+      }
+    ],
+    "ocr_text_excerpt": "27 Sicilienne bh 5 4.034 3 = 144 . 4 3, 1 041 a yt pe i i ip ht oe eS ee | a mf Sempre pizz. Z| A. A \u2014 \u2014 al 2 SS a ce ee | EA a SE a ae et a a a SS ae en ana ae 5 . 1 ee il en ee A | a SS A A \u2014 _ S _\u2014\u2014\u2014\u2014\u2014\u2014\u2014 oo oo ee \u2014 a a \u2014 Se 2 2 pe \u2014 Fine Vv 3 x2 B 4 ~, ey oe no ee ee SS oot a \u2014 eee eee ee 8 ee Ee ee SS \u2014 \u2014\u2014 a a eo se se oe a a oe a a a ee ee ee ee 1 13 a ee 4 \u2014 Se oS \u2014\u2014\u2014 O_O eS | i hd ee Se \u2014 a or aa SS \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014 7 D.C. al Fine",
+    "title": "Sicilienne"
+  },
+  "score_versions": {
+    "8721a440-d6a3-4e76-9ffb-4d9b844511b3": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "934e6c5b-7c2e-457c-a2f6-777ba38f505c": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "8721a440-d6a3-4e76-9ffb-4d9b844511b3",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "sicilienne",
+  "source_book_fingerprint": "book_sha256:9b86f2f4af532c041f648e006ef0100ce3cd078a191494b967f0733a2735599f",
+  "source_book_id": null,
+  "source_content_sha256": "9b86f2f4af532c041f648e006ef0100ce3cd078a191494b967f0733a2735599f",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Sicilienne",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

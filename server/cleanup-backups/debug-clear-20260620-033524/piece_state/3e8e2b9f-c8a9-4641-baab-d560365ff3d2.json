@@ -1,0 +1,129 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "3e8e2b9f-c8a9-4641-baab-d560365ff3d2",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "35 In A Hurry ] ; \u2014\u2014 \u2014<\u2014\u2014_ a 3A _ ee Se a eS te po fg eg ee \u2014\u2014\u2014\u2014\u2014\u2014\u2014 ES \u2014\u2014\u2014\u2014 EE CV EE eS 5 a 3 4 4 yo eee eee eee OEE OO SO Oe oe ae ee eS EA oo et _ a ee \u2014\u2014 ral _ OEE EE oT A ee Fine 4 9 y 0 \u00b0 2 ~~ 0 24 \u00b0 1 2 bey es NN OF SS EE eS Fi \u2014 Ft NN ee bo Ne ON ON NN \\ __ LE Ee SS oe | TT EE _ EEE \u2014\u2014\u2014\u2014\u2014\u2014 2 13 2 >\u00bb , eyo PS EP eee oP ae ro CE ee ee ee | a a a | EEE EE Eo | HS ee ee D.C. al Fine"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "35 In A Hurry ] ; \u2014\u2014 \u2014<\u2014\u2014_ a 3A _ ee Se a eS te po fg eg ee \u2014\u2014\u2014\u2014\u2014\u2014\u2014 ES \u2014\u2014\u2014\u2014 EE CV EE eS 5 a 3 4 4 yo eee eee eee OEE OO SO Oe oe ae ee eS EA oo et _ a ee \u2014\u2014 ral _ OEE EE oT A ee Fine 4 9 y 0 \u00b0 2 ~~ 0 24 \u00b0 1 2 bey es NN OF SS EE eS Fi \u2014 Ft NN ee bo Ne ON ON NN \\ __ LE Ee SS oe | TT EE _ EEE \u2014\u2014\u2014\u2014\u2014\u2014 2 13 2 >\u00bb , eyo PS EP eee oP ae ro CE ee ee ee | a a a | EEE EE Eo | HS ee ee D.C. al Fine",
+    "opus": "oP ae ro",
+    "primary_instrument": "Cello",
+    "source_file_name": "1918135a-7031-4871-90e6-d838604209f5.pdf",
+    "title": "D.C. al Fine"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "opus": "oP ae ro",
+        "title": "In A Hurry"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:cc13b03e4cf875f19cf07b7d441a88f3e390c658a4a23496ef47a5134940cc98",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "in a hurry",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "1918135a-7031-4871-90e6-d838604209f5.pdf",
+        "title": "D.C. al Fine"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0601,
+          "has_staff_hint": true,
+          "horizontal_line_count": 43,
+          "page_number": 1,
+          "text_excerpt": "D.C. al Fine",
+          "title_candidates": [
+            "In A Hurry"
+          ],
+          "title_ocr_excerpt": "In A Hurry",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "In A Hurry"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "In A Hurry",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "35 In A Hurry ] ; \u2014\u2014 \u2014<\u2014\u2014_ a 3A _ ee Se a eS te po fg eg ee \u2014\u2014\u2014\u2014\u2014\u2014\u2014 ES \u2014\u2014\u2014\u2014 EE CV EE eS 5 a 3 4 4 yo eee eee eee OEE OO SO Oe oe ae ee eS EA oo et _ a ee \u2014\u2014 ral _ OEE EE oT A ee Fine 4 9 y 0 \u00b0 2 ~~ 0 24 \u00b0 1 2 bey es NN OF SS EE eS Fi \u2014 Ft NN ee bo Ne ON ON NN \\ __ LE Ee SS oe | TT EE _ EEE \u2014\u2014\u2014\u2014\u2014\u2014 2 13 2 >\u00bb , eyo PS EP eee oP ae ro CE ee ee ee | a a a | EEE EE Eo | HS ee ee D.C. al Fine"
+      }
+    ],
+    "ocr_text_excerpt": "35 In A Hurry ] ; \u2014\u2014 \u2014<\u2014\u2014_ a 3A _ ee Se a eS te po fg eg ee \u2014\u2014\u2014\u2014\u2014\u2014\u2014 ES \u2014\u2014\u2014\u2014 EE CV EE eS 5 a 3 4 4 yo eee eee eee OEE OO SO Oe oe ae ee eS EA oo et _ a ee \u2014\u2014 ral _ OEE EE oT A ee Fine 4 9 y 0 \u00b0 2 ~~ 0 24 \u00b0 1 2 bey es NN OF SS EE eS Fi \u2014 Ft NN ee bo Ne ON ON NN \\ __ LE Ee SS oe | TT EE _ EEE \u2014\u2014\u2014\u2014\u2014\u2014 2 13 2 >\u00bb , eyo PS EP eee oP ae ro CE ee ee ee | a a a | EEE EE Eo | HS ee ee D.C. al Fine",
+    "opus": "oP ae ro",
+    "title": "In A Hurry"
+  },
+  "score_versions": {
+    "70aa6c38-259c-4913-b49f-31bfdcb87ce7": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "ffd4f256-36f3-4343-b04a-201883dee733": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "70aa6c38-259c-4913-b49f-31bfdcb87ce7",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "in a hurry",
+  "source_book_fingerprint": "book_sha256:cc13b03e4cf875f19cf07b7d441a88f3e390c658a4a23496ef47a5134940cc98",
+  "source_book_id": null,
+  "source_content_sha256": "cc13b03e4cf875f19cf07b7d441a88f3e390c658a4a23496ef47a5134940cc98",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "In A Hurry",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

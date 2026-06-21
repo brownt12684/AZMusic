@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "974805da-0374-43a3-a42e-a7b105068b9e",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "A Waltz"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "f05c64cd-7845-43af-8415-c94a32050283.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "A Waltz"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "A Waltz"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "f05c64cd-7845-43af-8415-c94a32050283.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "A Waltz"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:148dc790e56c3ff5ffa173971941ac0f6713616ed903d2c2220231ba5222fa1d|pages:1-1|title:a waltz|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "a waltz",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "9ae02c7f-1968-42b7-9791-281cc639f93a": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "bd42e98c-ea66-40ee-9a75-ac133d2613d3",
+      "student_default": true
+    },
+    "bd42e98c-ea66-40ee-9a75-ac133d2613d3": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "waltz",
+  "source_book_fingerprint": "book_sha256:148dc790e56c3ff5ffa173971941ac0f6713616ed903d2c2220231ba5222fa1d",
+  "source_book_id": "01c5f75d-7fec-4090-ab09-3a56d6b4906b",
+  "source_content_sha256": "148dc790e56c3ff5ffa173971941ac0f6713616ed903d2c2220231ba5222fa1d",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "A Waltz",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

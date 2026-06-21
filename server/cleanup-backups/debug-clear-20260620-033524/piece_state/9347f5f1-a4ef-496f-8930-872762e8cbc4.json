@@ -1,0 +1,147 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "9347f5f1-a4ef-496f-8930-872762e8cbc4",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "60 Jack Spratt Dances with His Wife d=e0 > pp htt en Gatag? .:ee 4 - en es v 5 2 4 3 2 | \u2014\u2014\u2014\u2014\u2014 : ee 2 4 Fine"
+      },
+      {
+        "page_number": 2,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "61 Jack Spratt Dances with His Wife -- page 2 P] 17 4 p 4 eye i \u2014 FF ee _\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014\u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014 f P f Hye ef _ EE a 21 4 ca a _ f A Ee EE EE Ee \u2014\u2014 5 : SS EE f f A . A . EE ee EE 29 4 \u2014\u2014\u2014\u2014\u2014 ee _\u2014\u2014\u2014\u2014__\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 ' ry \u00e9 a 1 EE || _\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 EEE | . \u00b0 D.C. al Fine"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "60 Jack Spratt Dances with His Wife d=e0 > pp htt en Gatag? .:ee 4 - en es v 5 2 4 3 2 | \u2014\u2014\u2014\u2014\u2014 : ee 2 4 Fine 61 Jack Spratt Dances with His Wife -- page 2 P] 17 4 p 4 eye i \u2014 FF ee _\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014\u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014 f P f Hye ef _ EE a 21 4 ca a _ f A Ee EE EE Ee \u2014\u2014 5 : SS EE f f A . A . EE ee EE 29 4 \u2014\u2014\u2014\u2014\u2014 ee _\u2014\u2014\u2014\u2014__\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 ' ry \u00e9 a 1 EE || _\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 EEE | . \u00b0 D.C. al Fine",
+    "primary_instrument": "Cello",
+    "source_file_name": "019ee6fa-a468-485c-ae7e-3a851f00424c.pdf",
+    "title": "Jack Spratt Dances with His Wife"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Jack Spratt Dances with His Wife"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:a0ec80ed68ca0ed17caf262f6c66a29dbe0800697ee900c6bc899f8ebec8e3eb",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "jack spratt dances with his wife",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "019ee6fa-a468-485c-ae7e-3a851f00424c.pdf",
+        "title": "Jack Spratt Dances with His Wife"
+      },
+      "page_count": 2,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0564,
+          "has_staff_hint": true,
+          "horizontal_line_count": 46,
+          "page_number": 1,
+          "text_excerpt": "Jack Spratt Dances with His Wife",
+          "title_candidates": [
+            "Jack Spratt Dances with His Wife"
+          ],
+          "title_ocr_excerpt": "Jack Spratt Dances with His Wife",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0511,
+          "has_staff_hint": true,
+          "horizontal_line_count": 47,
+          "page_number": 2,
+          "text_excerpt": "Jack Spratt Dances with His Wife -- page 2",
+          "title_candidates": [],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Jack Spratt Dances with His Wife"
+          ],
+          "multi_piece_page": false,
+          "page_end": 2,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Jack Spratt Dances with His Wife",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "60 Jack Spratt Dances with His Wife d=e0 > pp htt en Gatag? .:ee 4 - en es v 5 2 4 3 2 | \u2014\u2014\u2014\u2014\u2014 : ee 2 4 Fine"
+      },
+      {
+        "page_number": 2,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "61 Jack Spratt Dances with His Wife -- page 2 P] 17 4 p 4 eye i \u2014 FF ee _\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014\u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014 f P f Hye ef _ EE a 21 4 ca a _ f A Ee EE EE Ee \u2014\u2014 5 : SS EE f f A . A . EE ee EE 29 4 \u2014\u2014\u2014\u2014\u2014 ee _\u2014\u2014\u2014\u2014__\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 ' ry \u00e9 a 1 EE || _\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 EEE | . \u00b0 D.C. al Fine"
+      }
+    ],
+    "ocr_text_excerpt": "60 Jack Spratt Dances with His Wife d=e0 > pp htt en Gatag? .:ee 4 - en es v 5 2 4 3 2 | \u2014\u2014\u2014\u2014\u2014 : ee 2 4 Fine 61 Jack Spratt Dances with His Wife -- page 2 P] 17 4 p 4 eye i \u2014 FF ee _\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014\u2014 \u2014\u2014\u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014 f P f Hye ef _ EE a 21 4 ca a _ f A Ee EE EE Ee \u2014\u2014 5 : SS EE f f A . A . EE ee EE 29 4 \u2014\u2014\u2014\u2014\u2014 ee _\u2014\u2014\u2014\u2014__\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 ' ry \u00e9 a 1 EE || _\u2014\u2014\u2014\u2014\u2014\u2014\u2014 \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 EEE | . \u00b0 D.C. al Fine",
+    "title": "Jack Spratt Dances with His Wife"
+  },
+  "score_versions": {
+    "0fc91df0-2dcc-4e0c-8f34-4a4d39301262": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "d507327c-0ec2-4b26-91d4-fa3524b39811": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "0fc91df0-2dcc-4e0c-8f34-4a4d39301262",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "jack spratt dances with his wife",
+  "source_book_fingerprint": "book_sha256:a0ec80ed68ca0ed17caf262f6c66a29dbe0800697ee900c6bc899f8ebec8e3eb",
+  "source_book_id": null,
+  "source_content_sha256": "a0ec80ed68ca0ed17caf262f6c66a29dbe0800697ee900c6bc899f8ebec8e3eb",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Jack Spratt Dances with His Wife",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

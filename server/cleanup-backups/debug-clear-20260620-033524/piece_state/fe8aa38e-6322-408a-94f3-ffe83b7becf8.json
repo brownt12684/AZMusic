@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "fe8aa38e-6322-408a-94f3-ffe83b7becf8",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Sitting in the Shade"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "35704ab3-bf87-4bdc-9223-2dcccb6f5458.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Sitting in the Shade"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Sitting in the Shade"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "35704ab3-bf87-4bdc-9223-2dcccb6f5458.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Sitting in the Shade"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:1fc4929f2a47bfad597f11ece25170931b57358f201f02ce7223d1449884ae12|pages:1-1|title:sitting in the shade|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "sitting in the shade",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "2cedf3e3-dc9e-4688-88cc-ddad00817a4c": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "3e47d733-5119-4cac-8855-132f6929c9ea",
+      "student_default": true
+    },
+    "3e47d733-5119-4cac-8855-132f6929c9ea": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "sitting in the shade",
+  "source_book_fingerprint": "book_sha256:1fc4929f2a47bfad597f11ece25170931b57358f201f02ce7223d1449884ae12",
+  "source_book_id": "91f11938-f89c-4b71-90a1-ec9456e4318e",
+  "source_content_sha256": "1fc4929f2a47bfad597f11ece25170931b57358f201f02ce7223d1449884ae12",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "Sitting in the Shade",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

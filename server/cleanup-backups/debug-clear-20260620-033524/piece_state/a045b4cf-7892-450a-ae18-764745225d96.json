@@ -1,0 +1,80 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "a045b4cf-7892-450a-ae18-764745225d96",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Fanfare",
+      "Skating"
+    ],
+    "multi_piece_page": true,
+    "primary_instrument": "Cello",
+    "source_file_name": "333dae5d-1ae6-4024-933a-91e4ce0b281f.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Fanfare / Skating"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.8,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Fanfare",
+          "Skating"
+        ],
+        "multi_piece_page": true,
+        "primary_instrument": "Cello",
+        "source_file_name": "333dae5d-1ae6-4024-933a-91e4ce0b281f.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Fanfare / Skating"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:ee1d27ca30a4787d6586d4b78c32ae848cc876b8728dfd16a49d4a4e41b6c5a0|pages:1-1|title:fanfare skating|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "fanfare skating",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "72558930-92b6-4bb1-bb34-4d244671bed8": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "72f0d9ec-178c-4635-86be-9f84a377adc6",
+      "student_default": true
+    },
+    "72f0d9ec-178c-4635-86be-9f84a377adc6": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "fanfare skating",
+  "source_book_fingerprint": "book_sha256:ee1d27ca30a4787d6586d4b78c32ae848cc876b8728dfd16a49d4a4e41b6c5a0",
+  "source_book_id": "7d1a722a-324d-4d98-b986-00e63ee931f5",
+  "source_content_sha256": "ee1d27ca30a4787d6586d4b78c32ae848cc876b8728dfd16a49d4a4e41b6c5a0",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.8,
+  "title": "Fanfare / Skating",
+  "validation_warnings": [
+    "Multiple short pieces detected on one page; kept together as one shared page item."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

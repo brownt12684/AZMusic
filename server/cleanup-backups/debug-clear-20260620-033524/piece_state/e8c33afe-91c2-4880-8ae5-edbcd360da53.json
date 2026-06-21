@@ -1,0 +1,76 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "e8c33afe-91c2-4880-8ae5-edbcd360da53",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "In A Hurry"
+    ],
+    "multi_piece_page": false,
+    "primary_instrument": "Cello",
+    "source_file_name": "1918135a-7031-4871-90e6-d838604209f5.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "In A Hurry"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.84,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "In A Hurry"
+        ],
+        "multi_piece_page": false,
+        "primary_instrument": "Cello",
+        "source_file_name": "1918135a-7031-4871-90e6-d838604209f5.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "In A Hurry"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:cc13b03e4cf875f19cf07b7d441a88f3e390c658a4a23496ef47a5134940cc98|pages:1-1|title:in a hurry|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "in a hurry",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "62ad74e7-29b7-4228-a0a1-fea7ebc02ca3": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "b5361ed9-cc17-4123-9ea8-12f7fcab682e",
+      "student_default": true
+    },
+    "b5361ed9-cc17-4123-9ea8-12f7fcab682e": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "in a hurry",
+  "source_book_fingerprint": "book_sha256:cc13b03e4cf875f19cf07b7d441a88f3e390c658a4a23496ef47a5134940cc98",
+  "source_book_id": "3e8e2b9f-c8a9-4641-baab-d560365ff3d2",
+  "source_content_sha256": "cc13b03e4cf875f19cf07b7d441a88f3e390c658a4a23496ef47a5134940cc98",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.84,
+  "title": "In A Hurry",
+  "validation_warnings": [],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

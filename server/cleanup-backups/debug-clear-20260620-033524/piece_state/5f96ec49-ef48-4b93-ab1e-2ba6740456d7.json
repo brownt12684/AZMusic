@@ -1,0 +1,130 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "5f96ec49-ef48-4b93-ab1e-2ba6740456d7",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "16 Somersaults and Cartwheels dete O13 elo,ole o 1,2 ox 0 134 pet \u2014erPee ets | Pp efit sePesete (Ps ee We ef Py ey peep pe Te P * gee pa = el aye ft 2 re ee 7 or i i 2 al 4 $ O13 4iro1ro014 O12 401 |e eS a = a Se eS ee ne 2 Se SS 2 Se a es a _ t SS OS SS eee Se eee aes seme TS | : \u2018 : : D.C.al Fine Tango 4 Jeo 2 es wa\" a AK re yt EP fh [ S\u00a5-# ge 2 Et pe a (a a meee SiO\" OE SE nf sempre pizz. 3 1 4 OE a ee SE \u2014\u2014\u2014\u2014\u2014\u2014\u2014 ee ee ee ee ee ee \u2014 ee 5 ca ite 4Y Yb eT \u2014\u2014\u2014_\u2014\u2014 a \u2014\u2014 a a DOr Re ee Ne | Jee __a..."
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "16 Somersaults and Cartwheels dete O13 elo,ole o 1,2 ox 0 134 pet \u2014erPee ets | Pp efit sePesete (Ps ee We ef Py ey peep pe Te P * gee pa = el aye ft 2 re ee 7 or i i 2 al 4 $ O13 4iro1ro014 O12 401 |e eS a = a Se eS ee ne 2 Se SS 2 Se a es a _ t SS OS SS eee Se eee aes seme TS | : \u2018 : : D.C.al Fine Tango 4 Jeo 2 es wa\" a AK re yt EP fh [ S\u00a5-# ge 2 Et pe a (a a meee SiO\" OE SE nf sempre pizz. 3 1 4 OE a ee SE \u2014\u2014\u2014\u2014\u2014\u2014\u2014 ee ee ee ee ee ee \u2014 ee 5 ca ite 4Y Yb eT \u2014\u2014\u2014_\u2014\u2014 a \u2014\u2014 a a DOr Re ee Ne | Jee __a fn ne fe fF SSS SE SS ee",
+    "primary_instrument": "Cello",
+    "source_file_name": "9219c8b0-549b-4e64-83cc-06954b117b2c.pdf",
+    "title": "Somersaults and Cartwheels"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Somersaults and Cartwheels"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:3a1e84547cec6abe5bf67e6092ca5abe3ca4524090444847f0b833436a4ca059",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "somersaults and cartwheels tango",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "9219c8b0-549b-4e64-83cc-06954b117b2c.pdf",
+        "title": "Somersaults and Cartwheels"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0659,
+          "has_staff_hint": true,
+          "horizontal_line_count": 43,
+          "page_number": 1,
+          "text_excerpt": "Somersaults and Cartwheels ik)",
+          "title_candidates": [
+            "Somersaults and Cartwheels",
+            "Tango"
+          ],
+          "title_ocr_excerpt": "Somersaults and Cartwheels Tango",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "Somersaults and Cartwheels",
+            "Tango"
+          ],
+          "multi_piece_page": true,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Somersaults and Cartwheels / Tango",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "16 Somersaults and Cartwheels dete O13 elo,ole o 1,2 ox 0 134 pet \u2014erPee ets | Pp efit sePesete (Ps ee We ef Py ey peep pe Te P * gee pa = el aye ft 2 re ee 7 or i i 2 al 4 $ O13 4iro1ro014 O12 401 |e eS a = a Se eS ee ne 2 Se SS 2 Se a es a _ t SS OS SS eee Se eee aes seme TS | : \u2018 : : D.C.al Fine Tango 4 Jeo 2 es wa\" a AK re yt EP fh [ S\u00a5-# ge 2 Et pe a (a a meee SiO\" OE SE nf sempre pizz. 3 1 4 OE a ee SE \u2014\u2014\u2014\u2014\u2014\u2014\u2014 ee ee ee ee ee ee \u2014 ee 5 ca ite 4Y Yb eT \u2014\u2014\u2014_\u2014\u2014 a \u2014\u2014 a a DOr Re ee Ne | Jee __a..."
+      }
+    ],
+    "ocr_text_excerpt": "16 Somersaults and Cartwheels dete O13 elo,ole o 1,2 ox 0 134 pet \u2014erPee ets | Pp efit sePesete (Ps ee We ef Py ey peep pe Te P * gee pa = el aye ft 2 re ee 7 or i i 2 al 4 $ O13 4iro1ro014 O12 401 |e eS a = a Se eS ee ne 2 Se SS 2 Se a es a _ t SS OS SS eee Se eee aes seme TS | : \u2018 : : D.C.al Fine Tango 4 Jeo 2 es wa\" a AK re yt EP fh [ S\u00a5-# ge 2 Et pe a (a a meee SiO\" OE SE nf sempre pizz. 3 1 4 OE a ee SE \u2014\u2014\u2014\u2014\u2014\u2014\u2014 ee ee ee ee ee ee \u2014 ee 5 ca ite 4Y Yb eT \u2014\u2014\u2014_\u2014\u2014 a \u2014\u2014 a a DOr Re ee Ne | Jee __a fn ne fe fF SSS SE SS ee",
+    "title": "Somersaults and Cartwheels"
+  },
+  "score_versions": {
+    "0466e65e-f2ef-43fc-b66f-19285713550f": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "4f865c3a-29df-4fa2-92ca-4161e3e593a0": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "0466e65e-f2ef-43fc-b66f-19285713550f",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "somersaults and cartwheels tango",
+  "source_book_fingerprint": "book_sha256:3a1e84547cec6abe5bf67e6092ca5abe3ca4524090444847f0b833436a4ca059",
+  "source_book_id": null,
+  "source_content_sha256": "3a1e84547cec6abe5bf67e6092ca5abe3ca4524090444847f0b833436a4ca059",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Somersaults and Cartwheels / Tango",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

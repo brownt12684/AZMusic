@@ -1,0 +1,129 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "0cee05ed-7b56-44e9-8dc6-c06b210f1dd8",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "53 At The Ball y 1 4 dete a a LK oe atts. Io > \u2019 Oe SO er _O EE pA i 2\u2014 1 5 sF. eFS 4 4 heyy FF 0 9 9 a a 9 Ee a a es ef __ EEE! A a 9 2 ? Fine v 4 Vv v ~ Vv 4 9 A Oo 4 Vv Vv 4 y v \u00b0 3 1 v \u2014\u2014_~ vy Vvy a eS Se SS \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014 O_o mp pizz. a EE ee | cE | _ \\ v \u2014 2 13 a a. Y Yay * Yov op ee oe 9 9 eg oS | _\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 EE || eS D.C. al Fine"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "53 At The Ball y 1 4 dete a a LK oe atts. Io > \u2019 Oe SO er _O EE pA i 2\u2014 1 5 sF. eFS 4 4 heyy FF 0 9 9 a a 9 Ee a a es ef __ EEE! A a 9 2 ? Fine v 4 Vv v ~ Vv 4 9 A Oo 4 Vv Vv 4 y v \u00b0 3 1 v \u2014\u2014_~ vy Vvy a eS Se SS \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014 O_o mp pizz. a EE ee | cE | _ \\ v \u2014 2 13 a a. Y Yay * Yov op ee oe 9 9 eg oS | _\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 EE || eS D.C. al Fine",
+    "opus": "op ee oe 9 9 eg",
+    "primary_instrument": "Cello",
+    "source_file_name": "c4fbaf7d-2a2a-477e-94e6-d39246c99769.pdf",
+    "title": "At The Ball"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "opus": "op ee oe 9 9 eg",
+        "title": "At The Ball"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:6ddb3cbe8707c2651e640f84e1122daee810cc9f82b6f87bef64c72d7e212f0f",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "at the ball",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "c4fbaf7d-2a2a-477e-94e6-d39246c99769.pdf",
+        "title": "At The Ball"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0579,
+          "has_staff_hint": true,
+          "horizontal_line_count": 46,
+          "page_number": 1,
+          "text_excerpt": "At The Ball p< AN ir i Ire ia HU z 4 Lin) Hh Hi i el Ah",
+          "title_candidates": [
+            "At The Ball"
+          ],
+          "title_ocr_excerpt": "At The Ball",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "At The Ball"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "At The Ball",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "53 At The Ball y 1 4 dete a a LK oe atts. Io > \u2019 Oe SO er _O EE pA i 2\u2014 1 5 sF. eFS 4 4 heyy FF 0 9 9 a a 9 Ee a a es ef __ EEE! A a 9 2 ? Fine v 4 Vv v ~ Vv 4 9 A Oo 4 Vv Vv 4 y v \u00b0 3 1 v \u2014\u2014_~ vy Vvy a eS Se SS \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014 O_o mp pizz. a EE ee | cE | _ \\ v \u2014 2 13 a a. Y Yay * Yov op ee oe 9 9 eg oS | _\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 EE || eS D.C. al Fine"
+      }
+    ],
+    "ocr_text_excerpt": "53 At The Ball y 1 4 dete a a LK oe atts. Io > \u2019 Oe SO er _O EE pA i 2\u2014 1 5 sF. eFS 4 4 heyy FF 0 9 9 a a 9 Ee a a es ef __ EEE! A a 9 2 ? Fine v 4 Vv v ~ Vv 4 9 A Oo 4 Vv Vv 4 y v \u00b0 3 1 v \u2014\u2014_~ vy Vvy a eS Se SS \u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014 O_o mp pizz. a EE ee | cE | _ \\ v \u2014 2 13 a a. Y Yay * Yov op ee oe 9 9 eg oS | _\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 EE || eS D.C. al Fine",
+    "opus": "op ee oe 9 9 eg",
+    "title": "At The Ball"
+  },
+  "score_versions": {
+    "b50fbc8a-decc-4d45-a92c-a012beac6bc0": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "cd032d6f-3d8a-4f12-80d9-ddf1a2386ec7",
+      "student_default": true
+    },
+    "cd032d6f-3d8a-4f12-80d9-ddf1a2386ec7": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "at the ball",
+  "source_book_fingerprint": "book_sha256:6ddb3cbe8707c2651e640f84e1122daee810cc9f82b6f87bef64c72d7e212f0f",
+  "source_book_id": null,
+  "source_content_sha256": "6ddb3cbe8707c2651e640f84e1122daee810cc9f82b6f87bef64c72d7e212f0f",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "At The Ball",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

@@ -1,0 +1,129 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "783c5ebc-fc28-4011-b9d6-a8a9f3f041f5",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "26 Valse Triste J. oz y 4 a Zz , 3 > 3 \u2014\u2014_ SS \u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014 a a ee ee eS ee Se eee eee ee 4 _ Oe \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 1 . oe FS SS t\u2014 a ee ee a 2S Oy ot ie oo ee \u00b0 - \u00b0 . . a es Sa ee es fb Op et Se \u2014\u2014\u2014\u2014"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "26 Valse Triste J. oz y 4 a Zz , 3 > 3 \u2014\u2014_ SS \u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014 a a ee ee eS ee Se eee eee ee 4 _ Oe \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 1 . oe FS SS t\u2014 a ee ee a 2S Oy ot ie oo ee \u00b0 - \u00b0 . . a es Sa ee es fb Op et Se \u2014\u2014\u2014\u2014",
+    "opus": "Op et",
+    "primary_instrument": "Cello",
+    "source_file_name": "badc999d-5370-4b59-9f46-6875c0677587.pdf",
+    "title": "Valse Triste"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "opus": "Op et",
+        "title": "Valse Triste"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:ce82167f252a4a7a0c7af14e8c96f14b0d12fa9122c5a8ad895500dd4df86c94",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "valse triste",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "badc999d-5370-4b59-9f46-6875c0677587.pdf",
+        "title": "Valse Triste"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.057,
+          "has_staff_hint": true,
+          "horizontal_line_count": 41,
+          "page_number": 1,
+          "text_excerpt": "Valse Triste",
+          "title_candidates": [
+            "Valse Triste"
+          ],
+          "title_ocr_excerpt": "Valse Triste",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Valse Triste"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Valse Triste",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "26 Valse Triste J. oz y 4 a Zz , 3 > 3 \u2014\u2014_ SS \u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014 a a ee ee eS ee Se eee eee ee 4 _ Oe \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 1 . oe FS SS t\u2014 a ee ee a 2S Oy ot ie oo ee \u00b0 - \u00b0 . . a es Sa ee es fb Op et Se \u2014\u2014\u2014\u2014"
+      }
+    ],
+    "ocr_text_excerpt": "26 Valse Triste J. oz y 4 a Zz , 3 > 3 \u2014\u2014_ SS \u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014 a a ee ee eS ee Se eee eee ee 4 _ Oe \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 1 . oe FS SS t\u2014 a ee ee a 2S Oy ot ie oo ee \u00b0 - \u00b0 . . a es Sa ee es fb Op et Se \u2014\u2014\u2014\u2014",
+    "opus": "Op et",
+    "title": "Valse Triste"
+  },
+  "score_versions": {
+    "916f38b5-bac9-4bec-be27-0468779e2a7c": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "b43df859-e14d-40a7-b322-774969a0b4dd": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "916f38b5-bac9-4bec-be27-0468779e2a7c",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "valse triste",
+  "source_book_fingerprint": "book_sha256:ce82167f252a4a7a0c7af14e8c96f14b0d12fa9122c5a8ad895500dd4df86c94",
+  "source_book_id": null,
+  "source_content_sha256": "ce82167f252a4a7a0c7af14e8c96f14b0d12fa9122c5a8ad895500dd4df86c94",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Valse Triste",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

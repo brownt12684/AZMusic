@@ -1,0 +1,128 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "ed5ebe30-2728-4ca8-bcc1-c82f435eb93a",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "The Haunted House",
+    "ocr_confidence": 0.78,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "21 March of the Dinosaurs ee ee pe tte ee. 5 2 1 90 ! 1 WR 3 0 itt ett ee Ge The Haunted House 42 ~ des Bb dee ph eee ER eK: 8 ee ee IZ \u2014\u2014\u2014 e\u2014__|ve | SSS SS eS SSS 5 n 1 3\u2014 \u00b0 1 om 4 4 pa eed lteioe ele oe"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "21 March of the Dinosaurs ee ee pe tte ee. 5 2 1 90 ! 1 WR 3 0 itt ett ee Ge The Haunted House 42 ~ des Bb dee ph eee ER eK: 8 ee ee IZ \u2014\u2014\u2014 e\u2014__|ve | SSS SS eS SSS 5 n 1 3\u2014 \u00b0 1 om 4 4 pa eed lteioe ele oe",
+    "primary_instrument": "Cello",
+    "source_file_name": "7f7e8987-6fc8-4b7f-a3ac-3c7fe778543f.pdf",
+    "title": "March of the Dinosaurs"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.78,
+      "fields": {
+        "composer": "The Haunted House",
+        "title": "March of the Dinosaurs"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:e03be71d7bd5fa70810e5ecf456db5eaf4bfacba75389c2b16e2c733542c326e",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "march of the dinosaurs the haunted house",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "7f7e8987-6fc8-4b7f-a3ac-3c7fe778543f.pdf",
+        "title": "March of the Dinosaurs"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0499,
+          "has_staff_hint": true,
+          "horizontal_line_count": 48,
+          "page_number": 1,
+          "text_excerpt": "21 March of the Dinosaurs 1 3 4 1 SS See ro * : eS SS Se 4 1 =m 3.4 o # of ff Pe ore \"3 . T f =? mp Vv Vv Vv Ge = a7 a oe",
+          "title_candidates": [
+            "The Haunted House"
+          ],
+          "title_ocr_excerpt": "The Haunted House",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "The Haunted House"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "The Haunted House",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "composer": "The Haunted House",
+    "ocr_confidence": 0.78,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "21 March of the Dinosaurs ee ee pe tte ee. 5 2 1 90 ! 1 WR 3 0 itt ett ee Ge The Haunted House 42 ~ des Bb dee ph eee ER eK: 8 ee ee IZ \u2014\u2014\u2014 e\u2014__|ve | SSS SS eS SSS 5 n 1 3\u2014 \u00b0 1 om 4 4 pa eed lteioe ele oe"
+      }
+    ],
+    "ocr_text_excerpt": "21 March of the Dinosaurs ee ee pe tte ee. 5 2 1 90 ! 1 WR 3 0 itt ett ee Ge The Haunted House 42 ~ des Bb dee ph eee ER eK: 8 ee ee IZ \u2014\u2014\u2014 e\u2014__|ve | SSS SS eS SSS 5 n 1 3\u2014 \u00b0 1 om 4 4 pa eed lteioe ele oe",
+    "title": "March of the Dinosaurs"
+  },
+  "score_versions": {
+    "1e86d84d-3799-4f66-8909-6d539dd14e35": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "56d3a116-7896-43e1-b7ff-b8b42f639816",
+      "student_default": true
+    },
+    "56d3a116-7896-43e1-b7ff-b8b42f639816": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "march of the dinosaurs the haunted house",
+  "source_book_fingerprint": "book_sha256:e03be71d7bd5fa70810e5ecf456db5eaf4bfacba75389c2b16e2c733542c326e",
+  "source_book_id": null,
+  "source_content_sha256": "e03be71d7bd5fa70810e5ecf456db5eaf4bfacba75389c2b16e2c733542c326e",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "March of the Dinosaurs / The Haunted House",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

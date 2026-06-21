@@ -1,0 +1,130 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "7d1a722a-324d-4d98-b986-00e63ee931f5",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "5 Fanfare dew, 2 an oo} Te ote\u2019 TT ST ST eS SS | Sa | ee ee Oe ee ee .._-NoNuN0- a PE cs ee , \u2014 a | ES A \u2014 Oh, SS en \u2014. Ss | La} 4 4 5 a0 290 4 o 4 eye tt ne gg 9 Ly ow ff eg yy Se ee ee oe me a Sn So oe tt ee ee 0 | ,| |_| a d d ; 2 0 Skating J. 108 2.4 1 0 0 2 \u2014\u2014 0 2 oe eS \u2014\u2014\u2014 ae ee ee ee Cee See ee oe SSS SS ee eae eS a oo ee ee ESE SE EEE ZA a Vv y ZA \u2122 7 v SSS ee ee | EE 2 4 3 5 0 2 1 2 4 o Ce \u2014 \u2014\u2014 ne ee SS ee [=P) pee ng _ TEE | i et At \u2014\u2014\u2014\u00bb\u2014\u2014_ Fre oY _\u2014"
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "5 Fanfare dew, 2 an oo} Te ote\u2019 TT ST ST eS SS | Sa | ee ee Oe ee ee .._-NoNuN0- a PE cs ee , \u2014 a | ES A \u2014 Oh, SS en \u2014. Ss | La} 4 4 5 a0 290 4 o 4 eye tt ne gg 9 Ly ow ff eg yy Se ee ee oe me a Sn So oe tt ee ee 0 | ,| |_| a d d ; 2 0 Skating J. 108 2.4 1 0 0 2 \u2014\u2014 0 2 oe eS \u2014\u2014\u2014 ae ee ee ee Cee See ee oe SSS SS ee eae eS a oo ee ee ESE SE EEE ZA a Vv y ZA \u2122 7 v SSS ee ee | EE 2 4 3 5 0 2 1 2 4 o Ce \u2014 \u2014\u2014 ne ee SS ee [=P) pee ng _ TEE | i et At \u2014\u2014\u2014\u00bb\u2014\u2014_ Fre oY _\u2014",
+    "primary_instrument": "Cello",
+    "source_file_name": "333dae5d-1ae6-4024-933a-91e4ce0b281f.pdf",
+    "title": "Fanfare"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Fanfare"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:ee1d27ca30a4787d6586d4b78c32ae848cc876b8728dfd16a49d4a4e41b6c5a0",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "fanfare skating",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "333dae5d-1ae6-4024-933a-91e4ce0b281f.pdf",
+        "title": "Fanfare"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0505,
+          "has_staff_hint": true,
+          "horizontal_line_count": 45,
+          "page_number": 1,
+          "text_excerpt": "Fanfare ay cy ae \u00b0 (Ti \u00ab Sab) \u00b0 Thee wd \u2014 = J-20 pee SSS = 3 De Skating",
+          "title_candidates": [
+            "Fanfare",
+            "Skating"
+          ],
+          "title_ocr_excerpt": "Fanfare Skating",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "Fanfare",
+            "Skating"
+          ],
+          "multi_piece_page": true,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Fanfare / Skating",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "5 Fanfare dew, 2 an oo} Te ote\u2019 TT ST ST eS SS | Sa | ee ee Oe ee ee .._-NoNuN0- a PE cs ee , \u2014 a | ES A \u2014 Oh, SS en \u2014. Ss | La} 4 4 5 a0 290 4 o 4 eye tt ne gg 9 Ly ow ff eg yy Se ee ee oe me a Sn So oe tt ee ee 0 | ,| |_| a d d ; 2 0 Skating J. 108 2.4 1 0 0 2 \u2014\u2014 0 2 oe eS \u2014\u2014\u2014 ae ee ee ee Cee See ee oe SSS SS ee eae eS a oo ee ee ESE SE EEE ZA a Vv y ZA \u2122 7 v SSS ee ee | EE 2 4 3 5 0 2 1 2 4 o Ce \u2014 \u2014\u2014 ne ee SS ee [=P) pee ng _ TEE | i et At \u2014\u2014\u2014\u00bb\u2014\u2014_ Fre oY _\u2014"
+      }
+    ],
+    "ocr_text_excerpt": "5 Fanfare dew, 2 an oo} Te ote\u2019 TT ST ST eS SS | Sa | ee ee Oe ee ee .._-NoNuN0- a PE cs ee , \u2014 a | ES A \u2014 Oh, SS en \u2014. Ss | La} 4 4 5 a0 290 4 o 4 eye tt ne gg 9 Ly ow ff eg yy Se ee ee oe me a Sn So oe tt ee ee 0 | ,| |_| a d d ; 2 0 Skating J. 108 2.4 1 0 0 2 \u2014\u2014 0 2 oe eS \u2014\u2014\u2014 ae ee ee ee Cee See ee oe SSS SS ee eae eS a oo ee ee ESE SE EEE ZA a Vv y ZA \u2122 7 v SSS ee ee | EE 2 4 3 5 0 2 1 2 4 o Ce \u2014 \u2014\u2014 ne ee SS ee [=P) pee ng _ TEE | i et At \u2014\u2014\u2014\u00bb\u2014\u2014_ Fre oY _\u2014",
+    "title": "Fanfare"
+  },
+  "score_versions": {
+    "c0128b43-6cff-444b-8b18-2f6820457e0d": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "f96499db-1cda-4164-970c-c499eb9bd1f5": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "c0128b43-6cff-444b-8b18-2f6820457e0d",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "fanfare skating",
+  "source_book_fingerprint": "book_sha256:ee1d27ca30a4787d6586d4b78c32ae848cc876b8728dfd16a49d4a4e41b6c5a0",
+  "source_book_id": null,
+  "source_content_sha256": "ee1d27ca30a4787d6586d4b78c32ae848cc876b8728dfd16a49d4a4e41b6c5a0",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Fanfare / Skating",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

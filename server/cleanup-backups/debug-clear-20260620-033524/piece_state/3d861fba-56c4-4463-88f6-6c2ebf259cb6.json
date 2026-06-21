@@ -1,0 +1,80 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "3d861fba-56c4-4463-88f6-6c2ebf259cb6",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "contained_piece_titles": [
+      "Ballad",
+      "C Song"
+    ],
+    "multi_piece_page": true,
+    "primary_instrument": "Cello",
+    "source_file_name": "38892591-806a-4a56-912f-5d1e588ea4d6.pdf",
+    "source_page_end": 1,
+    "source_page_start": 1,
+    "title": "Ballad / C Song"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.8,
+      "fields": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "contained_piece_titles": [
+          "Ballad",
+          "C Song"
+        ],
+        "multi_piece_page": true,
+        "primary_instrument": "Cello",
+        "source_file_name": "38892591-806a-4a56-912f-5d1e588ea4d6.pdf",
+        "source_page_end": 1,
+        "source_page_start": 1,
+        "title": "Ballad / C Song"
+      },
+      "source": "book_split_hint"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "piece|book_sha256:73807a4c948e97eccb704ee2d5791cf26f28bc3f1869e21b5bf703501ac4a852|pages:1-1|title:ballad c song|composer:rick mooney|instrument:cello",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "ballad c song",
+  "notes": null,
+  "piece_kind": "piece",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "primary_instrument": "Cello"
+  },
+  "score_versions": {
+    "9c9ff490-2a39-45e2-b138-20d186058867": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "c9a4c3e1-6c9e-42a1-a9ad-84bbac19a13c": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "9c9ff490-2a39-45e2-b138-20d186058867",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "ballad c song",
+  "source_book_fingerprint": "book_sha256:73807a4c948e97eccb704ee2d5791cf26f28bc3f1869e21b5bf703501ac4a852",
+  "source_book_id": "2d63f53e-6d62-4d38-bf76-a4972a1e2f6e",
+  "source_content_sha256": "73807a4c948e97eccb704ee2d5791cf26f28bc3f1869e21b5bf703501ac4a852",
+  "source_page_end": 1,
+  "source_page_start": 1,
+  "split_confidence": 0.8,
+  "title": "Ballad / C Song",
+  "validation_warnings": [
+    "Multiple short pieces detected on one page; kept together as one shared page item."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

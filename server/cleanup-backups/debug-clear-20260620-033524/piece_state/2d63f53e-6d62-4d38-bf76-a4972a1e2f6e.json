@@ -1,0 +1,130 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "2d63f53e-6d62-4d38-bf76-a4972a1e2f6e",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "15 Ballad J ow tke 2+ 102 =o 2 9 oS tay yr 9 8 8 gp OE ee | A OE A ae ee SS Ae SS SS A SS A SO | Pap rt eS mp \u2014} sempre pizz. rT. ey | 7 O_o oe _O EE | EN oe a oe Lr Loo | ir and 2 \u2014 2\u2014~ 5 o 2 a 0 \u2014 \u2014~ x10 et _ IE ce OE ee | SSS pe te eh TEE EE A! OEE ee ae! (ee a i ee ee ae a Potrero te Coe C Song J 4102 =126 4 PTT) fu 02 201 . | | EF-8\u2014 9 2 oe eye NR tN NB Be SS \u2014\u2014 a ee a a onl an oo i a eo oe on oe oo oo eo SW oe aS LS AS 2 A SS ST oi or HP 42 2 5 bs oto 2 4201 9 4 y \u00a2 Ee ee UT \u2014 nn re ee \u2014a..."
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "15 Ballad J ow tke 2+ 102 =o 2 9 oS tay yr 9 8 8 gp OE ee | A OE A ae ee SS Ae SS SS A SS A SO | Pap rt eS mp \u2014} sempre pizz. rT. ey | 7 O_o oe _O EE | EN oe a oe Lr Loo | ir and 2 \u2014 2\u2014~ 5 o 2 a 0 \u2014 \u2014~ x10 et _ IE ce OE ee | SSS pe te eh TEE EE A! OEE ee ae! (ee a i ee ee ae a Potrero te Coe C Song J 4102 =126 4 PTT) fu 02 201 . | | EF-8\u2014 9 2 oe eye NR tN NB Be SS \u2014\u2014 a ee a a onl an oo i a eo oe on oe oo oo eo SW oe aS LS AS 2 A SS ST oi or HP 42 2 5 bs oto 2 4201 9 4 y \u00a2 Ee ee UT \u2014 nn re ee \u2014ao |, |, a ee ee on oe . oo S| Se",
+    "primary_instrument": "Cello",
+    "source_file_name": "38892591-806a-4a56-912f-5d1e588ea4d6.pdf",
+    "title": "Ballad"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "title": "Ballad"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:73807a4c948e97eccb704ee2d5791cf26f28bc3f1869e21b5bf703501ac4a852",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "ballad c song",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "38892591-806a-4a56-912f-5d1e588ea4d6.pdf",
+        "title": "Ballad"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0643,
+          "has_staff_hint": true,
+          "horizontal_line_count": 41,
+          "page_number": 1,
+          "text_excerpt": "Ballad = 2 = === mp ee \u2014\u2014 sempre pizz. @",
+          "title_candidates": [
+            "Ballad",
+            "C Song"
+          ],
+          "title_ocr_excerpt": "Ballad C Song",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "Ballad",
+            "C Song"
+          ],
+          "multi_piece_page": true,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Ballad / C Song",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "15 Ballad J ow tke 2+ 102 =o 2 9 oS tay yr 9 8 8 gp OE ee | A OE A ae ee SS Ae SS SS A SS A SO | Pap rt eS mp \u2014} sempre pizz. rT. ey | 7 O_o oe _O EE | EN oe a oe Lr Loo | ir and 2 \u2014 2\u2014~ 5 o 2 a 0 \u2014 \u2014~ x10 et _ IE ce OE ee | SSS pe te eh TEE EE A! OEE ee ae! (ee a i ee ee ae a Potrero te Coe C Song J 4102 =126 4 PTT) fu 02 201 . | | EF-8\u2014 9 2 oe eye NR tN NB Be SS \u2014\u2014 a ee a a onl an oo i a eo oe on oe oo oo eo SW oe aS LS AS 2 A SS ST oi or HP 42 2 5 bs oto 2 4201 9 4 y \u00a2 Ee ee UT \u2014 nn re ee \u2014a..."
+      }
+    ],
+    "ocr_text_excerpt": "15 Ballad J ow tke 2+ 102 =o 2 9 oS tay yr 9 8 8 gp OE ee | A OE A ae ee SS Ae SS SS A SS A SO | Pap rt eS mp \u2014} sempre pizz. rT. ey | 7 O_o oe _O EE | EN oe a oe Lr Loo | ir and 2 \u2014 2\u2014~ 5 o 2 a 0 \u2014 \u2014~ x10 et _ IE ce OE ee | SSS pe te eh TEE EE A! OEE ee ae! (ee a i ee ee ae a Potrero te Coe C Song J 4102 =126 4 PTT) fu 02 201 . | | EF-8\u2014 9 2 oe eye NR tN NB Be SS \u2014\u2014 a ee a a onl an oo i a eo oe on oe oo oo eo SW oe aS LS AS 2 A SS ST oi or HP 42 2 5 bs oto 2 4201 9 4 y \u00a2 Ee ee UT \u2014 nn re ee \u2014ao |, |, a ee ee on oe . oo S| Se",
+    "title": "Ballad"
+  },
+  "score_versions": {
+    "3bec5d5b-45dc-4639-888f-172e3f389fcb": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "a0fbcf3c-da6c-4e25-87e4-8d9b7909d0ec",
+      "student_default": true
+    },
+    "a0fbcf3c-da6c-4e25-87e4-8d9b7909d0ec": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "ballad c song",
+  "source_book_fingerprint": "book_sha256:73807a4c948e97eccb704ee2d5791cf26f28bc3f1869e21b5bf703501ac4a852",
+  "source_book_id": null,
+  "source_content_sha256": "73807a4c948e97eccb704ee2d5791cf26f28bc3f1869e21b5bf703501ac4a852",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Ballad / C Song",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

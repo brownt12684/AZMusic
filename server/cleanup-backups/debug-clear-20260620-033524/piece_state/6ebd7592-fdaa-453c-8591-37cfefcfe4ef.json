@@ -1,0 +1,129 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "6ebd7592-fdaa-453c-8591-37cfefcfe4ef",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "51 Going Baroque = Vv 1 2 d-70 42 12 = SO O_o _\u201dy. \u2014_s Ya eae TTT [itgty 2 ee Op 8 | eee ge ea a 7 P| wee ee Oe Ne a a mp 2 vv i lorgdtyp oe eR ee Ee tis I) YS ra ee [ot Pate ey ee ee ea 2 24 2 6 \u2014_ a: \u2014. . ore ty got fee tet 2 2 te _e a LEE SS SS A SS oe ee \u201d ae A ae de ce i se eee sees eee eee eee ee \u00b0 \u2014\u2014L mf Vv Ihy ey th te Ooo Eee Eo Se a a se ms eg ae nee eee Ogre St tg ee ee es Se ee Se ee 0) 4 0 12 pan er ee 21 a a OH SS eee A ES A SS SS ST A Sh SP A A OS __\u2014\u2014Y A | a Re ge es ttt = nf \u2014..."
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "51 Going Baroque = Vv 1 2 d-70 42 12 = SO O_o _\u201dy. \u2014_s Ya eae TTT [itgty 2 ee Op 8 | eee ge ea a 7 P| wee ee Oe Ne a a mp 2 vv i lorgdtyp oe eR ee Ee tis I) YS ra ee [ot Pate ey ee ee ea 2 24 2 6 \u2014_ a: \u2014. . ore ty got fee tet 2 2 te _e a LEE SS SS A SS oe ee \u201d ae A ae de ce i se eee sees eee eee eee ee \u00b0 \u2014\u2014L mf Vv Ihy ey th te Ooo Eee Eo Se a a se ms eg ae nee eee Ogre St tg ee ee es Se ee Se ee 0) 4 0 12 pan er ee 21 a a OH SS eee A ES A SS SS ST A Sh SP A A OS __\u2014\u2014Y A | a Re ge es ttt = nf \u2014 . = \u2018 . PN or | ly ee a a ee 1 2 \u00b0 4 V 16 My eal \u2018 a St yhy eS \"ee Eee ee ee _\u2014 a EB cresc. Sf 2 \u2014,\u2014~ x2, - it 1 1 4 2 i d bey FE 0 et Pct LS ee et ee a ee SE ee SS ES SS ee",
+    "opus": "Op 8",
+    "primary_instrument": "Cello",
+    "source_file_name": "7e2a0bdb-55ec-4872-a9a9-a5e8aff58cda.pdf",
+    "title": "Going Baroque"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "opus": "Op 8",
+        "title": "Going Baroque"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:333dfdd95026df05eecc7edb4d5ca4ae4c1b027a15f2c6d4b68eb13c78968e51",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "going baroque",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "7e2a0bdb-55ec-4872-a9a9-a5e8aff58cda.pdf",
+        "title": "Going Baroque"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0668,
+          "has_staff_hint": true,
+          "horizontal_line_count": 45,
+          "page_number": 1,
+          "text_excerpt": "31 Going Baroque aA< 124 2 124 SS deve pale ES , vvii 42 atte a \u2014 = yt} cresc, , f \u2014~",
+          "title_candidates": [
+            "Going Baroque"
+          ],
+          "title_ocr_excerpt": "Going Baroque",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Going Baroque"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "Going Baroque",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "51 Going Baroque = Vv 1 2 d-70 42 12 = SO O_o _\u201dy. \u2014_s Ya eae TTT [itgty 2 ee Op 8 | eee ge ea a 7 P| wee ee Oe Ne a a mp 2 vv i lorgdtyp oe eR ee Ee tis I) YS ra ee [ot Pate ey ee ee ea 2 24 2 6 \u2014_ a: \u2014. . ore ty got fee tet 2 2 te _e a LEE SS SS A SS oe ee \u201d ae A ae de ce i se eee sees eee eee eee ee \u00b0 \u2014\u2014L mf Vv Ihy ey th te Ooo Eee Eo Se a a se ms eg ae nee eee Ogre St tg ee ee es Se ee Se ee 0) 4 0 12 pan er ee 21 a a OH SS eee A ES A SS SS ST A Sh SP A A OS __\u2014\u2014Y A | a Re ge es ttt = nf \u2014..."
+      }
+    ],
+    "ocr_text_excerpt": "51 Going Baroque = Vv 1 2 d-70 42 12 = SO O_o _\u201dy. \u2014_s Ya eae TTT [itgty 2 ee Op 8 | eee ge ea a 7 P| wee ee Oe Ne a a mp 2 vv i lorgdtyp oe eR ee Ee tis I) YS ra ee [ot Pate ey ee ee ea 2 24 2 6 \u2014_ a: \u2014. . ore ty got fee tet 2 2 te _e a LEE SS SS A SS oe ee \u201d ae A ae de ce i se eee sees eee eee eee ee \u00b0 \u2014\u2014L mf Vv Ihy ey th te Ooo Eee Eo Se a a se ms eg ae nee eee Ogre St tg ee ee es Se ee Se ee 0) 4 0 12 pan er ee 21 a a OH SS eee A ES A SS SS ST A Sh SP A A OS __\u2014\u2014Y A | a Re ge es ttt = nf \u2014 . = \u2018 . PN or | ly ee a a ee 1 2 \u00b0 4 V 16 My eal \u2018 a St yhy eS \"ee Eee ee ee _\u2014 a EB cresc. Sf 2 \u2014,\u2014~ x2, - it 1 1 4 2 i d bey FE 0 et Pct LS ee et ee a ee SE ee SS ES SS ee",
+    "opus": "Op 8",
+    "title": "Going Baroque"
+  },
+  "score_versions": {
+    "3cf9c05a-b966-4dab-8df5-91fc64f8a970": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "abcb3a50-40a6-4a4a-84dc-1d0693e348f6",
+      "student_default": true
+    },
+    "abcb3a50-40a6-4a4a-84dc-1d0693e348f6": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "going baroque",
+  "source_book_fingerprint": "book_sha256:333dfdd95026df05eecc7edb4d5ca4ae4c1b027a15f2c6d4b68eb13c78968e51",
+  "source_book_id": null,
+  "source_content_sha256": "333dfdd95026df05eecc7edb4d5ca4ae4c1b027a15f2c6d4b68eb13c78968e51",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Going Baroque",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

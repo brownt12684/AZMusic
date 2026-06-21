@@ -1,0 +1,1613 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "fa8de395-26c8-4d97-9aff-a20858953b44",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.78,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "Position Wy - % Pieces \\. for EY Rick Mooney"
+      },
+      {
+        "page_number": 2,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "Contents A Note to Student ..........0.cccceeeeeee2 \u201cUpper\u201d Second Position A Minot Melody. Target Practice and Geography Quiz....3 The Big Kangaroo...............cccseeee000 32 Names and Numbe?s...............00cesee004 A Cloudy Day......s.sesscsscsesestsseeeneeeee 33 Fanfare ......s.ssccssssssessssseessseseesseesseeeeed Busy Bees........:.ecsssssssssssesseseseeseeeeees 34 Skating.......ccccceccescsseeessseessessesseeeeeeed In a HUITY...o ec eeseseceeecseeeseseseseseeeeeee 35 The Elephant\u2019s Wa..."
+      },
+      {
+        "page_number": 3,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "A Note to Students The pieces in this book have been specially designed to help you find certain im- portant notes (I call them \u201ctargets\u201d) on the cello fingerboard. The notes that I think of as targets have the same names as the open strings. That way, I can al- ways be sure I have hit the \u201c\u2018bull\u2019s eye\u201d by testing the fingered note with an open string. These pieces also help you to learn how certain other notes are easy to play once you have hit the target. For example, if you are very good at..."
+      },
+      {
+        "page_number": 4,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "3 4 i t4 99 rm Upper First Position a } o Second - Position ; ; Target Practice 0 ef o ao 0 4 ) 2 0 \u2018 0 > \u2014\u2014\u2014\u2014\u2014 i ot _\u2014\u2014\u2014\u2014 rt SI \u2014\u2014_\u2014\u2014 TT \u2014\u2014\u2014\u2014\u2014\u2014 3S oe ee ee, f--\u2014+ \u20144 [+4 \u201c| {2 4 @ Oo} oa a ag I I Tl I 1 it ity 0 IV ll Iv ml Geography Quiz Your 2nd finger is on D on the A-string. Answer the following questions: What note will be played by: What finger will you use to play: lonthe A-string? __ FE on the A-string? __ 3 on the A-string? __ Aon the D-string? = __ What is another . name for that not..."
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "Position Wy - % Pieces \\. for EY Rick Mooney Contents A Note to Student ..........0.cccceeeeeee2 \u201cUpper\u201d Second Position A Minot Melody. Target Practice and Geography Quiz....3 The Big Kangaroo...............cccseeee000 32 Names and Numbe?s...............00cesee004 A Cloudy Day......s.sesscsscsesestsseeeneeeee 33 Fanfare ......s.ssccssssssessssseessseseesseesseeeeed Busy Bees........:.ecsssssssssssesseseseeseeeeees 34 Skating.......ccccceccescsseeessseessessesseeeeeeed In a HUITY...o ec eeseseceeecseeeseseseseseeeeeee 35 The Elephant\u2019s Walltz............:0:00002006 Pp \u201d \"Tht ses The Tired Tortoise...........:ssecsesseeseeee+6 Upper\u201d Third Position The Whale\u2019s Song .........s:ssessessesseeseeeee 7 Target Practice and Geography Quiz..36 Match ........sseesssecscssesessseesseesseessseesse Names and Numbers.............++-+0+04+37 Sitting in the Shade............. cesses D The Troubadour ...........esseeseesseerseee 38 Bugle Call .........c.cc:cesessesesseeseseeseeeee 10 bs (0-00 (0) | ES...",
+    "primary_instrument": "Cello",
+    "source_file_name": "9fae1a51-88c5-4110-9e9c-c6c3cb0b7bfc.pdf",
+    "title": "Position Pieces for Cello, Book 1"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.78,
+      "fields": {
+        "composer": "Rick Mooney",
+        "title": "Position"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:8cef428183a3be697d28d69a450878038b556666a18aadb68483ace0e9b47dcc",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "position pieces for cello book 1",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "book_or_collection": "Position Pieces for Cello, Book 1",
+        "composer": "Rick Mooney",
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "primary_instrument": "Cello",
+        "source_file_name": "9fae1a51-88c5-4110-9e9c-c6c3cb0b7bfc.pdf",
+        "title": "Position Pieces for Cello, Book 1"
+      },
+      "page_count": 65,
+      "page_facts": [
+        {
+          "classification": "cover",
+          "dark_pixel_ratio": 0.0575,
+          "has_staff_hint": true,
+          "horizontal_line_count": 23,
+          "page_number": 1,
+          "text_excerpt": "Position Pieces Rick Mooney",
+          "title_candidates": [
+            "Position",
+            "Pieces"
+          ],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        },
+        {
+          "classification": "front_matter",
+          "dark_pixel_ratio": 0.0752,
+          "has_staff_hint": true,
+          "horizontal_line_count": 95,
+          "page_number": 2,
+          "text_excerpt": "Contents A Note to Student ........cccccceeseeseeeee 2 \u201cUpper\u201d Second Position Target Practice and Geography Quiz.... Names and Numbers..............++ Fanfare The Elephant\u2019s Waltz. The Tired Tortoise. The Whale\u2019s Song . March...........-.0 Toy Soldiers Lament...... The Invisible Target. Pachyderm Parade ... Extended Second Position Target Practice and Geography Quiz.. 13 Names and Numbers................ \u00ab14 Ballad..... 15 C Song.... 15 Somersaults and Cartwheels .. 16 TAN 0 woe. eeeeseeeesesesseesessseeseeenseeseenaee 16 Erik\u2019s Minuet ...........::csesseeseereseeereee 17 \u201cLower\u201d Third Position Target Practice and Geography Quiz.. 18 Names and Numbers. wl Japanese Garden. I'm So Sleepy ...\u2026",
+          "title_candidates": [
+            "Fanfare",
+            "The Elephant\u2019s Waltz.",
+            "The Tired Tortoise.",
+            "The Whale\u2019s Song ."
+          ],
+          "title_ocr_excerpt": "Contents",
+          "warnings": []
+        },
+        {
+          "classification": "instructional",
+          "dark_pixel_ratio": 0.083,
+          "has_staff_hint": true,
+          "horizontal_line_count": 38,
+          "page_number": 3,
+          "text_excerpt": "A Note to Students The pieces in this book have been specially designed to help you find certain im- portant notes (I call them \u201ctargets\u201d) on the cello fingerboard. The notes that I think of as targets have the same names as the open strings. That way, I can al- ways be sure I have hit the \u201c\u2018bull\u2019s eye\u201d by testing the fingered note with an open string. These pieces also help you to learn how certain other notes are easy to play once you have hit the target. For example, if you are very good at hitting G on the D-string with 2nd finger, then G-sharp (even though it sounds rather omi- nous) is very easy to play with third finger. In order to get the most out of this book, there are a few thin\u2026",
+          "title_candidates": [
+            "A Note to Students"
+          ],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        },
+        {
+          "classification": "instructional",
+          "dark_pixel_ratio": 0.0461,
+          "has_staff_hint": true,
+          "horizontal_line_count": 36,
+          "page_number": 4,
+          "text_excerpt": "First Position Second Position \u00b0 ow . Geography Quiz Your 2nd finger is on D on the A-string. Answer the following questions: What note will be played by: 1 on the A-string? 3 on the A-string? What is another name for that note? 4 on the A-string? 2 on the D-string? 2 on the G-string? 2 on the C-string? 3 on the D-string? What is another name for that note? What finger will you use to play: E> on the A-string? A on the D-string? C on the G-string? G on the C-string? F# on the D-string? F# on the C-string? B on the G-string? E on the C-string? D> on the A-string?",
+          "title_candidates": [
+            "Second",
+            "Target Practice",
+            "Geography Quiz"
+          ],
+          "title_ocr_excerpt": "Target Practice Geography Quiz",
+          "warnings": []
+        },
+        {
+          "classification": "instructional",
+          "dark_pixel_ratio": 0.0358,
+          "has_staff_hint": true,
+          "horizontal_line_count": 49,
+          "page_number": 5,
+          "text_excerpt": "Names and Numbers \u201cUpper\u201d Second Position ~] Names: Numbers: 2 \u2014 Names: G _ _ __ Numbers: 2 Names: Cc Names: F \u2014 \u2014 \u2014 \u2014 Se o id Numbers: 2 Names: D \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 2 oe = 2 Bo 3 \u2014 = = 4 Lom o\u2014\u2014_\u2014\u2014\u2014_ Numbers: 2 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 Names: D is a fo a 5 \u2014\u2014 \u2014=\" | Numbers: 2",
+          "title_candidates": [],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0505,
+          "has_staff_hint": true,
+          "horizontal_line_count": 45,
+          "page_number": 6,
+          "text_excerpt": "Fanfare ay cy ae \u00b0 (Ti \u00ab Sab) \u00b0 Thee wd \u2014 = J-20 pee SSS = 3 De Skating",
+          "title_candidates": [
+            "Fanfare",
+            "Skating"
+          ],
+          "title_ocr_excerpt": "Fanfare Skating",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0586,
+          "has_staff_hint": true,
+          "horizontal_line_count": 46,
+          "page_number": 7,
+          "text_excerpt": "The Elephant\u2019s Waltz 1 5 2 42 , 46 20 3 ~~\u00bb m V D.C. al Fine",
+          "title_candidates": [
+            "The Elephant\u2019s Waltz.",
+            "The Tired Tortoise."
+          ],
+          "title_ocr_excerpt": "The Tired Tortoise",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0532,
+          "has_staff_hint": true,
+          "horizontal_line_count": 45,
+          "page_number": 8,
+          "text_excerpt": "The Whale\u2019s Song This one U4B7-DLZ-QWGU",
+          "title_candidates": [
+            "The Whale\u2019s Song ."
+          ],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0576,
+          "has_staff_hint": true,
+          "horizontal_line_count": 45,
+          "page_number": 9,
+          "text_excerpt": "",
+          "title_candidates": [
+            "March"
+          ],
+          "title_ocr_excerpt": "March",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0693,
+          "has_staff_hint": true,
+          "horizontal_line_count": 44,
+          "page_number": 10,
+          "text_excerpt": "Sitting in the Shade 24 J. 2 Lr 2 4 13 a\u2014+ 2 = 06 \u2018 \u2122 13 ov fl of # ettes 12 4 0 erte 0 i t",
+          "title_candidates": [
+            "Sitting in the Shade"
+          ],
+          "title_ocr_excerpt": "Sitting in the Shade",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0635,
+          "has_staff_hint": true,
+          "horizontal_line_count": 39,
+          "page_number": 11,
+          "text_excerpt": "Bugle Call i> id T+ Lit w",
+          "title_candidates": [
+            "Bugle Call",
+            "Toy Soldiers"
+          ],
+          "title_ocr_excerpt": "Bugle Call Toy Soldiers",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0536,
+          "has_staff_hint": true,
+          "horizontal_line_count": 46,
+          "page_number": 12,
+          "text_excerpt": "",
+          "title_candidates": [
+            "Lament"
+          ],
+          "title_ocr_excerpt": "Lament",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0623,
+          "has_staff_hint": true,
+          "horizontal_line_count": 52,
+          "page_number": 13,
+          "text_excerpt": "The Invisible Target = 100 oy oo, oO) 3 0 b \u00a2 f E x 2 + 2 go = ee + * This harmonic can be played in three different places. See if you can find them all. Pachyderm Parade Jos Yo 0 4 2 4 o 3 x2 Bere eee pile SS f Dp Ser erie rs * SSS a ra ra 3 > \u20182 Se",
+          "title_candidates": [
+            "The Invisible Target.",
+            "Pachyderm Parade"
+          ],
+          "title_ocr_excerpt": "Pachyderm Parade",
+          "warnings": []
+        },
+        {
+          "classification": "instructional",
+          "dark_pixel_ratio": 0.0383,
+          "has_staff_hint": true,
+          "horizontal_line_count": 37,
+          "page_number": 14,
+          "text_excerpt": "Extended Second Position First Position Target Practice I 4 2 2 0 a2 a o- 2 2 et 2 5f 2 & Sa \u2014\u2014 \u2014 l Mi 4 a 2 42 on = = ao ZZ \u2014\u2014 ? q oe eS eS : ial 4 2 2 0 \\ 0 4 4 4 = \u2014 \u2014a = So o 4 \u00e9 \u00e9 \u00e9 Geography Quiz Your 2nd finger is on G on the D-string. Answer the following questions: What note will be played by: 1 on the A-string? xl on the A-string? ___ 3 on the G-string? xl on the D-string? ___ 4 on the G-string? __ xl on the G-string? ___ What is another name for that note? __ What finger will you use to play: Gt on the D-string? A? on the D-string? E> on the C-string? D on the G-string? F on the C-string? B on the G-string? D on the A-string?",
+          "title_candidates": [
+            "Extended",
+            "Second",
+            "Target Practice"
+          ],
+          "title_ocr_excerpt": "Target Practice Geography Quiz",
+          "warnings": []
+        },
+        {
+          "classification": "instructional",
+          "dark_pixel_ratio": 0.0401,
+          "has_staff_hint": true,
+          "horizontal_line_count": 49,
+          "page_number": 15,
+          "text_excerpt": "Names and Numbers Extended Second Position a oe fo a fo 2s be ho Numbers: 2 Names: G \u2014\u2014\u2014 ee eee Numbers: 2 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 _ Names: Cc \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 x \u2018S- rer ey re Numbers: 2 \u2014 \u2014 \u2014 \u2014 \u2014_\u2014 \u2014 \u2014 \u2014 Names: F \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014_\u2014 _ o \u00a9 oe Numbers: 2 ie Names: G \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 _ ey \u2014 Le o eo o Numbers: 2 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 Names: Cc \u2014 \u2014 \u2014 eo e a",
+          "title_candidates": [
+            "Extended Second Position"
+          ],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0643,
+          "has_staff_hint": true,
+          "horizontal_line_count": 41,
+          "page_number": 16,
+          "text_excerpt": "Ballad = 2 = === mp ee \u2014\u2014 sempre pizz. @",
+          "title_candidates": [
+            "Ballad",
+            "C Song"
+          ],
+          "title_ocr_excerpt": "Ballad C Song",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0659,
+          "has_staff_hint": true,
+          "horizontal_line_count": 43,
+          "page_number": 17,
+          "text_excerpt": "Somersaults and Cartwheels ik)",
+          "title_candidates": [
+            "Somersaults and Cartwheels",
+            "Tango"
+          ],
+          "title_ocr_excerpt": "Somersaults and Cartwheels Tango",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0529,
+          "has_staff_hint": true,
+          "horizontal_line_count": 42,
+          "page_number": 18,
+          "text_excerpt": "Erik\u2019s Minuet",
+          "title_candidates": [
+            "Erik\u2019s Minuet"
+          ],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        },
+        {
+          "classification": "instructional",
+          "dark_pixel_ratio": 0.0474,
+          "has_staff_hint": true,
+          "horizontal_line_count": 38,
+          "page_number": 19,
+          "text_excerpt": "\u201cLower\u201d First Position Third Position ; } Target Practice 0 poo gp 0 4 0 1 0 \u2019 0 n f od ad Fy \u00b0 ep epee 3 4 x 1 geist in I = 1 if = E = iin AS t Vv 2 im = = == Geography Quiz Your Ist finger is on D on the A-string. Answer the following questions: What note will be played by: 1 on the C-string? 4 on the A-string? 3 on the G-string? 2 on the D-string? What is another name for that note? 1 on the G-string? 4 on the C-string? 3 on the A-string? __ 1 on the G-string? __ What finger will you use to play: Eb on the A-string? G on the C-string? Ct on the G-string? FF on the C-string? Eb on the G-string? BP on the D-string? Ab on the C-string? G# on the C-string? A on the D-string?",
+          "title_candidates": [
+            "Target Practice",
+            "Geography Quiz"
+          ],
+          "title_ocr_excerpt": "Target Practice Geography Quiz",
+          "warnings": []
+        },
+        {
+          "classification": "instructional",
+          "dark_pixel_ratio": 0.0405,
+          "has_staff_hint": true,
+          "horizontal_line_count": 48,
+          "page_number": 20,
+          "text_excerpt": "Names and Numbers \u201cLower\u201d Third Position Names: D \u2014 \u2014 ao bo to be te fe to bo Numbers: 1 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 Names: G Numbers: 1 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 Names: F \u2014 \u2014 \u2014 \u2014 = = Numbers: 1 \u2014 re \u2014 \u00b0 ag ie \u00b0 i Names: D \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 ie | 5 | 8 |",
+          "title_candidates": [],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0539,
+          "has_staff_hint": true,
+          "horizontal_line_count": 44,
+          "page_number": 21,
+          "text_excerpt": "deve 1 Japanese Garden fpe 3 = } 2 eee mf ofr a7: - Jy I\u2019m So Sleepy",
+          "title_candidates": [
+            "Japanese Garden.",
+            "I'm So Sleepy"
+          ],
+          "title_ocr_excerpt": "Japanese Garden",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0499,
+          "has_staff_hint": true,
+          "horizontal_line_count": 48,
+          "page_number": 22,
+          "text_excerpt": "21 March of the Dinosaurs 1 3 4 1 SS See ro * : eS SS Se 4 1 =m 3.4 o # of ff Pe ore \"3 . T f =? mp Vv Vv Vv Ge = a7 a oe",
+          "title_candidates": [
+            "March of the Dinosaurs",
+            "The Haunted House"
+          ],
+          "title_ocr_excerpt": "The Haunted House",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0669,
+          "has_staff_hint": true,
+          "horizontal_line_count": 44,
+          "page_number": 23,
+          "text_excerpt": "I Was a Teenage Monster Fine D.C. al Fine",
+          "title_candidates": [
+            "I Was a Teenage Monster."
+          ],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        },
+        {
+          "classification": "instructional",
+          "dark_pixel_ratio": 0.0498,
+          "has_staff_hint": true,
+          "horizontal_line_count": 39,
+          "page_number": 24,
+          "text_excerpt": "23 \u201cLower\u201d Second Position First Position Target Practice = PP o pe 0 a2 0) 7 0 0 : SaaS Sal 3 4 3 pe 3 4 3 3 ; 4 3 3 pet \u00a3 \u00a3 et = === in I 0 I im on m 4 Vv Vv Geography Quiz Your 3rd finger is on C on the G-string. Answer the following questions: What note will be played by: What finger will you use to play: 3 on the A-string? __ Eb on the C-string? 4 on the A-string? __ Ct on the G-string? 2 on the C-string? __ Ct on the A-string? lon the D-string? __ BP on the G-string? 2 on the G-string? __ G on the D-string? 3 on the C-string? __ F# on the C-string? 4 on the D-string? What is another ; name for that note? __ Con the G-string? ___ F on the D-string? 1 on the A-string? ___ C on the A-str\u2026",
+          "title_candidates": [
+            "Target Practice",
+            "Geography Quiz"
+          ],
+          "title_ocr_excerpt": "Target Practice Geography Quiz",
+          "warnings": []
+        },
+        {
+          "classification": "instructional",
+          "dark_pixel_ratio": 0.042,
+          "has_staff_hint": true,
+          "horizontal_line_count": 49,
+          "page_number": 25,
+          "text_excerpt": "24 Names and Numbers \u201cLower\u201d Second Position Names: D in ie fe on le ep ke = Numbers: 3 \u2014 \u2014 \u2014 _ : Names: G \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014_\u2014 > ret =. fe be x \u2014 fox brs fe tx 4] Numbers: 3 \u2014 \u2014 \u2014 Names: \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 SE | Numbers: 3 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 Names: F \u2014 \u2014 \u2014\u2014\u2014 a a Names: D \u2014 o be a 2 = rat $x | Numbers: 3 \u2014 \u2014 * fe \u2014 \u2014 \u2014 \u2014 Names: Cc",
+          "title_candidates": [],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0394,
+          "has_staff_hint": true,
+          "horizontal_line_count": 35,
+          "page_number": 26,
+          "text_excerpt": "I\u2019ve Got Homework _ ae : 3\u2014\u2014~_ 4 a : mf \u20ac $19)",
+          "title_candidates": [
+            "I\u2019ve Got Homework"
+          ],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.057,
+          "has_staff_hint": true,
+          "horizontal_line_count": 41,
+          "page_number": 27,
+          "text_excerpt": "Valse Triste",
+          "title_candidates": [
+            "Valse Triste"
+          ],
+          "title_ocr_excerpt": "Valse Triste",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0705,
+          "has_staff_hint": true,
+          "horizontal_line_count": 44,
+          "page_number": 28,
+          "text_excerpt": "Sicilienne",
+          "title_candidates": [
+            "Sicilienne"
+          ],
+          "title_ocr_excerpt": "Sicilienne",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0511,
+          "has_staff_hint": true,
+          "horizontal_line_count": 37,
+          "page_number": 29,
+          "text_excerpt": "",
+          "title_candidates": [
+            "Etude"
+          ],
+          "title_ocr_excerpt": "Etude",
+          "warnings": []
+        },
+        {
+          "classification": "instructional",
+          "dark_pixel_ratio": 0.0398,
+          "has_staff_hint": true,
+          "horizontal_line_count": 36,
+          "page_number": 30,
+          "text_excerpt": "First Position 29 Fourth Position Target Practice 3 22 \u00b0 3 0 1 Hel SS ica ae fp 1 =SroSSa sth o ~\u2014o\u2014ah t a ad 4 ef 4 0 1 0 = 0 1 0 PP? gi ae = =e \u2018| ee Geography Quiz Your Ist finger is on G on the C-string. Answer the following questions: What note will be played by: What finger will you use to play: 4 on the A-string? 2 on the D-string? 3 on the G-string? 1 on the A-string? 3 on the C-string? 1 on the D-string? 2 on the C-string? What is another name for that note? 4 on the D-string? __ F# on the A-string? D? on the G-string? B? on the C-string? F on the G-string? B on the D-string? E> on the G-string? F on the A-string? A? on the D-string? G? on the A-string?",
+          "title_candidates": [
+            "Target Practice",
+            "Geography Quiz"
+          ],
+          "title_ocr_excerpt": "Target Practice Geography Quiz",
+          "warnings": []
+        },
+        {
+          "classification": "instructional",
+          "dark_pixel_ratio": 0.0425,
+          "has_staff_hint": true,
+          "horizontal_line_count": 48,
+          "page_number": 31,
+          "text_excerpt": "30 Names and Numbers Fourth Position Fl P | tl eo 5 | Numbers: 1 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 Names: D \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 o\u2014\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014 TT ooo \u2014]] Numbers: 1 \u2014 Names: G \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 Names: E \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 = = === SSS Numbers; 1 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 Names: G \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 2 2 he \u00b0 a= \u2014\u2014\u2014 | oe po- f gf",
+          "title_candidates": [],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0408,
+          "has_staff_hint": true,
+          "horizontal_line_count": 36,
+          "page_number": 32,
+          "text_excerpt": "Church Bells",
+          "title_candidates": [
+            "Church Bells"
+          ],
+          "title_ocr_excerpt": "Church Bells",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0644,
+          "has_staff_hint": true,
+          "horizontal_line_count": 44,
+          "page_number": 33,
+          "text_excerpt": "32 A Minor Melody The Big Kangaroo i : : ? ? 2 3 4 3 4 9 : = f he E eee",
+          "title_candidates": [
+            "A Minor Melody",
+            "The Big Kangaroo."
+          ],
+          "title_ocr_excerpt": "A Minor Melody The Big Kangaroo",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0538,
+          "has_staff_hint": true,
+          "horizontal_line_count": 42,
+          "page_number": 34,
+          "text_excerpt": "33 A Cloudy Day _ v dw 1 oo 1 3 4 1 oo = | \u00b0 \u00b0 \u2122 : $ ial",
+          "title_candidates": [
+            "A Cloudy Day"
+          ],
+          "title_ocr_excerpt": "A Cloudy Day",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0709,
+          "has_staff_hint": true,
+          "horizontal_line_count": 43,
+          "page_number": 35,
+          "text_excerpt": "Busy Bees 5 see eat tivieinte",
+          "title_candidates": [
+            "Busy Bees"
+          ],
+          "title_ocr_excerpt": "Busy Bees",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0601,
+          "has_staff_hint": true,
+          "horizontal_line_count": 43,
+          "page_number": 36,
+          "text_excerpt": "D.C. al Fine",
+          "title_candidates": [
+            "In A Hurry"
+          ],
+          "title_ocr_excerpt": "In A Hurry",
+          "warnings": []
+        },
+        {
+          "classification": "instructional",
+          "dark_pixel_ratio": 0.0404,
+          "has_staff_hint": true,
+          "horizontal_line_count": 38,
+          "page_number": 37,
+          "text_excerpt": "36 Third Position Fourth Position Target Practice i) 2 0 1 0 2 ESSE lees i Geography Quiz Your 2nd finger is on D on the G-string. Answer the following questions: What note will be played by: What finger will you use to play: 2 on the A-string? F on the A-string? 1 on the C-string? B on the D-string? 1 on the G-string? Eb on the G-string? 1 on the D-string? What is another G# on the C-string? name for that note? ___ A on the D-string? __ 4 on the C-string? ____ Gon the C-string? = __ 4 on the G-string? __ E> on the A-string? ___ 4on the D-string? __ Ct on the G-string? __ 4onthe A-string? ___ Ft on the C-string?",
+          "title_candidates": [
+            "Third",
+            "Target Practice",
+            "Geography Quiz"
+          ],
+          "title_ocr_excerpt": "Target Practice Geography Quiz",
+          "warnings": []
+        },
+        {
+          "classification": "instructional",
+          "dark_pixel_ratio": 0.0406,
+          "has_staff_hint": true,
+          "horizontal_line_count": 50,
+          "page_number": 38,
+          "text_excerpt": "37 Names and Numbers \u201cUpper\u201d Third Position fo 2 fo to \u00a9 be",
+          "title_candidates": [],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0597,
+          "has_staff_hint": true,
+          "horizontal_line_count": 44,
+          "page_number": 39,
+          "text_excerpt": "The Troubadour * see the note on \u201cThe Invisible Target\u201d Hoedown",
+          "title_candidates": [
+            "The Troubadour",
+            "Hoedown."
+          ],
+          "title_ocr_excerpt": "The Troubadour Hoedown",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0441,
+          "has_staff_hint": true,
+          "horizontal_line_count": 34,
+          "page_number": 40,
+          "text_excerpt": "A Waltz 39 7 Vv Vv Je 0 iy 4a Ty 2 1\u2014? 4 le t mf Vy Y\u2014~y y y 2 2 y, y, iad \u2014",
+          "title_candidates": [
+            "A Waltz"
+          ],
+          "title_ocr_excerpt": "A Waltz",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0638,
+          "has_staff_hint": true,
+          "horizontal_line_count": 45,
+          "page_number": 41,
+          "text_excerpt": "The Hippopotamus\u2019 Dance",
+          "title_candidates": [
+            "The Hippopotamus\u2019 Dance."
+          ],
+          "title_ocr_excerpt": "The Hippopotamus\u2019 Dance",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0696,
+          "has_staff_hint": true,
+          "horizontal_line_count": 36,
+          "page_number": 42,
+          "text_excerpt": "41 The Heavy Highlander",
+          "title_candidates": [
+            "The Heavy Highlander",
+            "Barcarole"
+          ],
+          "title_ocr_excerpt": "The Heavy Highlander Barcarole",
+          "warnings": []
+        },
+        {
+          "classification": "instructional",
+          "dark_pixel_ratio": 0.0503,
+          "has_staff_hint": true,
+          "horizontal_line_count": 48,
+          "page_number": 43,
+          "text_excerpt": "42 Extended Third Position Fourth Position=~ Target Practice 5 2 o ete 2 te 2 0 bps ees pele 2 nv % Hy]. Sette, tte 4 2,2 i) 2 2S etl Geography Quiz Your 2nd finger is on G on the C-string. Answer the following questions: What note will be played by: What finger will you use to play: lon the C-string? __ C on the G-string? xl on the C-string? __ AP on the C-string? __. 2 on the G-string? __ E> on the A-string? __ xl on the D-string? __ D on the A-string? =__ 3 on the A-string? __ Aon the D-string? 9 __ 1 on the D-string? What is another name for that note? ____ A on the C-string? Ct on the G-string?",
+          "title_candidates": [
+            "Extended",
+            "Target Practice",
+            "Geography Quiz"
+          ],
+          "title_ocr_excerpt": "Target Practice Geography Quiz",
+          "warnings": []
+        },
+        {
+          "classification": "instructional",
+          "dark_pixel_ratio": 0.0378,
+          "has_staff_hint": true,
+          "horizontal_line_count": 49,
+          "page_number": 44,
+          "text_excerpt": "43 Names and Numbers Extended Third Position Names: o n 2 b&b B&B &B BR i Numbers: 2 Names: A Numbers: 2 \u00a2 b \u00a5 be Lb $ il Numbers: 2 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 Names: G \u2014 \u2014 \u2014 \u2014 \u2014 \u2014_\u2014 \u2014_ _ Numbers: 2 Names: E \u2014 \u2014 \u2014 _ \u2014_\u2014 \u2014_\u2014 \u2014_\u2014 _ 2 a 2s e- | Numbers: 2 \u2014 \u2014 _ _ _ _ _ _ Names: A",
+          "title_candidates": [],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0666,
+          "has_staff_hint": true,
+          "horizontal_line_count": 45,
+          "page_number": 45,
+          "text_excerpt": "Dreamland deve 2 om 0 3 2 4.51 2 1 a yor fe = ape 22 == Sas ae Marching Martians",
+          "title_candidates": [
+            "Dreamland",
+            "Marching Martians"
+          ],
+          "title_ocr_excerpt": "Dreamland Marching Martians",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0657,
+          "has_staff_hint": true,
+          "horizontal_line_count": 45,
+          "page_number": 46,
+          "text_excerpt": "45 Bugle Call 4 14 o\u2014\u2122~, lant :. io Lal Pi3 ial Pls oh Bde Bap Bs Bebo jo Sv \u2014\u2019 \u2019 Note: \u201cToy Soldiers\u201d also can be fingered in third position. The Tiny Ballerina",
+          "title_candidates": [
+            "Bugle Call",
+            "The Tiny Ballerina"
+          ],
+          "title_ocr_excerpt": "Bugle Call The Tiny Ballerina",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0617,
+          "has_staff_hint": true,
+          "horizontal_line_count": 41,
+          "page_number": 47,
+          "text_excerpt": "Fine",
+          "title_candidates": [
+            "Jig"
+          ],
+          "title_ocr_excerpt": "Jig",
+          "warnings": []
+        },
+        {
+          "classification": "instructional",
+          "dark_pixel_ratio": 0.0481,
+          "has_staff_hint": true,
+          "horizontal_line_count": 33,
+          "page_number": 48,
+          "text_excerpt": "First rostion-\\ 47 Half Position Target Practice ==] ee 4 pe 3} 2 3 ; 4 ; === 3 f \u2014\u2014- \u2014H Geography Quiz Your 2nd finger is on B on the A-string. Answer the following questions: What note will be played by: What finger will you use to play: 1 on the A-string? What is another name for that note? 1 on the D-string? What is another name for that note? 1 on the G-string? What is another name for that note? 1 on the C-string? What is another name for that note? 4on the A-string? __ Ft on the D-string? B on the G-string? E on the C-string? A on the G-string? B? on the G-string? E> on the C-string? Df on the C-string? C on the A-string? F on the D-string?",
+          "title_candidates": [
+            "Target Practice",
+            "Geography Quiz"
+          ],
+          "title_ocr_excerpt": "Target Practice Geography Quiz",
+          "warnings": []
+        },
+        {
+          "classification": "instructional",
+          "dark_pixel_ratio": 0.0407,
+          "has_staff_hint": true,
+          "horizontal_line_count": 46,
+          "page_number": 49,
+          "text_excerpt": "Names and Numbers Half Position Names: B \u2014 _ \u2014 \u2014 \u2014 \u2014 \u2014 Numbers: 2 Numbers: 2 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 Names: A \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 E x $= Se \u2014jo\u2014 \u2014 Axe fo xx om = =j Numbers: 2 \u2014 \u2014 \u2014_\u2014 \u2014 \u2014 \u2014 \u2014 \u2014 Names: D \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 Numbers: 2 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 Names: B \u2014 \u2014 \u2014 \u2014_\u2014 \u2014\u2014\u2014\u2014\u2014\u2014\u2014\u2014 SS oc fe Numbers: 2 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 \u2014 Names: A",
+          "title_candidates": [
+            "Half Position"
+          ],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0644,
+          "has_staff_hint": true,
+          "horizontal_line_count": 41,
+          "page_number": 50,
+          "text_excerpt": "49 Half Position Serenade",
+          "title_candidates": [
+            "Half Position Serenade",
+            "The Shark"
+          ],
+          "title_ocr_excerpt": "Half Position Serenade The Shark",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0729,
+          "has_staff_hint": true,
+          "horizontal_line_count": 38,
+          "page_number": 51,
+          "text_excerpt": "\u00a9 =] \u00b0 eS D.C. al Fine",
+          "title_candidates": [
+            "Running"
+          ],
+          "title_ocr_excerpt": "Running",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0668,
+          "has_staff_hint": true,
+          "horizontal_line_count": 45,
+          "page_number": 52,
+          "text_excerpt": "31 Going Baroque aA< 124 2 124 SS deve pale ES , vvii 42 atte a \u2014 = yt} cresc, , f \u2014~",
+          "title_candidates": [
+            "Going Baroque ."
+          ],
+          "title_ocr_excerpt": "Going Baroque",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0558,
+          "has_staff_hint": true,
+          "horizontal_line_count": 42,
+          "page_number": 53,
+          "text_excerpt": "Spanish Dance i",
+          "title_candidates": [
+            "Spanish Dance"
+          ],
+          "title_ocr_excerpt": "Spanish Dance",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0579,
+          "has_staff_hint": true,
+          "horizontal_line_count": 46,
+          "page_number": 54,
+          "text_excerpt": "At The Ball p< AN ir i Ire ia HU z 4 Lin) Hh Hi i el Ah",
+          "title_candidates": [
+            "At The Ball"
+          ],
+          "title_ocr_excerpt": "At The Ball",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0467,
+          "has_staff_hint": true,
+          "horizontal_line_count": 32,
+          "page_number": 55,
+          "text_excerpt": "Sad Song ty Oe |e Na ee ot a a",
+          "title_candidates": [
+            "Sad Song"
+          ],
+          "title_ocr_excerpt": "Sad Song",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0568,
+          "has_staff_hint": true,
+          "horizontal_line_count": 46,
+          "page_number": 56,
+          "text_excerpt": "Walking Home => fegagee Sth < | seul ce",
+          "title_candidates": [
+            "Walking Home"
+          ],
+          "title_ocr_excerpt": "Walking Home",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0574,
+          "has_staff_hint": true,
+          "horizontal_line_count": 47,
+          "page_number": 57,
+          "text_excerpt": "Landler z im ky ef ff n 52> pe arco eS aE SaaS aeaee aa = ee ee i . fe wy 2 peta St D.C. al Fine",
+          "title_candidates": [
+            "Landler"
+          ],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0729,
+          "has_staff_hint": true,
+          "horizontal_line_count": 44,
+          "page_number": 58,
+          "text_excerpt": "37 Feeling Fine * D.C. al Fine",
+          "title_candidates": [
+            "Feeling Fine"
+          ],
+          "title_ocr_excerpt": "Feeling Fine",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0339,
+          "has_staff_hint": true,
+          "horizontal_line_count": 35,
+          "page_number": 59,
+          "text_excerpt": "The Irish Tenor 1 9 e 2 tte \u00ab 3 \u2014~ Ve ~ s ef poets EE fh - PES Ee - \u2014\u2014\u2014 | mp \u2014= arco \u2014 22 4 ral. \u2014\u2014\u2014 pp mu lenio ; vv S: 2. a ae ee ee eee r @ az v e",
+          "title_candidates": [
+            "The Irish Tenor"
+          ],
+          "title_ocr_excerpt": "The Irish Tenor",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0585,
+          "has_staff_hint": true,
+          "horizontal_line_count": 48,
+          "page_number": 60,
+          "text_excerpt": "Melancholy D.C. al Fine",
+          "title_candidates": [
+            "Melancholy"
+          ],
+          "title_ocr_excerpt": "Melancholy",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0564,
+          "has_staff_hint": true,
+          "horizontal_line_count": 46,
+          "page_number": 61,
+          "text_excerpt": "Jack Spratt Dances with His Wife",
+          "title_candidates": [
+            "Jack Spratt Dances with His Wife"
+          ],
+          "title_ocr_excerpt": "Jack Spratt Dances with His Wife",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0511,
+          "has_staff_hint": true,
+          "horizontal_line_count": 47,
+          "page_number": 62,
+          "text_excerpt": "Jack Spratt Dances with His Wife -- page 2",
+          "title_candidates": [
+            "Jack Spratt Dances with His Wife"
+          ],
+          "title_ocr_excerpt": null,
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0637,
+          "has_staff_hint": true,
+          "horizontal_line_count": 55,
+          "page_number": 63,
+          "text_excerpt": "Playing in the Park dese L\u2014\u2014~ 4 4 o ft tee oe = = a",
+          "title_candidates": [
+            "Playing in the Park"
+          ],
+          "title_ocr_excerpt": "Playing in the Park",
+          "warnings": []
+        },
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0578,
+          "has_staff_hint": true,
+          "horizontal_line_count": 57,
+          "page_number": 64,
+          "text_excerpt": "63 I Got the Blues, Baby ieee ba-by\u2014 _I got the} blues ba-by\u2014 I got the \u00b0 4 ia) 4 o ffftft \u00a3 sf 4 FRESE SE = 3 \u2014s) \u2014 a a a) cel - lo play- in\u2019 blu - es__ Yeah, they\u2019re the | prac - tic-in\u2019 my shift- ing piece blu- es__ I got the",
+          "title_candidates": [
+            "I Got the Blues, Baby"
+          ],
+          "title_ocr_excerpt": "I Got the Blues, Baby",
+          "warnings": []
+        },
+        {
+          "classification": "front_matter",
+          "dark_pixel_ratio": 0.043,
+          "has_staff_hint": true,
+          "horizontal_line_count": 19,
+          "page_number": 65,
+          "text_excerpt": "ISBN 0-87487-762-8 HM 9 HN Double Stops for Cello (0760) Ensembles for Cello Vol. 1 (0296) Ensembles for Cello Vol. 2 (0298) Ensembles for Cello Vol. 3 (0299) Position Pieces for Cello Book 1 \u2014 (0762) postion Pieces for Cello Book 2 (20572) Thumb Positidn for Cello Book 1 \u2014 (0763) Thumb Position for\u20acello Book 2 (0764) Thomb Other Publications by Rick Mooney: S lk \u00b0 Ensembles for Cello Position \u201c> jor Celte oj Steel\u201d Position Pieces for Cello Position Pieces by Rick Mooney \u2014\u2014\u2014\u2014\u2014\u2014 SUMMY-BIRCHARD IN\u00a2 SUMMY-BIRCHARD, INC. Alfred Distributed by (| Alfred Publishing Co., Inc. wa%) alfred.com $10.95 in USA 0762 hy 4 29156) |",
+          "title_candidates": [
+            "Thomb",
+            "Position"
+          ],
+          "title_ocr_excerpt": "Thomb Position",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "Fanfare",
+            "Skating"
+          ],
+          "multi_piece_page": true,
+          "page_end": 6,
+          "page_start": 6,
+          "primary_instrument": "Cello",
+          "title": "Fanfare / Skating",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "The Elephant\u2019s Waltz",
+            "The Tired Tortoise"
+          ],
+          "multi_piece_page": true,
+          "page_end": 7,
+          "page_start": 7,
+          "primary_instrument": "Cello",
+          "title": "The Elephant\u2019s Waltz / The Tired Tortoise",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "The Whale\u2019s Song ."
+          ],
+          "multi_piece_page": false,
+          "page_end": 8,
+          "page_start": 8,
+          "primary_instrument": "Cello",
+          "title": "The Whale\u2019s Song .",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "March"
+          ],
+          "multi_piece_page": false,
+          "page_end": 9,
+          "page_start": 9,
+          "primary_instrument": "Cello",
+          "title": "March",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Sitting in the Shade"
+          ],
+          "multi_piece_page": false,
+          "page_end": 10,
+          "page_start": 10,
+          "primary_instrument": "Cello",
+          "title": "Sitting in the Shade",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "Bugle Call",
+            "Toy Soldiers"
+          ],
+          "multi_piece_page": true,
+          "page_end": 11,
+          "page_start": 11,
+          "primary_instrument": "Cello",
+          "title": "Bugle Call / Toy Soldiers",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Lament"
+          ],
+          "multi_piece_page": false,
+          "page_end": 12,
+          "page_start": 12,
+          "primary_instrument": "Cello",
+          "title": "Lament",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "The Invisible Target",
+            "Pachyderm Parade"
+          ],
+          "multi_piece_page": true,
+          "page_end": 13,
+          "page_start": 13,
+          "primary_instrument": "Cello",
+          "title": "The Invisible Target / Pachyderm Parade",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "Ballad",
+            "C Song"
+          ],
+          "multi_piece_page": true,
+          "page_end": 16,
+          "page_start": 16,
+          "primary_instrument": "Cello",
+          "title": "Ballad / C Song",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "Somersaults and Cartwheels",
+            "Tango"
+          ],
+          "multi_piece_page": true,
+          "page_end": 17,
+          "page_start": 17,
+          "primary_instrument": "Cello",
+          "title": "Somersaults and Cartwheels / Tango",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Erik\u2019s Minuet"
+          ],
+          "multi_piece_page": false,
+          "page_end": 18,
+          "page_start": 18,
+          "primary_instrument": "Cello",
+          "title": "Erik\u2019s Minuet",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "Japanese Garden",
+            "I'm So Sleepy"
+          ],
+          "multi_piece_page": true,
+          "page_end": 21,
+          "page_start": 21,
+          "primary_instrument": "Cello",
+          "title": "Japanese Garden / I'm So Sleepy",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "March of the Dinosaurs",
+            "The Haunted House"
+          ],
+          "multi_piece_page": true,
+          "page_end": 22,
+          "page_start": 22,
+          "primary_instrument": "Cello",
+          "title": "March of the Dinosaurs / The Haunted House",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "I Was a Teenage Monster."
+          ],
+          "multi_piece_page": false,
+          "page_end": 23,
+          "page_start": 23,
+          "primary_instrument": "Cello",
+          "title": "I Was a Teenage Monster.",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "I\u2019ve Got Homework"
+          ],
+          "multi_piece_page": false,
+          "page_end": 26,
+          "page_start": 26,
+          "primary_instrument": "Cello",
+          "title": "I\u2019ve Got Homework",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Valse Triste"
+          ],
+          "multi_piece_page": false,
+          "page_end": 27,
+          "page_start": 27,
+          "primary_instrument": "Cello",
+          "title": "Valse Triste",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Sicilienne"
+          ],
+          "multi_piece_page": false,
+          "page_end": 28,
+          "page_start": 28,
+          "primary_instrument": "Cello",
+          "title": "Sicilienne",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Etude"
+          ],
+          "multi_piece_page": false,
+          "page_end": 29,
+          "page_start": 29,
+          "primary_instrument": "Cello",
+          "title": "Etude",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Church Bells"
+          ],
+          "multi_piece_page": false,
+          "page_end": 32,
+          "page_start": 32,
+          "primary_instrument": "Cello",
+          "title": "Church Bells",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "A Minor Melody",
+            "The Big Kangaroo"
+          ],
+          "multi_piece_page": true,
+          "page_end": 33,
+          "page_start": 33,
+          "primary_instrument": "Cello",
+          "title": "A Minor Melody / The Big Kangaroo",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "A Cloudy Day"
+          ],
+          "multi_piece_page": false,
+          "page_end": 34,
+          "page_start": 34,
+          "primary_instrument": "Cello",
+          "title": "A Cloudy Day",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Busy Bees"
+          ],
+          "multi_piece_page": false,
+          "page_end": 35,
+          "page_start": 35,
+          "primary_instrument": "Cello",
+          "title": "Busy Bees",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "In A Hurry"
+          ],
+          "multi_piece_page": false,
+          "page_end": 36,
+          "page_start": 36,
+          "primary_instrument": "Cello",
+          "title": "In A Hurry",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "The Troubadour",
+            "Hoedown"
+          ],
+          "multi_piece_page": true,
+          "page_end": 39,
+          "page_start": 39,
+          "primary_instrument": "Cello",
+          "title": "The Troubadour / Hoedown",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "A Waltz"
+          ],
+          "multi_piece_page": false,
+          "page_end": 40,
+          "page_start": 40,
+          "primary_instrument": "Cello",
+          "title": "A Waltz",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "The Hippopotamus\u2019 Dance."
+          ],
+          "multi_piece_page": false,
+          "page_end": 41,
+          "page_start": 41,
+          "primary_instrument": "Cello",
+          "title": "The Hippopotamus\u2019 Dance.",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "The Heavy Highlander",
+            "Barcarole"
+          ],
+          "multi_piece_page": true,
+          "page_end": 42,
+          "page_start": 42,
+          "primary_instrument": "Cello",
+          "title": "The Heavy Highlander / Barcarole",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "Dreamland",
+            "Marching Martians"
+          ],
+          "multi_piece_page": true,
+          "page_end": 45,
+          "page_start": 45,
+          "primary_instrument": "Cello",
+          "title": "Dreamland / Marching Martians",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "Bugle Call",
+            "The Tiny Ballerina"
+          ],
+          "multi_piece_page": true,
+          "page_end": 46,
+          "page_start": 46,
+          "primary_instrument": "Cello",
+          "title": "Bugle Call / The Tiny Ballerina",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Jig"
+          ],
+          "multi_piece_page": false,
+          "page_end": 47,
+          "page_start": 47,
+          "primary_instrument": "Cello",
+          "title": "Jig",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.8,
+          "contained_piece_titles": [
+            "Half Position Serenade",
+            "The Shark"
+          ],
+          "multi_piece_page": true,
+          "page_end": 50,
+          "page_start": 50,
+          "primary_instrument": "Cello",
+          "title": "Half Position Serenade / The Shark",
+          "validation_warnings": [
+            "Multiple short pieces detected on one page; kept together as one shared page item."
+          ]
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Running"
+          ],
+          "multi_piece_page": false,
+          "page_end": 51,
+          "page_start": 51,
+          "primary_instrument": "Cello",
+          "title": "Running",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Going Baroque ."
+          ],
+          "multi_piece_page": false,
+          "page_end": 52,
+          "page_start": 52,
+          "primary_instrument": "Cello",
+          "title": "Going Baroque .",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Spanish Dance"
+          ],
+          "multi_piece_page": false,
+          "page_end": 53,
+          "page_start": 53,
+          "primary_instrument": "Cello",
+          "title": "Spanish Dance",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "At The Ball"
+          ],
+          "multi_piece_page": false,
+          "page_end": 54,
+          "page_start": 54,
+          "primary_instrument": "Cello",
+          "title": "At The Ball",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Sad Song"
+          ],
+          "multi_piece_page": false,
+          "page_end": 55,
+          "page_start": 55,
+          "primary_instrument": "Cello",
+          "title": "Sad Song",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Walking Home"
+          ],
+          "multi_piece_page": false,
+          "page_end": 56,
+          "page_start": 56,
+          "primary_instrument": "Cello",
+          "title": "Walking Home",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Landler"
+          ],
+          "multi_piece_page": false,
+          "page_end": 57,
+          "page_start": 57,
+          "primary_instrument": "Cello",
+          "title": "Landler",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Feeling Fine"
+          ],
+          "multi_piece_page": false,
+          "page_end": 58,
+          "page_start": 58,
+          "primary_instrument": "Cello",
+          "title": "Feeling Fine",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "The Irish Tenor"
+          ],
+          "multi_piece_page": false,
+          "page_end": 59,
+          "page_start": 59,
+          "primary_instrument": "Cello",
+          "title": "The Irish Tenor",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Melancholy"
+          ],
+          "multi_piece_page": false,
+          "page_end": 60,
+          "page_start": 60,
+          "primary_instrument": "Cello",
+          "title": "Melancholy",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Jack Spratt Dances with His Wife"
+          ],
+          "multi_piece_page": false,
+          "page_end": 62,
+          "page_start": 61,
+          "primary_instrument": "Cello",
+          "title": "Jack Spratt Dances with His Wife",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "Playing in the Park"
+          ],
+          "multi_piece_page": false,
+          "page_end": 63,
+          "page_start": 63,
+          "primary_instrument": "Cello",
+          "title": "Playing in the Park",
+          "validation_warnings": []
+        },
+        {
+          "composer": "Rick Mooney",
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "I Got the Blues, Baby"
+          ],
+          "multi_piece_page": false,
+          "page_end": 64,
+          "page_start": 64,
+          "primary_instrument": "Cello",
+          "title": "I Got the Blues, Baby",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.78,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "Position Wy - % Pieces \\. for EY Rick Mooney"
+      },
+      {
+        "page_number": 2,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "Contents A Note to Student ..........0.cccceeeeeee2 \u201cUpper\u201d Second Position A Minot Melody. Target Practice and Geography Quiz....3 The Big Kangaroo...............cccseeee000 32 Names and Numbe?s...............00cesee004 A Cloudy Day......s.sesscsscsesestsseeeneeeee 33 Fanfare ......s.ssccssssssessssseessseseesseesseeeeed Busy Bees........:.ecsssssssssssesseseseeseeeeees 34 Skating.......ccccceccescsseeessseessessesseeeeeeed In a HUITY...o ec eeseseceeecseeeseseseseseeeeeee 35 The Elephant\u2019s Wa..."
+      },
+      {
+        "page_number": 3,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "A Note to Students The pieces in this book have been specially designed to help you find certain im- portant notes (I call them \u201ctargets\u201d) on the cello fingerboard. The notes that I think of as targets have the same names as the open strings. That way, I can al- ways be sure I have hit the \u201c\u2018bull\u2019s eye\u201d by testing the fingered note with an open string. These pieces also help you to learn how certain other notes are easy to play once you have hit the target. For example, if you are very good at..."
+      },
+      {
+        "page_number": 4,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "3 4 i t4 99 rm Upper First Position a } o Second - Position ; ; Target Practice 0 ef o ao 0 4 ) 2 0 \u2018 0 > \u2014\u2014\u2014\u2014\u2014 i ot _\u2014\u2014\u2014\u2014 rt SI \u2014\u2014_\u2014\u2014 TT \u2014\u2014\u2014\u2014\u2014\u2014 3S oe ee ee, f--\u2014+ \u20144 [+4 \u201c| {2 4 @ Oo} oa a ag I I Tl I 1 it ity 0 IV ll Iv ml Geography Quiz Your 2nd finger is on D on the A-string. Answer the following questions: What note will be played by: What finger will you use to play: lonthe A-string? __ FE on the A-string? __ 3 on the A-string? __ Aon the D-string? = __ What is another . name for that not..."
+      }
+    ],
+    "ocr_text_excerpt": "Position Wy - % Pieces \\. for EY Rick Mooney Contents A Note to Student ..........0.cccceeeeeee2 \u201cUpper\u201d Second Position A Minot Melody. Target Practice and Geography Quiz....3 The Big Kangaroo...............cccseeee000 32 Names and Numbe?s...............00cesee004 A Cloudy Day......s.sesscsscsesestsseeeneeeee 33 Fanfare ......s.ssccssssssessssseessseseesseesseeeeed Busy Bees........:.ecsssssssssssesseseseeseeeeees 34 Skating.......ccccceccescsseeessseessessesseeeeeeed In a HUITY...o ec eeseseceeecseeeseseseseseeeeeee 35 The Elephant\u2019s Walltz............:0:00002006 Pp \u201d \"Tht ses The Tired Tortoise...........:ssecsesseeseeee+6 Upper\u201d Third Position The Whale\u2019s Song .........s:ssessessesseeseeeee 7 Target Practice and Geography Quiz..36 Match ........sseesssecscssesessseesseesseessseesse Names and Numbers.............++-+0+04+37 Sitting in the Shade............. cesses D The Troubadour ...........esseeseesseerseee 38 Bugle Call .........c.cc:cesessesesseeseseeseeeee 10 bs (0-00 (0) | ES...",
+    "title": "Position"
+  },
+  "score_versions": {
+    "e778f35a-7a8f-41e2-9c1a-8d02152ee8b0": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "fec8c725-287b-4fb1-bd62-e2999349c131": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "e778f35a-7a8f-41e2-9c1a-8d02152ee8b0",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "position pieces for cello book 1",
+  "source_book_fingerprint": "book_sha256:8cef428183a3be697d28d69a450878038b556666a18aadb68483ace0e9b47dcc",
+  "source_book_id": null,
+  "source_content_sha256": "8cef428183a3be697d28d69a450878038b556666a18aadb68483ace0e9b47dcc",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "Position Pieces for Cello, Book 1",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}

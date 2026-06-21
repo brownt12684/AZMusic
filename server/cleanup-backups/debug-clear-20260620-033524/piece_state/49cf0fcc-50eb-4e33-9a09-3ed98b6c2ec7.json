@@ -1,0 +1,129 @@
+{
+  "attempt_status": "canonical",
+  "book_or_collection": "Position Pieces for Cello, Book 1",
+  "canonical_piece_id": "49cf0fcc-50eb-4e33-9a09-3ed98b6c2ec7",
+  "catalog_metadata": {
+    "book_or_collection": "Position Pieces for Cello, Book 1",
+    "composer": "Rick Mooney",
+    "ocr_confidence": 0.66,
+    "ocr_effort": "balanced",
+    "ocr_engine": "tesseract",
+    "ocr_language": "eng",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "58 The Irish Tenor dew y YN oN 4 \u2014 4. F, Oey ig pe ro ee gg 4 Se \u2014\u2014\u2014\u2014 \u2014\u2014\u2014\u2014\u2014 \u2014 \u2014\u2014\u2014\u2014 Se ee eS a ee ee ey ers | te oo a, a a ee ee oe ee ee ee a oe a \u2014 2 ca i i\u2019 v 4 3 5 ma hee 4 _ 2 sb m\u2122 ez. Coy ee PT Oo \u2014\u2014 or 89 eee Ero Ss \u2014 a a A _ ee eSSSSeSeeeaeeEe\u2014EE_\u2014\u2014E\u2014 = a a eee ee aan \u2014 - a aa ae eS _\u2014\u2014 a a a a oe 4+\u2014__ ~ 4 1 : - 9 f =o Woe occa , opp PPE 2 Ge Be] [es ee ee ee es a en \u2014\u2014 \u2014 g sl _= , ee \u2014\u2014 ee ee ee ee ep gg a Ym YO A ; . 8 4 13 ty \u00b0 2s? or 2 : cm ee ee ee DS SS SSS SS ee tw es | 0 Vv oN..."
+      }
+    ],
+    "ocr_render_scale": 2,
+    "ocr_text_excerpt": "58 The Irish Tenor dew y YN oN 4 \u2014 4. F, Oey ig pe ro ee gg 4 Se \u2014\u2014\u2014\u2014 \u2014\u2014\u2014\u2014\u2014 \u2014 \u2014\u2014\u2014\u2014 Se ee eS a ee ee ey ers | te oo a, a a ee ee oe ee ee ee a oe a \u2014 2 ca i i\u2019 v 4 3 5 ma hee 4 _ 2 sb m\u2122 ez. Coy ee PT Oo \u2014\u2014 or 89 eee Ero Ss \u2014 a a A _ ee eSSSSeSeeeaeeEe\u2014EE_\u2014\u2014E\u2014 = a a eee ee aan \u2014 - a aa ae eS _\u2014\u2014 a a a a oe 4+\u2014__ ~ 4 1 : - 9 f =o Woe occa , opp PPE 2 Ge Be] [es ee ee ee es a en \u2014\u2014 \u2014 g sl _= , ee \u2014\u2014 ee ee ee ee ep gg a Ym YO A ; . 8 4 13 ty \u00b0 2s? or 2 : cm ee ee ee DS SS SSS SS ee tw es | 0 Vv oN \u2014 it TT Ol A TS A SF ee A AS A ee ee",
+    "opus": "opp PPE 2 Ge Be",
+    "primary_instrument": "Cello",
+    "source_file_name": "1c5e4dd6-215a-4bc7-b8e4-135e6fc127fe.pdf",
+    "title": "The Irish Tenor"
+  },
+  "catalog_suggestions": [
+    {
+      "confidence": 0.66,
+      "fields": {
+        "opus": "opp PPE 2 Ge Be",
+        "title": "The Irish Tenor"
+      },
+      "source": "ocr_text"
+    }
+  ],
+  "composer": "Rick Mooney",
+  "duplicate_attempt_count": 0,
+  "logical_piece_key": "book|book_sha256:e2d10a60c44b9d0f9e3c86184bca2cf927a239b2e7922cbbf446a0131193bb94",
+  "normalized_composer": "rick mooney",
+  "normalized_title": "the irish tenor",
+  "notes": null,
+  "piece_kind": "book",
+  "previous_visible_to_profile_ids": [],
+  "primary_instrument": "Cello",
+  "processed_metadata": {
+    "book_preprocessing": {
+      "book_metadata": {
+        "ocr_effort": "balanced",
+        "ocr_language": "eng",
+        "ocr_render_scale": 2,
+        "source_file_name": "1c5e4dd6-215a-4bc7-b8e4-135e6fc127fe.pdf",
+        "title": "The Irish Tenor"
+      },
+      "page_count": 1,
+      "page_facts": [
+        {
+          "classification": "music_piece",
+          "dark_pixel_ratio": 0.0339,
+          "has_staff_hint": true,
+          "horizontal_line_count": 35,
+          "page_number": 1,
+          "text_excerpt": "The Irish Tenor 1 9 e 2 tte \u00ab 3 \u2014~ Ve ~ s ef poets EE fh - PES Ee - \u2014\u2014\u2014 | mp \u2014= arco \u2014 22 4 ral. \u2014\u2014\u2014 pp mu lenio ; vv S: 2. a ae ee ee eee r @ az v e",
+          "title_candidates": [
+            "The Irish Tenor"
+          ],
+          "title_ocr_excerpt": "The Irish Tenor",
+          "warnings": []
+        }
+      ],
+      "split_proposals": [
+        {
+          "composer": null,
+          "confidence": 0.84,
+          "contained_piece_titles": [
+            "The Irish Tenor"
+          ],
+          "multi_piece_page": false,
+          "page_end": 1,
+          "page_start": 1,
+          "primary_instrument": null,
+          "title": "The Irish Tenor",
+          "validation_warnings": []
+        }
+      ],
+      "warnings": []
+    },
+    "ocr_confidence": 0.66,
+    "ocr_engine": "tesseract",
+    "ocr_pages": [
+      {
+        "page_number": 1,
+        "source": "tesseract_pdf_page",
+        "text_excerpt": "58 The Irish Tenor dew y YN oN 4 \u2014 4. F, Oey ig pe ro ee gg 4 Se \u2014\u2014\u2014\u2014 \u2014\u2014\u2014\u2014\u2014 \u2014 \u2014\u2014\u2014\u2014 Se ee eS a ee ee ey ers | te oo a, a a ee ee oe ee ee ee a oe a \u2014 2 ca i i\u2019 v 4 3 5 ma hee 4 _ 2 sb m\u2122 ez. Coy ee PT Oo \u2014\u2014 or 89 eee Ero Ss \u2014 a a A _ ee eSSSSeSeeeaeeEe\u2014EE_\u2014\u2014E\u2014 = a a eee ee aan \u2014 - a aa ae eS _\u2014\u2014 a a a a oe 4+\u2014__ ~ 4 1 : - 9 f =o Woe occa , opp PPE 2 Ge Be] [es ee ee ee es a en \u2014\u2014 \u2014 g sl _= , ee \u2014\u2014 ee ee ee ee ep gg a Ym YO A ; . 8 4 13 ty \u00b0 2s? or 2 : cm ee ee ee DS SS SSS SS ee tw es | 0 Vv oN..."
+      }
+    ],
+    "ocr_text_excerpt": "58 The Irish Tenor dew y YN oN 4 \u2014 4. F, Oey ig pe ro ee gg 4 Se \u2014\u2014\u2014\u2014 \u2014\u2014\u2014\u2014\u2014 \u2014 \u2014\u2014\u2014\u2014 Se ee eS a ee ee ey ers | te oo a, a a ee ee oe ee ee ee a oe a \u2014 2 ca i i\u2019 v 4 3 5 ma hee 4 _ 2 sb m\u2122 ez. Coy ee PT Oo \u2014\u2014 or 89 eee Ero Ss \u2014 a a A _ ee eSSSSeSeeeaeeEe\u2014EE_\u2014\u2014E\u2014 = a a eee ee aan \u2014 - a aa ae eS _\u2014\u2014 a a a a oe 4+\u2014__ ~ 4 1 : - 9 f =o Woe occa , opp PPE 2 Ge Be] [es ee ee ee es a en \u2014\u2014 \u2014 g sl _= , ee \u2014\u2014 ee ee ee ee ep gg a Ym YO A ; . 8 4 13 ty \u00b0 2s? or 2 : cm ee ee ee DS SS SSS SS ee tw es | 0 Vv oN \u2014 it TT Ol A TS A SF ee A AS A ee ee",
+    "opus": "opp PPE 2 Ge Be",
+    "title": "The Irish Tenor"
+  },
+  "score_versions": {
+    "75fae521-7dad-4f2d-9654-d7dbee2374a4": {
+      "approved_by_parent": true,
+      "artifact_role": "original_import",
+      "display_rank": 100,
+      "student_default": false
+    },
+    "78095713-7d3d-436a-bcb3-bf993ce5801a": {
+      "approved_by_parent": false,
+      "artifact_role": "cleaned_pdf",
+      "display_rank": 10,
+      "replaces_score_version_id": "75fae521-7dad-4f2d-9654-d7dbee2374a4",
+      "student_default": true
+    }
+  },
+  "sort_composer": "rick mooney",
+  "sort_title": "irish tenor",
+  "source_book_fingerprint": "book_sha256:e2d10a60c44b9d0f9e3c86184bca2cf927a239b2e7922cbbf446a0131193bb94",
+  "source_book_id": null,
+  "source_content_sha256": "e2d10a60c44b9d0f9e3c86184bca2cf927a239b2e7922cbbf446a0131193bb94",
+  "source_page_end": null,
+  "source_page_start": null,
+  "split_confidence": null,
+  "title": "The Irish Tenor",
+  "validation_warnings": [
+    "No readable PDF text layer was found on the first pages."
+  ],
+  "visible_to_profile_ids": [],
+  "workflow_closed": false
+}
