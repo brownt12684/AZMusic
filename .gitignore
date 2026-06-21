@@ -95,6 +95,11 @@ server/*.db-shm
 server/*.db-wal
 server/.env
 
+# Server backups (may contain SQLite DBs and PDFs with PII — never commit)
+server/cleanup-backups/
+server/*-backup*/
+server/backups/
+
 # IDEs
 .vscode/
 .idea/
