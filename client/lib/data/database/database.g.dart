@@ -4047,7 +4047,7 @@ class AnnotationNotesCompanion extends UpdateCompanion<AnnotationNoteRow> {
 }
 
 class $MediaAssetsTable extends MediaAssets
-    with TableInfo<$MediaAssetsTable, MediaAsset> {
+    with TableInfo<$MediaAssetsTable, MediaAssetRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -4132,7 +4132,7 @@ class $MediaAssetsTable extends MediaAssets
   String get actualTableName => $name;
   static const String $name = 'media_assets';
   @override
-  VerificationContext validateIntegrity(Insertable<MediaAsset> instance,
+  VerificationContext validateIntegrity(Insertable<MediaAssetRow> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
@@ -4199,9 +4199,9 @@ class $MediaAssetsTable extends MediaAssets
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  MediaAsset map(Map<String, dynamic> data, {String? tablePrefix}) {
+  MediaAssetRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return MediaAsset(
+    return MediaAssetRow(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       pieceId: attachedDatabase.typeMapping
@@ -4231,7 +4231,7 @@ class $MediaAssetsTable extends MediaAssets
   }
 }
 
-class MediaAsset extends DataClass implements Insertable<MediaAsset> {
+class MediaAssetRow extends DataClass implements Insertable<MediaAssetRow> {
   final String id;
   final String pieceId;
   final String filePath;
@@ -4242,7 +4242,7 @@ class MediaAsset extends DataClass implements Insertable<MediaAsset> {
   final String? thumbnailPath;
   final DateTime createdAt;
   final DateTime updatedAt;
-  const MediaAsset(
+  const MediaAssetRow(
       {required this.id,
       required this.pieceId,
       required this.filePath,
@@ -4300,10 +4300,10 @@ class MediaAsset extends DataClass implements Insertable<MediaAsset> {
     );
   }
 
-  factory MediaAsset.fromJson(Map<String, dynamic> json,
+  factory MediaAssetRow.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return MediaAsset(
+    return MediaAssetRow(
       id: serializer.fromJson<String>(json['id']),
       pieceId: serializer.fromJson<String>(json['pieceId']),
       filePath: serializer.fromJson<String>(json['filePath']),
@@ -4333,7 +4333,7 @@ class MediaAsset extends DataClass implements Insertable<MediaAsset> {
     };
   }
 
-  MediaAsset copyWith(
+  MediaAssetRow copyWith(
           {String? id,
           String? pieceId,
           String? filePath,
@@ -4344,7 +4344,7 @@ class MediaAsset extends DataClass implements Insertable<MediaAsset> {
           Value<String?> thumbnailPath = const Value.absent(),
           DateTime? createdAt,
           DateTime? updatedAt}) =>
-      MediaAsset(
+      MediaAssetRow(
         id: id ?? this.id,
         pieceId: pieceId ?? this.pieceId,
         filePath: filePath ?? this.filePath,
@@ -4358,8 +4358,8 @@ class MediaAsset extends DataClass implements Insertable<MediaAsset> {
         createdAt: createdAt ?? this.createdAt,
         updatedAt: updatedAt ?? this.updatedAt,
       );
-  MediaAsset copyWithCompanion(MediaAssetsCompanion data) {
-    return MediaAsset(
+  MediaAssetRow copyWithCompanion(MediaAssetsCompanion data) {
+    return MediaAssetRow(
       id: data.id.present ? data.id.value : this.id,
       pieceId: data.pieceId.present ? data.pieceId.value : this.pieceId,
       filePath: data.filePath.present ? data.filePath.value : this.filePath,
@@ -4380,7 +4380,7 @@ class MediaAsset extends DataClass implements Insertable<MediaAsset> {
 
   @override
   String toString() {
-    return (StringBuffer('MediaAsset(')
+    return (StringBuffer('MediaAssetRow(')
           ..write('id: $id, ')
           ..write('pieceId: $pieceId, ')
           ..write('filePath: $filePath, ')
@@ -4401,7 +4401,7 @@ class MediaAsset extends DataClass implements Insertable<MediaAsset> {
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is MediaAsset &&
+      (other is MediaAssetRow &&
           other.id == this.id &&
           other.pieceId == this.pieceId &&
           other.filePath == this.filePath &&
@@ -4414,7 +4414,7 @@ class MediaAsset extends DataClass implements Insertable<MediaAsset> {
           other.updatedAt == this.updatedAt);
 }
 
-class MediaAssetsCompanion extends UpdateCompanion<MediaAsset> {
+class MediaAssetsCompanion extends UpdateCompanion<MediaAssetRow> {
   final Value<String> id;
   final Value<String> pieceId;
   final Value<String> filePath;
@@ -4457,7 +4457,7 @@ class MediaAssetsCompanion extends UpdateCompanion<MediaAsset> {
         format = Value(format),
         createdAt = Value(createdAt),
         updatedAt = Value(updatedAt);
-  static Insertable<MediaAsset> custom({
+  static Insertable<MediaAssetRow> custom({
     Expression<String>? id,
     Expression<String>? pieceId,
     Expression<String>? filePath,
@@ -4571,7 +4571,7 @@ class MediaAssetsCompanion extends UpdateCompanion<MediaAsset> {
 }
 
 class $MediaMatchCandidatesTable extends MediaMatchCandidates
-    with TableInfo<$MediaMatchCandidatesTable, MediaMatchCandidate> {
+    with TableInfo<$MediaMatchCandidatesTable, MediaMatchCandidateRow> {
   @override
   final GeneratedDatabase attachedDatabase;
   final String? _alias;
@@ -4649,7 +4649,7 @@ class $MediaMatchCandidatesTable extends MediaMatchCandidates
   static const String $name = 'media_match_candidates';
   @override
   VerificationContext validateIntegrity(
-      Insertable<MediaMatchCandidate> instance,
+      Insertable<MediaMatchCandidateRow> instance,
       {bool isInserting = false}) {
     final context = VerificationContext();
     final data = instance.toColumns(true);
@@ -4710,9 +4710,9 @@ class $MediaMatchCandidatesTable extends MediaMatchCandidates
   @override
   Set<GeneratedColumn> get $primaryKey => {id};
   @override
-  MediaMatchCandidate map(Map<String, dynamic> data, {String? tablePrefix}) {
+  MediaMatchCandidateRow map(Map<String, dynamic> data, {String? tablePrefix}) {
     final effectivePrefix = tablePrefix != null ? '$tablePrefix.' : '';
-    return MediaMatchCandidate(
+    return MediaMatchCandidateRow(
       id: attachedDatabase.typeMapping
           .read(DriftSqlType.string, data['${effectivePrefix}id'])!,
       mediaAssetId: attachedDatabase.typeMapping
@@ -4738,8 +4738,8 @@ class $MediaMatchCandidatesTable extends MediaMatchCandidates
   }
 }
 
-class MediaMatchCandidate extends DataClass
-    implements Insertable<MediaMatchCandidate> {
+class MediaMatchCandidateRow extends DataClass
+    implements Insertable<MediaMatchCandidateRow> {
   final String id;
   final String mediaAssetId;
   final String pieceId;
@@ -4748,7 +4748,7 @@ class MediaMatchCandidate extends DataClass
   final String status;
   final String? aiNotes;
   final DateTime createdAt;
-  const MediaMatchCandidate(
+  const MediaMatchCandidateRow(
       {required this.id,
       required this.mediaAssetId,
       required this.pieceId,
@@ -4788,10 +4788,10 @@ class MediaMatchCandidate extends DataClass
     );
   }
 
-  factory MediaMatchCandidate.fromJson(Map<String, dynamic> json,
+  factory MediaMatchCandidateRow.fromJson(Map<String, dynamic> json,
       {ValueSerializer? serializer}) {
     serializer ??= driftRuntimeOptions.defaultSerializer;
-    return MediaMatchCandidate(
+    return MediaMatchCandidateRow(
       id: serializer.fromJson<String>(json['id']),
       mediaAssetId: serializer.fromJson<String>(json['mediaAssetId']),
       pieceId: serializer.fromJson<String>(json['pieceId']),
@@ -4817,7 +4817,7 @@ class MediaMatchCandidate extends DataClass
     };
   }
 
-  MediaMatchCandidate copyWith(
+  MediaMatchCandidateRow copyWith(
           {String? id,
           String? mediaAssetId,
           String? pieceId,
@@ -4826,7 +4826,7 @@ class MediaMatchCandidate extends DataClass
           String? status,
           Value<String?> aiNotes = const Value.absent(),
           DateTime? createdAt}) =>
-      MediaMatchCandidate(
+      MediaMatchCandidateRow(
         id: id ?? this.id,
         mediaAssetId: mediaAssetId ?? this.mediaAssetId,
         pieceId: pieceId ?? this.pieceId,
@@ -4836,8 +4836,8 @@ class MediaMatchCandidate extends DataClass
         aiNotes: aiNotes.present ? aiNotes.value : this.aiNotes,
         createdAt: createdAt ?? this.createdAt,
       );
-  MediaMatchCandidate copyWithCompanion(MediaMatchCandidatesCompanion data) {
-    return MediaMatchCandidate(
+  MediaMatchCandidateRow copyWithCompanion(MediaMatchCandidatesCompanion data) {
+    return MediaMatchCandidateRow(
       id: data.id.present ? data.id.value : this.id,
       mediaAssetId: data.mediaAssetId.present
           ? data.mediaAssetId.value
@@ -4857,7 +4857,7 @@ class MediaMatchCandidate extends DataClass
 
   @override
   String toString() {
-    return (StringBuffer('MediaMatchCandidate(')
+    return (StringBuffer('MediaMatchCandidateRow(')
           ..write('id: $id, ')
           ..write('mediaAssetId: $mediaAssetId, ')
           ..write('pieceId: $pieceId, ')
@@ -4876,7 +4876,7 @@ class MediaMatchCandidate extends DataClass
   @override
   bool operator ==(Object other) =>
       identical(this, other) ||
-      (other is MediaMatchCandidate &&
+      (other is MediaMatchCandidateRow &&
           other.id == this.id &&
           other.mediaAssetId == this.mediaAssetId &&
           other.pieceId == this.pieceId &&
@@ -4888,7 +4888,7 @@ class MediaMatchCandidate extends DataClass
 }
 
 class MediaMatchCandidatesCompanion
-    extends UpdateCompanion<MediaMatchCandidate> {
+    extends UpdateCompanion<MediaMatchCandidateRow> {
   final Value<String> id;
   final Value<String> mediaAssetId;
   final Value<String> pieceId;
@@ -4926,7 +4926,7 @@ class MediaMatchCandidatesCompanion
         similarityScore = Value(similarityScore),
         status = Value(status),
         createdAt = Value(createdAt);
-  static Insertable<MediaMatchCandidate> custom({
+  static Insertable<MediaMatchCandidateRow> custom({
     Expression<String>? id,
     Expression<String>? mediaAssetId,
     Expression<String>? pieceId,
@@ -7903,7 +7903,7 @@ final class $$PiecesTableReferences
         manager.$state.copyWith(prefetchedData: cache));
   }
 
-  static MultiTypedResultKey<$MediaAssetsTable, List<MediaAsset>>
+  static MultiTypedResultKey<$MediaAssetsTable, List<MediaAssetRow>>
       _mediaAssetsRefsTable(_$AppDatabase db) =>
           MultiTypedResultKey.fromTable(db.mediaAssets,
               aliasName:
@@ -7919,7 +7919,7 @@ final class $$PiecesTableReferences
   }
 
   static MultiTypedResultKey<$MediaMatchCandidatesTable,
-      List<MediaMatchCandidate>> _mediaMatchCandidatesRefsTable(
+      List<MediaMatchCandidateRow>> _mediaMatchCandidatesRefsTable(
           _$AppDatabase db) =>
       MultiTypedResultKey.fromTable(db.mediaMatchCandidates,
           aliasName: $_aliasNameGenerator(
@@ -9041,7 +9041,7 @@ final class $$ScoreVersionsTableReferences extends BaseReferences<_$AppDatabase,
   }
 
   static MultiTypedResultKey<$MediaMatchCandidatesTable,
-      List<MediaMatchCandidate>> _mediaMatchCandidatesRefsTable(
+      List<MediaMatchCandidateRow>> _mediaMatchCandidatesRefsTable(
           _$AppDatabase db) =>
       MultiTypedResultKey.fromTable(db.mediaMatchCandidates,
           aliasName: $_aliasNameGenerator(
@@ -10461,7 +10461,7 @@ typedef $$MediaAssetsTableUpdateCompanionBuilder = MediaAssetsCompanion
 });
 
 final class $$MediaAssetsTableReferences
-    extends BaseReferences<_$AppDatabase, $MediaAssetsTable, MediaAsset> {
+    extends BaseReferences<_$AppDatabase, $MediaAssetsTable, MediaAssetRow> {
   $$MediaAssetsTableReferences(super.$_db, super.$_table, super.$_typedResult);
 
   static $PiecesTable _pieceIdTable(_$AppDatabase db) => db.pieces
@@ -10478,7 +10478,7 @@ final class $$MediaAssetsTableReferences
   }
 
   static MultiTypedResultKey<$MediaMatchCandidatesTable,
-      List<MediaMatchCandidate>> _mediaMatchCandidatesRefsTable(
+      List<MediaMatchCandidateRow>> _mediaMatchCandidatesRefsTable(
           _$AppDatabase db) =>
       MultiTypedResultKey.fromTable(db.mediaMatchCandidates,
           aliasName: $_aliasNameGenerator(
@@ -10718,14 +10718,14 @@ class $$MediaAssetsTableAnnotationComposer
 class $$MediaAssetsTableTableManager extends RootTableManager<
     _$AppDatabase,
     $MediaAssetsTable,
-    MediaAsset,
+    MediaAssetRow,
     $$MediaAssetsTableFilterComposer,
     $$MediaAssetsTableOrderingComposer,
     $$MediaAssetsTableAnnotationComposer,
     $$MediaAssetsTableCreateCompanionBuilder,
     $$MediaAssetsTableUpdateCompanionBuilder,
-    (MediaAsset, $$MediaAssetsTableReferences),
-    MediaAsset,
+    (MediaAssetRow, $$MediaAssetsTableReferences),
+    MediaAssetRow,
     PrefetchHooks Function({bool pieceId, bool mediaMatchCandidatesRefs})> {
   $$MediaAssetsTableTableManager(_$AppDatabase db, $MediaAssetsTable table)
       : super(TableManagerState(
@@ -10852,14 +10852,14 @@ class $$MediaAssetsTableTableManager extends RootTableManager<
 typedef $$MediaAssetsTableProcessedTableManager = ProcessedTableManager<
     _$AppDatabase,
     $MediaAssetsTable,
-    MediaAsset,
+    MediaAssetRow,
     $$MediaAssetsTableFilterComposer,
     $$MediaAssetsTableOrderingComposer,
     $$MediaAssetsTableAnnotationComposer,
     $$MediaAssetsTableCreateCompanionBuilder,
     $$MediaAssetsTableUpdateCompanionBuilder,
-    (MediaAsset, $$MediaAssetsTableReferences),
-    MediaAsset,
+    (MediaAssetRow, $$MediaAssetsTableReferences),
+    MediaAssetRow,
     PrefetchHooks Function({bool pieceId, bool mediaMatchCandidatesRefs})>;
 typedef $$MediaMatchCandidatesTableCreateCompanionBuilder
     = MediaMatchCandidatesCompanion Function({
@@ -10887,7 +10887,7 @@ typedef $$MediaMatchCandidatesTableUpdateCompanionBuilder
 });
 
 final class $$MediaMatchCandidatesTableReferences extends BaseReferences<
-    _$AppDatabase, $MediaMatchCandidatesTable, MediaMatchCandidate> {
+    _$AppDatabase, $MediaMatchCandidatesTable, MediaMatchCandidateRow> {
   $$MediaMatchCandidatesTableReferences(
       super.$_db, super.$_table, super.$_typedResult);
 
@@ -11193,14 +11193,14 @@ class $$MediaMatchCandidatesTableAnnotationComposer
 class $$MediaMatchCandidatesTableTableManager extends RootTableManager<
     _$AppDatabase,
     $MediaMatchCandidatesTable,
-    MediaMatchCandidate,
+    MediaMatchCandidateRow,
     $$MediaMatchCandidatesTableFilterComposer,
     $$MediaMatchCandidatesTableOrderingComposer,
     $$MediaMatchCandidatesTableAnnotationComposer,
     $$MediaMatchCandidatesTableCreateCompanionBuilder,
     $$MediaMatchCandidatesTableUpdateCompanionBuilder,
-    (MediaMatchCandidate, $$MediaMatchCandidatesTableReferences),
-    MediaMatchCandidate,
+    (MediaMatchCandidateRow, $$MediaMatchCandidatesTableReferences),
+    MediaMatchCandidateRow,
     PrefetchHooks Function(
         {bool mediaAssetId, bool pieceId, bool scoreVersionId})> {
   $$MediaMatchCandidatesTableTableManager(
@@ -11332,14 +11332,14 @@ typedef $$MediaMatchCandidatesTableProcessedTableManager
     = ProcessedTableManager<
         _$AppDatabase,
         $MediaMatchCandidatesTable,
-        MediaMatchCandidate,
+        MediaMatchCandidateRow,
         $$MediaMatchCandidatesTableFilterComposer,
         $$MediaMatchCandidatesTableOrderingComposer,
         $$MediaMatchCandidatesTableAnnotationComposer,
         $$MediaMatchCandidatesTableCreateCompanionBuilder,
         $$MediaMatchCandidatesTableUpdateCompanionBuilder,
-        (MediaMatchCandidate, $$MediaMatchCandidatesTableReferences),
-        MediaMatchCandidate,
+        (MediaMatchCandidateRow, $$MediaMatchCandidatesTableReferences),
+        MediaMatchCandidateRow,
         PrefetchHooks Function(
             {bool mediaAssetId, bool pieceId, bool scoreVersionId})>;
 typedef $$ProcessingJobsTableCreateCompanionBuilder = ProcessingJobsCompanion

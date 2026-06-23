@@ -23,6 +23,7 @@ import '../../providers/piece_providers.dart';
 import '../../providers/processing_settings_providers.dart';
 import '../../providers/profile_providers.dart';
 import '../../providers/review_providers.dart';
+import '../../providers/media_providers.dart';
 
 const _activeWorkflowPollInterval = Duration(seconds: 5);
 
@@ -277,7 +278,7 @@ class ParentHomeScreen extends ConsumerWidget {
                     _showAddStudentDialog(context, ref);
                   },
                   onCreatePairing: (student) {
-                    _showStudentPairingDialog(context, ref, student);
+                    showStudentPairingDialog(context, ref, student);
                   },
                   onEditMetadata: (piece) => _showMetadataEditor(
                     context,
@@ -325,7 +326,7 @@ class ParentHomeScreen extends ConsumerWidget {
               ),
               RefreshIndicator(
                 onRefresh: refreshParentData,
-                child: _ServerToolsTab(
+                child: ServerToolsTab(
                   serverHealth: serverHealth,
                   onRepairPairing: openPairingScreen,
                 ),
@@ -615,40 +616,6 @@ class ParentHomeScreen extends ConsumerWidget {
     }
   }
 
-  void _showStudentPairingDialog(
-    BuildContext context,
-    WidgetRef ref,
-    Profile student,
-  ) {
-    if (!AppConfig.isServerPaired) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'Pair the parent device with the AZMusic server before adding student devices.',
-          ),
-        ),
-      );
-      return;
-    }
-
-    final pairingFuture =
-        ref.read(serverPieceSyncRepositoryProvider).fetchPairingCode(
-              purpose: 'student_device',
-              profileId: student.id,
-              profileName: student.displayName,
-              role: 'student',
-            );
-
-    showDialog<void>(
-      context: context,
-      builder: (context) {
-        return _StudentPairingDialog(
-          student: student,
-          pairingFuture: pairingFuture,
-        );
-      },
-    );
-  }
 
   Future<void> _showMetadataEditor(
     BuildContext context,
@@ -973,11 +940,11 @@ class _IntakeAndPushTab extends StatelessWidget {
               'Books stay grouped here while the server splits pages and prepares student PDFs.',
           children: [
             processingCapabilities.when(
-              data: (capabilities) => _ProcessingTrackerCard(
+              data: (capabilities) => ProcessingTrackerCard(
                 summary: capabilities.jobSummary,
               ),
-              error: (error, _) => _ProcessingTrackerErrorCard(error: error),
-              loading: () => const _ProcessingTrackerLoadingCard(),
+              error: (error, _) => ProcessingTrackerErrorCard(error: error),
+              loading: () => const ProcessingTrackerLoadingCard(),
             ),
             const SizedBox(height: 12),
             _ParentDebugToolsCard(
@@ -1490,8 +1457,8 @@ String? _reviewProcessingStage(ReviewQueueEntry item) {
   return _metadataString(item.candidateData['processing_stage']);
 }
 
-class _ProcessingTrackerCard extends StatelessWidget {
-  const _ProcessingTrackerCard({required this.summary});
+class ProcessingTrackerCard extends StatelessWidget {
+  const ProcessingTrackerCard({required this.summary});
 
   final ProcessingJobSummary summary;
 
@@ -2268,8 +2235,8 @@ String _shortDateTime(DateTime value) {
   return '$month/$day $hour:$minute';
 }
 
-class _ProcessingTrackerLoadingCard extends StatelessWidget {
-  const _ProcessingTrackerLoadingCard();
+class ProcessingTrackerLoadingCard extends StatelessWidget {
+  const ProcessingTrackerLoadingCard();
 
   @override
   Widget build(BuildContext context) {
@@ -2288,8 +2255,8 @@ class _ProcessingTrackerLoadingCard extends StatelessWidget {
   }
 }
 
-class _ProcessingTrackerErrorCard extends StatelessWidget {
-  const _ProcessingTrackerErrorCard({required this.error});
+class ProcessingTrackerErrorCard extends StatelessWidget {
+  const ProcessingTrackerErrorCard({required this.error});
 
   final Object error;
 
@@ -2595,8 +2562,9 @@ class _StudentLibrarySelector extends StatelessWidget {
   }
 }
 
-class _ServerToolsTab extends StatelessWidget {
-  const _ServerToolsTab({
+class ServerToolsTab extends ConsumerWidget {
+  const ServerToolsTab({
+    super.key,
     required this.serverHealth,
     required this.onRepairPairing,
   });
@@ -2605,8 +2573,19 @@ class _ServerToolsTab extends StatelessWidget {
   final VoidCallback onRepairPairing;
 
   @override
-  Widget build(BuildContext context) {
+  Widget build(BuildContext context, WidgetRef ref) {
+    final debugTools = ref.watch(parentDebugToolsProvider);
+    final allEntries = ref.watch(allPiecesProvider).valueOrNull ?? const <LibraryEntry>[];
+    final syncedPieces = ref.watch(parentSyncedPiecesProvider);
+    final remotePieces = syncedPieces.valueOrNull ?? const <RemotePieceSummary>[];
+
+    final debugPieceTargets = _buildDebugPieceTargets(
+      localEntries: allEntries,
+      remotePieces: remotePieces,
+    );
+
     return ListView(
+      key: AppKeys.parentWorkflowList,
       padding: const EdgeInsets.all(16),
       children: [
         _ServerStatusCard(
@@ -2615,8 +2594,35 @@ class _ServerToolsTab extends StatelessWidget {
         ),
         const SizedBox(height: 12),
         const _CloudSyncCard(),
-        const SizedBox(height: 12),
         const _ProcessingSettingsCard(),
+        const _YouTubeMediaScanCard(),
+        const SizedBox(height: 12),
+        _ParentDebugToolsCard(
+          state: debugTools,
+          pieces: debugPieceTargets,
+          onToggle: (enabled) {
+            return ref.read(parentDebugToolsProvider.notifier).setEnabled(enabled);
+          },
+          onClearLibraries: () {
+            return ref.read(parentDebugToolsProvider.notifier).clearLocalAndServerLibraries();
+          },
+          onRefreshJobs: () {
+            return ref.read(parentDebugToolsProvider.notifier).refreshJobs();
+          },
+          onCancelJob: (jobId) {
+            return ref.read(parentDebugToolsProvider.notifier).cancelJob(jobId);
+          },
+          onRetryJob: (jobId) {
+            return ref.read(parentDebugToolsProvider.notifier).retryJob(jobId);
+          },
+          onClearPiece: (target) {
+            return ref.read(parentDebugToolsProvider.notifier).clearPiece(
+                  title: target.title,
+                  localPieceId: target.localPieceId,
+                  serverPieceId: target.serverPieceId,
+                );
+          },
+        ),
       ],
     );
   }
@@ -2728,6 +2734,16 @@ class _IntakeEntryCard extends StatelessWidget {
                 ),
               ),
               _ParentStatusBadge(status: piece.libraryStatus),
+              const SizedBox(width: 4),
+              IconButton(
+                tooltip: 'Accompaniments & Media',
+                icon: const Icon(Icons.music_video_outlined),
+                iconSize: 20,
+                onPressed: () => Navigator.of(context).pushNamed(
+                  AppRouter.pieceDetail,
+                  arguments: entry.piece.id,
+                ),
+              ),
             ],
           ),
           const SizedBox(height: 12),
@@ -3737,8 +3753,43 @@ class _AddStudentDialogState extends State<_AddStudentDialog> {
   }
 }
 
-class _StudentPairingDialog extends StatelessWidget {
-  const _StudentPairingDialog({
+void showStudentPairingDialog(
+  BuildContext context,
+  WidgetRef ref,
+  Profile student,
+) {
+  if (!AppConfig.isServerPaired) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text(
+          'Pair the parent device with the AZMusic server before adding student devices.',
+        ),
+      ),
+    );
+    return;
+  }
+
+  final pairingFuture =
+      ref.read(serverPieceSyncRepositoryProvider).fetchPairingCode(
+            purpose: 'student_device',
+            profileId: student.id,
+            profileName: student.displayName,
+            role: 'student',
+          );
+
+  showDialog<void>(
+    context: context,
+    builder: (context) {
+      return StudentPairingDialog(
+        student: student,
+        pairingFuture: pairingFuture,
+      );
+    },
+  );
+}
+
+class StudentPairingDialog extends StatelessWidget {
+  const StudentPairingDialog({
     required this.student,
     required this.pairingFuture,
   });
@@ -4671,5 +4722,84 @@ String _instrumentLabel(InstrumentType instrument) {
       return 'Piano';
     case InstrumentType.other:
       return 'Other';
+  }
+}
+
+class _YouTubeMediaScanCard extends ConsumerStatefulWidget {
+  const _YouTubeMediaScanCard();
+
+  @override
+  ConsumerState<_YouTubeMediaScanCard> createState() => _YouTubeMediaScanCardState();
+}
+
+class _YouTubeMediaScanCardState extends ConsumerState<_YouTubeMediaScanCard> {
+  bool _isScanning = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(18),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Retroactive YouTube Scan',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 8),
+            Text(
+              'Scan all pieces in the local library and trigger reference searches on the server for any pieces missing accompaniments.',
+              style: theme.textTheme.bodySmall?.copyWith(
+                color: theme.colorScheme.onSurfaceVariant,
+              ),
+            ),
+            const SizedBox(height: 16),
+            _isScanning
+                ? const Row(
+                    children: [
+                      CircularProgressIndicator(),
+                      SizedBox(width: 12),
+                      Text('Scanning library and queuing searches...'),
+                    ],
+                  )
+                : FilledButton.icon(
+                    onPressed: () async {
+                      setState(() {
+                        _isScanning = true;
+                      });
+                      try {
+                        await ref
+                            .read(mediaOperationsProvider)
+                            .triggerBatchRetroactiveSearch();
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text(
+                                'Retroactive search completed. Check piece details for candidates.'),
+                          ),
+                        );
+                      } catch (e) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text('Failed to trigger scan: $e'),
+                          ),
+                        );
+                      } finally {
+                        setState(() {
+                          _isScanning = false;
+                        });
+                      }
+                    },
+                    icon: const Icon(Icons.youtube_searched_for),
+                    label: const Text('Scan Library'),
+                  ),
+          ],
+        ),
+      ),
+    );
   }
 }

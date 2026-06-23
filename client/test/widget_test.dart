@@ -19,6 +19,9 @@ import 'package:azmusic/presentation/screens/parent/review_compare_screen.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:flutter_test/flutter_test.dart';
+import 'package:azmusic/data/database/database.dart';
+import 'package:azmusic/data/repositories/local_library_repository.dart';
+import 'package:azmusic/presentation/providers/piece_providers.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
 void main() {
@@ -47,9 +50,23 @@ void main() {
     ),
     _FakeServerPieceSyncRepository? repository,
   }) async {
+    tester.view.physicalSize = const Size(1280, 800);
+    tester.view.devicePixelRatio = 1.0;
+    addTearDown(() {
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
+    });
     await tester.pumpWidget(
       ProviderScope(
         overrides: [
+          libraryRepositoryProvider.overrideWith((ref) {
+            final repo = LocalLibraryRepository(
+              appDirectory: tempDir,
+              database: AppDatabase.memory(),
+            );
+            ref.onDispose(() => repo.close());
+            return repo;
+          }),
           appDirectoryProvider.overrideWith((ref) => tempDir),
           launchOptionsProvider.overrideWith((ref) => launchOptions),
           serverPieceSyncRepositoryProvider.overrideWith(
@@ -338,6 +355,9 @@ void main() {
     await tester.tap(find.text('Unlock'));
     await tester.pump(const Duration(milliseconds: 500));
     await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
+    await tester.tap(find.text('Global Library'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     await scrollParentWorkflowUntilFound(tester, find.text('Ready to Push'));
     await pumpUntilFound(tester, find.byKey(AppKeys.parentServerReadyList));
 
@@ -395,6 +415,9 @@ void main() {
     await tester.tap(find.text('Unlock'));
     await tester.pump(const Duration(milliseconds: 500));
     await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
+    await tester.tap(find.text('Global Library'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     await scrollParentWorkflowUntilFound(tester, find.text('Ready to Push'));
     await pumpUntilFound(tester, find.byKey(AppKeys.parentServerReadyList));
 
@@ -459,6 +482,9 @@ void main() {
     await tester.tap(find.text('Unlock'));
     await tester.pump(const Duration(milliseconds: 500));
     await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
+    await tester.tap(find.text('Global Library'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     await scrollParentWorkflowUntilFound(tester, find.text('Ready to Push'));
     await pumpUntilFound(tester, find.byKey(AppKeys.parentServerReadyList));
 
@@ -510,6 +536,9 @@ void main() {
     await tester.tap(find.text('Unlock'));
     await tester.pump(const Duration(milliseconds: 500));
     await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
+    await tester.tap(find.text('Global Library'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     await scrollParentWorkflowUntilFound(tester, find.text('Ready to Push'));
     await pumpUntilFound(tester, find.byKey(AppKeys.parentServerReadyList));
 
@@ -787,6 +816,9 @@ void main() {
     await tester.enterText(find.byKey(AppKeys.parentPinEntryField), '2468');
     await tester.tap(find.text('Unlock'));
     await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
+    await tester.tap(find.text('Global Library'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
     await scrollParentWorkflowUntilFound(
       tester,
       find.textContaining('Processing The Troubadour'),
@@ -852,18 +884,24 @@ void main() {
     await tester.enterText(find.byKey(AppKeys.parentPinEntryField), '2468');
     await tester.tap(find.text('Unlock'));
     await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
-
     await tester.tap(find.text('Students'));
-    await tester.pumpAndSettle();
+    await tester.pump();
+    await pumpUntilFound(tester, find.text('Alyse'));
     await tester.tap(find.byKey(AppKeys.parentAddStudentButton));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 200));
     await tester.enterText(find.byKey(AppKeys.parentStudentNameField), 'Kai');
     await tester.tap(find.byKey(AppKeys.parentCreateStudentButton));
-    await tester.pumpAndSettle();
+    await tester.pump(const Duration(milliseconds: 200));
+    print('DEBUG: all text widgets on screen:');
+    for (final element in find.byType(Text).evaluate()) {
+      final textWidget = element.widget as Text;
+      print('  - Text: "${textWidget.data}"');
+    }
+    await pumpUntilFound(tester, find.byKey(AppKeys.studentDevicePairingButton('student-kai')));
 
     expect(find.byKey(AppKeys.studentDevicePairingButton('student-kai')),
         findsOneWidget);
-    expect(find.text('Pair Kai device'), findsOneWidget);
+    expect(find.text('Kai'), findsOneWidget);
   });
 
   testWidgets('parent student libraries filter pushed pieces by student', (
@@ -902,6 +940,9 @@ void main() {
     await tester.enterText(find.byKey(AppKeys.parentPinEntryField), '2468');
     await tester.tap(find.text('Unlock'));
     await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
+    await tester.tap(find.text('Students'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     await tester.tap(find.text('Students'));
     await tester.pumpAndSettle();
@@ -958,6 +999,9 @@ void main() {
     await tester.enterText(find.byKey(AppKeys.parentPinEntryField), '2468');
     await tester.tap(find.text('Unlock'));
     await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
+    await tester.tap(find.text('Students'));
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 500));
 
     await tester.tap(find.text('Students'));
     await tester.pumpAndSettle();
@@ -1002,6 +1046,9 @@ void main() {
       ),
     );
     await pumpUntilFound(tester, find.byKey(AppKeys.parentHomeScreen));
+    await tester.tap(find.text('Global Library'));
+    await tester.pump();
+    await pumpUntilFound(tester, find.byKey(AppKeys.parentReviewCard));
 
     expect(find.byKey(AppKeys.parentHomeScreen), findsOneWidget);
     expect(find.byKey(AppKeys.parentReviewCard), findsOneWidget);

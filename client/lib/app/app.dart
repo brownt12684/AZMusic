@@ -22,7 +22,7 @@ class AzMusicApp extends ConsumerWidget {
         AppRouter.library,
       AppLaunchSurface.parentHome => AppRouter.parentHome,
       AppLaunchSurface.reviewQueue when !launchOptions.resetLibraryOnLaunch =>
-        AppRouter.parentHome,
+        AppRouter.reviewQueue,
       AppLaunchSurface.sandbox when !AppConfig.isProductionBuild =>
         AppRouter.sandbox,
       _ when launchOptions.useSandboxLauncher && !AppConfig.isProductionBuild =>

@@ -108,7 +108,7 @@ app.include_router(
 )
 app.include_router(
     media.router,
-    prefix="/api/v1/media",
+    prefix="/api/v1",
     tags=["media"],
     dependencies=_protected_dependencies,
 )

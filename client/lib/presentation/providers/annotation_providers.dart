@@ -56,6 +56,9 @@ final annotationPageProvider = AsyncNotifierProvider.family<
   AnnotationPageNotifier.new,
 );
 
+final notesLayerVisibleProvider = StateProvider<bool>((ref) => true);
+
+
 class AnnotationPageNotifier extends FamilyAsyncNotifier<AnnotationPageState,
     ({String profileId, String scoreVersionId, int pageNumber})> {
   final Uuid _uuid = const Uuid();

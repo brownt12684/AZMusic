@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 
+import '../../../app/app_keys.dart';
 import '../../../domain/entities/profile.dart';
 import '../../providers/activity_providers.dart';
 import '../../providers/piece_providers.dart';
@@ -72,6 +73,7 @@ class _StudentsScreenState extends ConsumerState<StudentsScreen> with SingleTick
           Padding(
             padding: const EdgeInsets.only(right: 16.0),
             child: ElevatedButton.icon(
+              key: AppKeys.parentAddStudentButton,
               onPressed: () => _showAddStudentDialog(context),
               icon: const Icon(Icons.add),
               label: const Text('Add Student'),
@@ -279,6 +281,7 @@ class _StudentsScreenState extends ConsumerState<StudentsScreen> with SingleTick
               ),
               const SizedBox(width: 24),
               IconButton(
+                key: AppKeys.studentDevicePairingButton(student.id),
                 icon: const Icon(Icons.qr_code_2_outlined),
                 tooltip: 'Pair/Resync Device QR Code',
                 onPressed: () => showStudentPairingDialog(context, ref, student),
@@ -942,6 +945,7 @@ class _StudentsScreenState extends ConsumerState<StudentsScreen> with SingleTick
                 mainAxisSize: MainAxisSize.min,
                 children: [
                   TextField(
+                    key: AppKeys.parentStudentNameField,
                     controller: nameController,
                     decoration: const InputDecoration(
                       labelText: 'Full Name',
@@ -976,6 +980,7 @@ class _StudentsScreenState extends ConsumerState<StudentsScreen> with SingleTick
                   child: const Text('Cancel'),
                 ),
                 ElevatedButton(
+                  key: AppKeys.parentCreateStudentButton,
                   onPressed: () async {
                     final name = nameController.text.trim();
                     if (name.isEmpty) {

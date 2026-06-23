@@ -16,6 +16,8 @@ import 'package:azmusic/presentation/providers/debug_tools_providers.dart';
 import 'package:azmusic/presentation/providers/piece_providers.dart';
 import 'package:azmusic/presentation/providers/review_providers.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:azmusic/data/database/database.dart';
+import 'package:azmusic/data/repositories/local_library_repository.dart';
 import 'package:flutter_test/flutter_test.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 
@@ -221,7 +223,7 @@ void main() {
     final reboundEntry = await repository.findEntry(entry.piece.id);
     expect(reboundEntry, isNotNull);
     expect(reboundEntry!.piece.serverPieceId, 'remote-${entry.piece.id}');
-    expect(reboundEntry.piece.libraryStatus, LibraryStatus.intake);
+    expect(reboundEntry.piece.libraryStatus, LibraryStatus.processing);
   });
 
   test('parent can reupload a local item whose server record is missing',
@@ -701,6 +703,14 @@ ProviderContainer _containerFor(
   return ProviderContainer(
     overrides: [
       appDirectoryProvider.overrideWith((ref) => tempDir),
+      libraryRepositoryProvider.overrideWith((ref) {
+        final repo = LocalLibraryRepository(
+          appDirectory: tempDir,
+          database: AppDatabase.memory(),
+        );
+        ref.onDispose(() => repo.close());
+        return repo;
+      }),
       launchOptionsProvider.overrideWith(
         (ref) => const AppLaunchOptions(
           sandboxMode: false,

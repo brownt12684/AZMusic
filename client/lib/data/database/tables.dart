@@ -141,6 +141,7 @@ class AnnotationNotes extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+@DataClassName('MediaAssetRow')
 class MediaAssets extends Table {
   TextColumn get id => text()();
   TextColumn get pieceId => text().references(Pieces, #id)();
@@ -157,6 +158,7 @@ class MediaAssets extends Table {
   Set<Column> get primaryKey => {id};
 }
 
+@DataClassName('MediaMatchCandidateRow')
 class MediaMatchCandidates extends Table {
   TextColumn get id => text()();
   TextColumn get mediaAssetId => text().references(MediaAssets, #id)();

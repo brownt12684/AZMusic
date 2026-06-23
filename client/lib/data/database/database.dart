@@ -11,6 +11,7 @@ import '../../domain/entities/note_entry.dart';
 import '../../domain/entities/piece.dart';
 import '../../domain/entities/practice_recording.dart';
 import '../../domain/entities/score_version.dart';
+import '../../domain/entities/media_asset.dart';
 import 'tables.dart'
     show
         Profiles,
@@ -55,14 +56,38 @@ String defaultDatabasePath(Directory appDirectory) {
   ],
 )
 class AppDatabase extends _$AppDatabase {
-  AppDatabase({required String dbPath}) : super(_openConnection(dbPath));
+  AppDatabase({required String dbPath}) : super(_openConnection(dbPath)) {
+    print('DEBUG: AppDatabase initialized with path: $dbPath');
+  }
+  AppDatabase.memory() : super(NativeDatabase.memory()) {
+    print('DEBUG: AppDatabase.memory initialized');
+  }
 
   static QueryExecutor _openConnection(String dbPath) {
-    return LazyDatabase(() async => NativeDatabase(File(dbPath)));
+    print('DEBUG: _openConnection LazyDatabase callback configured for: $dbPath');
+    return LazyDatabase(() async {
+      print('DEBUG: LazyDatabase opening NativeDatabase at: $dbPath');
+      return NativeDatabase(File(dbPath));
+    });
   }
 
   @override
-  int get schemaVersion => 1;
+  int get schemaVersion => 2;
+
+  @override
+  MigrationStrategy get migration => MigrationStrategy(
+        onUpgrade: (migrator, from, to) async {
+          if (from < 2) {
+            // Drop old tables that had stale schemas
+            await migrator.database.customStatement('DROP TABLE IF EXISTS annotation_layers;');
+            await migrator.database.customStatement('DROP TABLE IF EXISTS notes;');
+            await migrator.database.customStatement('DROP TABLE IF EXISTS library_entries;');
+            
+            // Re-create annotation_layers table with the new schema
+            await migrator.create(annotationLayers);
+          }
+        },
+      );
 
   // ─── Profiles ──────────────────────────────────────────────────────────────
 
@@ -343,7 +368,7 @@ class AppDatabase extends _$AppDatabase {
     );
     if (existing != null) {
       await (update(annotationLayers)
-            ..where((t) => t.id.equals(layer.id)))
+            ..where((t) => t.id.equals(existing.id)))
           .write(AnnotationLayersCompanion(
         strokes: Value(
             jsonEncode(layer.strokes.map((s) => s.toMap()).toList())),
@@ -602,6 +627,49 @@ class AppDatabase extends _$AppDatabase {
     return LibraryStatus.values.firstWhere(
       (e) => e.name == name,
       orElse: () => LibraryStatus.intake,
+    );
+  }
+
+  // ─── Media Assets ────────────────────────────────────────────────────────────
+
+  Future<List<MediaAsset>> loadMediaAssetsForPiece(String pieceId) async {
+    final rows = await (select(mediaAssets)..where((t) => t.pieceId.equals(pieceId))).get();
+    return rows.map(_mediaAssetFromRow).toList();
+  }
+
+  Future<void> saveMediaAsset(MediaAsset asset) async {
+    await into(mediaAssets).insertOnConflictUpdate(
+      MediaAssetRow(
+        id: asset.id,
+        pieceId: asset.pieceId,
+        filePath: asset.filePath,
+        remoteUrl: asset.remoteUrl,
+        format: asset.format,
+        durationMs: asset.durationMs,
+        fileSizeBytes: asset.fileSizeBytes,
+        thumbnailPath: asset.thumbnailPath,
+        createdAt: asset.createdAt,
+        updatedAt: asset.updatedAt,
+      ),
+    );
+  }
+
+  Future<void> deleteMediaAsset(String id) async {
+    await (delete(mediaAssets)..where((t) => t.id.equals(id))).go();
+  }
+
+  MediaAsset _mediaAssetFromRow(MediaAssetRow row) {
+    return MediaAsset(
+      id: row.id,
+      pieceId: row.pieceId,
+      filePath: row.filePath,
+      remoteUrl: row.remoteUrl,
+      format: row.format,
+      durationMs: row.durationMs,
+      fileSizeBytes: row.fileSizeBytes,
+      thumbnailPath: row.thumbnailPath,
+      createdAt: row.createdAt,
+      updatedAt: row.updatedAt,
     );
   }
 }

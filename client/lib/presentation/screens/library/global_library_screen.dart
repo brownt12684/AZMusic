@@ -8,15 +8,19 @@ import 'package:path/path.dart' as p;
 import 'package:path_provider/path_provider.dart';
 
 import '../../../../app/routes/app_router.dart';
+import '../../../../app/app_keys.dart';
 import '../../../../core/import/score_import_picker.dart';
 import '../../../../domain/entities/library_entry.dart';
 import '../../../../domain/entities/piece.dart';
 import '../../../../domain/entities/profile.dart';
 import '../../../../domain/entities/score_version.dart';
 import '../../../../domain/entities/review_candidate_package.dart';
+import '../../../../domain/entities/processing_settings.dart';
 import '../../providers/piece_providers.dart';
 import '../../providers/profile_providers.dart';
 import '../../providers/review_providers.dart';
+import '../../providers/processing_settings_providers.dart';
+import '../parent/parent_home_screen.dart';
 
 class _InstrumentTab {
   final InstrumentType? type;
@@ -75,6 +79,7 @@ class _GlobalLibraryScreenState extends ConsumerState<GlobalLibraryScreen> {
     final piecesAsync = ref.watch(allPiecesProvider);
     final students = ref.watch(studentProfilesProvider);
     final reviewQueueAsync = ref.watch(parentReviewQueueProvider);
+    final processingCapabilitiesAsync = ref.watch(processingCapabilitiesProvider);
 
     return DefaultTabController(
       length: _instrumentTabs.length,
@@ -92,9 +97,10 @@ class _GlobalLibraryScreenState extends ConsumerState<GlobalLibraryScreen> {
             Padding(
               padding: const EdgeInsets.only(right: 16.0),
               child: ElevatedButton.icon(
+                key: AppKeys.parentImportButton,
                 onPressed: () => _importPiece(context),
                 icon: const Icon(Icons.upload_file),
-                label: const Text('Import New PDF'),
+                label: const Text('Import'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
                   shape: RoundedRectangleBorder(
@@ -131,16 +137,17 @@ class _GlobalLibraryScreenState extends ConsumerState<GlobalLibraryScreen> {
                   return titleMatch || composerMatch;
                 }).toList();
 
-                return Column(
-                  children: [
-                    // 1. Intake & Processing Pipeline
-                    _buildPipelineSection(context, tabEntries, students, reviewQueue),
-                    
-                    const Divider(height: 1, thickness: 1),
-                    
-                    // 2. Global Library Header & Grid
-                    Expanded(
-                      child: Padding(
+                return SingleChildScrollView(
+                  key: AppKeys.parentWorkflowList,
+                  child: Column(
+                    children: [
+                      // 1. Intake & Processing Pipeline
+                      _buildPipelineSection(context, tabEntries, students, reviewQueue, processingCapabilitiesAsync),
+                      
+                      const Divider(height: 1, thickness: 1),
+                      
+                      // 2. Global Library Header & Grid
+                      Padding(
                         padding: const EdgeInsets.all(24.0),
                         child: Column(
                           crossAxisAlignment: CrossAxisAlignment.start,
@@ -178,14 +185,12 @@ class _GlobalLibraryScreenState extends ConsumerState<GlobalLibraryScreen> {
                             ),
                             const SizedBox(height: 16),
                             // Grid of ready pieces
-                            Expanded(
-                              child: _buildLibraryGrid(context, filteredEntries, students),
-                            ),
+                            _buildLibraryGrid(context, filteredEntries, students),
                           ],
                         ),
                       ),
-                    ),
-                  ],
+                    ],
+                  ),
                 );
               }).toList(),
             );
@@ -204,6 +209,7 @@ class _GlobalLibraryScreenState extends ConsumerState<GlobalLibraryScreen> {
     List<LibraryEntry> entries, 
     List<Profile> students, 
     List<ReviewQueueEntry> reviewQueue,
+    AsyncValue<ProcessingCapabilities> processingCapabilitiesAsync,
   ) {
     // Categorize entries
     final uploading = entries.where((e) => e.piece.libraryStatus == LibraryStatus.uploadPending).toList();
@@ -218,6 +224,7 @@ class _GlobalLibraryScreenState extends ConsumerState<GlobalLibraryScreen> {
     ).toList();
 
     return Container(
+      key: AppKeys.parentReviewCard,
       color: Theme.of(context).colorScheme.surfaceVariant.withOpacity(0.2),
       padding: const EdgeInsets.all(24.0),
       child: Column(
@@ -233,6 +240,22 @@ class _GlobalLibraryScreenState extends ConsumerState<GlobalLibraryScreen> {
             style: TextStyle(fontSize: 13, color: Theme.of(context).colorScheme.onSurfaceVariant),
           ),
           const SizedBox(height: 16),
+          processingCapabilitiesAsync.when(
+            data: (capabilities) => capabilities.jobSummary.activeJobs.isEmpty
+                ? const SizedBox.shrink()
+                : Padding(
+                    padding: const EdgeInsets.only(bottom: 16.0),
+                    child: ProcessingTrackerCard(summary: capabilities.jobSummary),
+                  ),
+            error: (error, _) => Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: ProcessingTrackerErrorCard(error: error),
+            ),
+            loading: () => const Padding(
+              padding: const EdgeInsets.only(bottom: 16.0),
+              child: ProcessingTrackerLoadingCard(),
+            ),
+          ),
           Row(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
@@ -400,6 +423,8 @@ class _GlobalLibraryScreenState extends ConsumerState<GlobalLibraryScreen> {
     }
 
     return GridView.builder(
+      shrinkWrap: true,
+      physics: const NeverScrollableScrollPhysics(),
       gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
         crossAxisCount: 4,
         crossAxisSpacing: 16,

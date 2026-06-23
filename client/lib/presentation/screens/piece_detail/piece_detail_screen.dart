@@ -8,6 +8,8 @@ import '../../../domain/entities/library_entry.dart';
 import '../../../domain/entities/score_version.dart';
 import '../../providers/piece_providers.dart';
 import '../../providers/profile_providers.dart';
+import '../../providers/media_providers.dart';
+import '../../../domain/entities/youtube_candidate.dart';
 
 class PieceDetailScreen extends ConsumerWidget {
   const PieceDetailScreen({
@@ -80,6 +82,11 @@ class PieceDetailScreen extends ConsumerWidget {
                     ),
                   );
             },
+          ),
+          const SizedBox(height: 16),
+          _YouTubeAccompanimentsSection(
+            pieceId: entry.piece.id,
+            isTeacher: showAllScoreVersions,
           ),
         ],
       ),
@@ -323,6 +330,166 @@ class _ScoreVersionsSection extends StatelessWidget {
                 'No stored score versions for $pieceTitle.',
                 style: theme.textTheme.bodyMedium,
               ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _YouTubeAccompanimentsSection extends ConsumerStatefulWidget {
+  const _YouTubeAccompanimentsSection({
+    required this.pieceId,
+    required this.isTeacher,
+  });
+
+  final String pieceId;
+  final bool isTeacher;
+
+  @override
+  ConsumerState<_YouTubeAccompanimentsSection> createState() =>
+      _YouTubeAccompanimentsSectionState();
+}
+
+class _YouTubeAccompanimentsSectionState
+    extends ConsumerState<_YouTubeAccompanimentsSection> {
+  bool _isSearching = false;
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final assetsAsync = ref.watch(mediaAssetsProvider(widget.pieceId));
+    final candidatesAsync = widget.isTeacher
+        ? ref.watch(mediaCandidatesProvider(widget.pieceId))
+        : const AsyncValue<List<YouTubeCandidate>>.data([]);
+
+    return Card(
+      child: Padding(
+        padding: const EdgeInsets.all(20),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Accompaniments & Reference Media',
+              style: theme.textTheme.titleLarge?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 16),
+            assetsAsync.when(
+              data: (assets) {
+                if (assets.isEmpty) {
+                  return const Text('No approved reference tracks.');
+                }
+                return ListView.builder(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: assets.length,
+                  itemBuilder: (context, index) {
+                    final asset = assets[index];
+                    return ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.audiotrack),
+                      title: Text(asset.remoteUrl != null
+                          ? 'YouTube Audio (${asset.format.toUpperCase()})'
+                          : 'Reference Audio'),
+                      subtitle: Text(asset.durationString),
+                      trailing: widget.isTeacher
+                          ? TextButton.icon(
+                              icon: const Icon(Icons.close, color: Colors.red),
+                              label: const Text('Revoke',
+                                  style: TextStyle(color: Colors.red)),
+                              onPressed: () async {
+                                await ref
+                                    .read(mediaOperationsProvider)
+                                    .revokeAsset(widget.pieceId, asset.id);
+                              },
+                            )
+                          : null,
+                    );
+                  },
+                );
+              },
+              error: (error, _) => Text('Error loading accompaniments: $error'),
+              loading: () => const CircularProgressIndicator(),
+            ),
+            if (widget.isTeacher) ...[
+              const Divider(height: 32),
+              Text(
+                'YouTube Candidates',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.w700,
+                ),
+              ),
+              const SizedBox(height: 8),
+              candidatesAsync.when(
+                data: (candidates) {
+                  final unapproved =
+                      candidates.where((c) => !c.isApproved).toList();
+                  if (unapproved.isEmpty) {
+                    return Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text('No pending YouTube candidates staged.'),
+                        const SizedBox(height: 12),
+                        _isSearching
+                            ? const Row(
+                                children: [
+                                  CircularProgressIndicator(),
+                                  SizedBox(width: 12),
+                                  Text('Searching YouTube Data API...'),
+                                ],
+                              )
+                            : OutlinedButton.icon(
+                                onPressed: () async {
+                                  setState(() {
+                                    _isSearching = true;
+                                  });
+                                  try {
+                                    await ref
+                                        .read(mediaOperationsProvider)
+                                        .searchYouTubeForPiece(widget.pieceId);
+                                  } finally {
+                                    setState(() {
+                                      _isSearching = false;
+                                    });
+                                  }
+                                },
+                                icon: const Icon(Icons.search),
+                                label: const Text('Search YouTube'),
+                              ),
+                      ],
+                    );
+                  }
+                  return ListView.builder(
+                    shrinkWrap: true,
+                    physics: const NeverScrollableScrollPhysics(),
+                    itemCount: unapproved.length,
+                    itemBuilder: (context, index) {
+                      final candidate = unapproved[index];
+                      return Card(
+                        margin: const EdgeInsets.only(bottom: 8),
+                        child: ListTile(
+                          title: Text(candidate.title),
+                          subtitle: Text('Video: ${candidate.youtubeVideoId}'),
+                          trailing: ElevatedButton.icon(
+                            icon: const Icon(Icons.cloud_upload_outlined),
+                            label: const Text('Approve & Push'),
+                            onPressed: () async {
+                              await ref
+                                  .read(mediaOperationsProvider)
+                                  .pushCandidate(widget.pieceId, candidate.id);
+                            },
+                          ),
+                        ),
+                      );
+                    },
+                  );
+                },
+                error: (error, _) => Text('Error searching candidates: $error'),
+                loading: () => const CircularProgressIndicator(),
+              ),
+            ],
           ],
         ),
       ),

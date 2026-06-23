@@ -122,6 +122,9 @@ async def push_media_asset(
     db: AsyncSession = Depends(get_db),
 ) -> MediaRevokeResponse:
     """Approve a media asset and trigger background download of the audio file."""
+    import re
+    import uuid
+
     result = await db.execute(
         select(MediaAsset).where(MediaAsset.id == asset_id)
     )
@@ -129,18 +132,76 @@ async def push_media_asset(
     if not asset:
         raise HTTPException(status_code=404, detail="Media asset not found")
 
+    # Fetch the parent piece to get title/composer for propagation
+    piece_result = await db.execute(
+        select(Piece).where(Piece.id == asset.piece_id)
+    )
+    piece = piece_result.scalar_one_or_none()
+
     # Toggle approval on
     now = datetime.utcnow()
     asset.is_approved = True
+    asset.status = "approved"
     asset.pushed_at = now
     asset.updated_at = now
+
+    # Propagate to any matching pieces across all student profiles
+    if piece:
+        def normalize(val: str | None) -> str:
+            return re.sub(r"[^a-zA-Z0-9]", "", val or "").lower().strip()
+
+        norm_title = normalize(piece.title)
+        norm_composer = normalize(piece.composer)
+
+        pieces_result = await db.execute(select(Piece))
+        all_pieces = pieces_result.scalars().all()
+        matching_pieces = [
+            p for p in all_pieces
+            if p.id != piece.id
+            and normalize(p.title) == norm_title
+            and normalize(p.composer) == norm_composer
+        ]
+
+        for mp in matching_pieces:
+            # Check if matching piece already has this YouTube video staged or approved
+            exist_res = await db.execute(
+                select(MediaAsset).where(
+                    MediaAsset.piece_id == mp.id,
+                    MediaAsset.youtube_video_id == asset.youtube_video_id,
+                )
+            )
+            existing_asset = exist_res.scalar_one_or_none()
+            if existing_asset:
+                existing_asset.is_approved = True
+                existing_asset.local_file_path = asset.local_file_path
+                existing_asset.file_path = asset.file_path
+                existing_asset.status = "approved"
+                existing_asset.pushed_at = now
+                existing_asset.updated_at = now
+            else:
+                new_asset = MediaAsset(
+                    id=str(uuid.uuid4()),
+                    piece_id=mp.id,
+                    asset_type=asset.asset_type,
+                    file_path=asset.file_path,
+                    status="approved",
+                    created_at=now,
+                    updated_at=now,
+                    youtube_video_id=asset.youtube_video_id,
+                    thumbnail_url=asset.thumbnail_url,
+                    local_file_path=asset.local_file_path,
+                    is_approved=True,
+                    pushed_at=now,
+                )
+                db.add(new_asset)
+
     await db.commit()
     await db.refresh(asset)
 
     # Trigger async download in background (non-blocking)
     import asyncio  # noqa: PLC0414
 
-    asyncio.create_task(download_approved_audio(asset_id, db))
+    asyncio.create_task(download_approved_audio(asset.id, db))
 
     return MediaRevokeResponse(
         id=asset.id,
@@ -277,3 +338,98 @@ async def get_media_sync_delta(
         media_attachments=media_attachments,
         media_deletions=media_deletions,
     )
+
+
+@router.post("/media/retroactive-sync")
+async def trigger_retroactive_media_sync(
+    db: AsyncSession = Depends(get_db),
+):
+    """Scan the library, propagate approved media to matching pieces, and run missing searches."""
+    import re
+    import uuid
+    from server.services.youtube_search import search_reference_media
+
+    # 1. Fetch all pieces and all media assets
+    pieces_res = await db.execute(select(Piece))
+    pieces = pieces_res.scalars().all()
+
+    assets_res = await db.execute(select(MediaAsset))
+    assets = assets_res.scalars().all()
+
+    def normalize(val: str | None) -> str:
+        return re.sub(r"[^a-zA-Z0-9]", "", val or "").lower().strip()
+
+    # Map normalized keys to lists of pieces
+    groups: dict[tuple[str, str], list[Piece]] = {}
+    for p in pieces:
+        key = (normalize(p.title), normalize(p.composer))
+        groups.setdefault(key, []).append(p)
+
+    # 2. Propagate existing approved assets within groups
+    propagated_count = 0
+    now = datetime.utcnow()
+
+    # Find approved YouTube assets
+    approved_assets = [a for a in assets if a.is_approved and a.asset_type == "youtube_candidate"]
+
+    for asset in approved_assets:
+        # Find which piece this asset originally belongs to
+        parent_piece = next((p for p in pieces if p.id == asset.piece_id), None)
+        if not parent_piece:
+            continue
+
+        key = (normalize(parent_piece.title), normalize(parent_piece.composer))
+        group_pieces = groups.get(key, [])
+
+        for p in group_pieces:
+            if p.id == asset.piece_id:
+                continue
+
+            # Check if this piece already has this YouTube asset
+            exists = any(
+                a.piece_id == p.id and a.youtube_video_id == asset.youtube_video_id
+                for a in assets
+            )
+            if not exists:
+                new_asset = MediaAsset(
+                    id=str(uuid.uuid4()),
+                    piece_id=p.id,
+                    asset_type=asset.asset_type,
+                    file_path=asset.file_path,
+                    status="approved",
+                    created_at=now,
+                    updated_at=now,
+                    youtube_video_id=asset.youtube_video_id,
+                    thumbnail_url=asset.thumbnail_url,
+                    local_file_path=asset.local_file_path,
+                    is_approved=True,
+                    pushed_at=now,
+                )
+                db.add(new_asset)
+                propagated_count += 1
+
+    await db.commit()
+
+    # 3. Trigger searches for any piece that has no staged candidates or approved media
+    # Re-fetch assets to get updated state
+    updated_assets_res = await db.execute(select(MediaAsset))
+    updated_assets = updated_assets_res.scalars().all()
+
+    search_triggered_count = 0
+    for p in pieces:
+        has_media = any(
+            a.piece_id == p.id and a.asset_type == "youtube_candidate"
+            for a in updated_assets
+        )
+        if not has_media:
+            # Trigger async search with a clean background session
+            import asyncio
+            asyncio.create_task(search_reference_media(p, None))
+            search_triggered_count += 1
+
+    return {
+        "status": "success",
+        "propagated_assets_count": propagated_count,
+        "searches_triggered_count": search_triggered_count,
+    }
+

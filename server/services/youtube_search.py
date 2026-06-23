@@ -12,6 +12,7 @@ from googleapiclient.discovery import build
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 
+from server.config import settings
 from server.database import async_session
 from server.models.orm import MediaAsset, Piece
 
@@ -71,10 +72,10 @@ async def search_reference_media(
     query = _build_search_query(piece)
     logger.info("Searching YouTube for piece %s: %r", piece.id, query)
 
-    api_key = os.environ.get("YOUTUBE_API_KEY") or os.environ.get("GOOGLE_API_KEY")
+    api_key = settings.youtube_api_key or os.environ.get("YOUTUBE_API_KEY") or os.environ.get("GOOGLE_API_KEY")
     if not api_key:
         logger.warning(
-            "No YOUTUBE_API_KEY/GOOGLE_API_KEY configured; skipping YouTube search for %s",
+            "No YOUTUBE_API_KEY configured in server/.env; skipping YouTube search for %s",
             piece.id,
         )
         return []
@@ -107,12 +108,12 @@ async def _search_and_stage(
     try:
         search_response = youtube.search().list(
             q=query,
-            part="snippet",
+            part="id,snippet",
             type="video",
             maxResults=_MAX_CANDIDATES,
             safeSearch="strict",
-            videoEmbeddable=True,
-            fields="items/snippet/videoId,title,thumbnails/default/url",
+            videoEmbeddable="true",
+            fields="items(id/videoId,snippet/title,snippet/thumbnails/default/url)",
         ).execute()
     except Exception as exc:
         logger.error("YouTube API search request failed: %s", exc)
@@ -135,7 +136,8 @@ async def _search_and_stage(
     now = datetime.utcnow()
     for item in items[:_MAX_CANDIDATES]:
         snippet = item.get("snippet", {})
-        video_id = item.get("videoId")
+        # In YouTube Data API v3 search results, videoId is nested under item["id"]["videoId"]
+        video_id = item.get("id", {}).get("videoId")
         title = snippet.get("title", "")
         thumbnail = snippet.get("thumbnails", {}).get("default", {}).get("url")
 
@@ -143,14 +145,15 @@ async def _search_and_stage(
             logger.debug("Skipping low-quality candidate: %r", title)
             continue
 
-        # Check for duplicate video IDs across all pieces
+        # Check for duplicate video IDs on this specific piece
         dup_result = await db.execute(
             select(MediaAsset.id).where(
+                MediaAsset.piece_id == piece.id,
                 MediaAsset.youtube_video_id == video_id,
             )
         )
         if dup_result.scalar_one_or_none():
-            logger.debug("Skipping duplicate YouTube ID: %s", video_id)
+            logger.debug("Skipping duplicate YouTube ID on same piece: %s", video_id)
             continue
 
         media_asset = MediaAsset(

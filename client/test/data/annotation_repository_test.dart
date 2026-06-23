@@ -21,7 +21,7 @@ void main() {
   });
 
   test('saves, reloads, and clears page markup', () async {
-    const stroke = AnnotationStroke(
+    const stroke1 = AnnotationStroke(
       id: 'stroke-1',
       color: StrokeColor.orange,
       strokeWidth: 3,
@@ -32,23 +32,52 @@ void main() {
       tool: StrokeTool.pen,
     );
 
-    final savedLayer = await repository.saveLayer(
+    final savedLayer1 = await repository.saveLayer(
       profileId: 'student-alyse',
       scoreVersionId: 'score-001',
       pageNumber: 2,
-      strokes: [stroke],
+      strokes: [stroke1],
     );
 
-    final reloadedLayer = await repository.loadLayer(
+    var reloadedLayer = await repository.loadLayer(
       profileId: 'student-alyse',
       scoreVersionId: 'score-001',
       pageNumber: 2,
     );
 
-    expect(savedLayer.pageNumber, 2);
+    expect(savedLayer1.pageNumber, 2);
     expect(reloadedLayer, isNotNull);
     expect(reloadedLayer!.strokes, hasLength(1));
-    expect(reloadedLayer.strokes.single.points, stroke.points);
+    expect(reloadedLayer.strokes.first.id, 'stroke-1');
+
+    const stroke2 = AnnotationStroke(
+      id: 'stroke-2',
+      color: StrokeColor.blue,
+      strokeWidth: 4,
+      points: [
+        OffsetPoint(x: 0.3, y: 0.4),
+        OffsetPoint(x: 0.7, y: 0.8),
+      ],
+      tool: StrokeTool.pen,
+    );
+
+    final savedLayer2 = await repository.saveLayer(
+      profileId: 'student-alyse',
+      scoreVersionId: 'score-001',
+      pageNumber: 2,
+      strokes: [stroke1, stroke2],
+    );
+
+    reloadedLayer = await repository.loadLayer(
+      profileId: 'student-alyse',
+      scoreVersionId: 'score-001',
+      pageNumber: 2,
+    );
+
+    expect(reloadedLayer, isNotNull);
+    expect(reloadedLayer!.strokes, hasLength(2));
+    expect(reloadedLayer.strokes[0].id, 'stroke-1');
+    expect(reloadedLayer.strokes[1].id, 'stroke-2');
 
     await repository.clearLayer(
       profileId: 'student-alyse',

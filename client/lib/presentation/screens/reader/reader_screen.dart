@@ -19,6 +19,9 @@ import '../../providers/note_providers.dart';
 import '../../providers/piece_providers.dart';
 import '../../providers/profile_providers.dart';
 import '../../providers/toc_providers.dart';
+import 'package:just_audio/just_audio.dart';
+import '../../../domain/entities/media_asset.dart';
+import '../../providers/media_providers.dart';
 import 'modules/recording_module.dart';
 import 'reader_page_layout.dart';
 
@@ -73,6 +76,18 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     _chromeAutoHideTimer?.cancel();
     _pdfController.dispose();
     super.dispose();
+  }
+
+  @override
+  void initState() {
+    super.initState();
+    if (widget.pieceId != null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (mounted) {
+          ref.read(mediaOperationsProvider).syncMediaForPiece(widget.pieceId!);
+        }
+      });
+    }
   }
 
   @override
@@ -138,8 +153,9 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
         ? null
         : ref.watch(annotationPageProvider(annotationRequest));
     final annotationPageState = annotationState?.valueOrNull;
-    final isWriteModeActive = (annotationPageState?.isDrawing ?? false) &&
-        (annotationPageState?.isVisible ?? true);
+    final isNotesVisible = ref.watch(notesLayerVisibleProvider);
+    final isWriteModeActive =
+        (annotationPageState?.isDrawing ?? false) && isNotesVisible;
     final mediaQuery = MediaQuery.of(context);
     final spreadMode = isLandscapeSpreadEligible(
           format: scoreVersion.format,
@@ -473,12 +489,12 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
     }
 
     final pageState = annotationState?.valueOrNull;
-    final isVisible = pageState?.isVisible ?? true;
+    final isVisible = ref.watch(notesLayerVisibleProvider);
     final isDrawing = (pageState?.isDrawing ?? false) && isVisible;
 
     return LayoutBuilder(
       builder: (context, constraints) {
-        if (!isDrawing) {
+        if (!isVisible) {
           return baseCanvas;
         }
         final canvasSize = constraints.biggest;
@@ -681,8 +697,8 @@ class _ReaderScreenState extends ConsumerState<ReaderScreen> {
   ) {
     final notifier =
         ref.read(annotationPageProvider(annotationRequest).notifier);
-    if (!(annotationPageState?.isVisible ?? true)) {
-      notifier.setVisibility(true);
+    if (!ref.read(notesLayerVisibleProvider)) {
+      ref.read(notesLayerVisibleProvider.notifier).state = true;
     }
     final nextDrawingState = !(annotationPageState?.isDrawing ?? false);
     notifier.setDrawing(nextDrawingState);
@@ -1174,12 +1190,7 @@ class _ReaderModulePanel extends StatelessWidget {
           switch (module) {
             _ReaderModule.about =>
               _AboutModule(entry: entry, scoreVersion: scoreVersion),
-            _ReaderModule.media => const _PlaceholderModule(
-                title: 'Play media',
-                icon: Icons.headphones_outlined,
-                body:
-                    'Approved practice media will live here once the score-review loop is locked.',
-              ),
+            _ReaderModule.media => _MediaModule(entry: entry),
             _ReaderModule.tuner => const _PlaceholderModule(
                 title: 'Tuner and metronome',
                 icon: Icons.tune_outlined,
@@ -1366,7 +1377,7 @@ class _SpreadPagePane extends ConsumerWidget {
     final annotationState =
         request == null ? null : ref.watch(annotationPageProvider(request));
     final pageState = annotationState?.valueOrNull;
-    final isVisible = pageState?.isVisible ?? true;
+    final isVisible = ref.watch(notesLayerVisibleProvider);
 
     return Semantics(
       selected: selected,
@@ -1655,15 +1666,13 @@ class _NotesModuleState extends ConsumerState<_NotesModule> {
               SwitchListTile.adaptive(
                 key: AppKeys.notesLayerVisibilityToggle,
                 contentPadding: EdgeInsets.zero,
-                value: annotationPageState?.isVisible ?? true,
+                value: ref.watch(notesLayerVisibleProvider),
                 onChanged: widget.annotationRequest == null
                     ? null
-                    : (value) => ref
-                        .read(
-                          annotationPageProvider(widget.annotationRequest!)
-                              .notifier,
-                        )
-                        .setVisibility(value),
+                    : (value) {
+                        ref.read(notesLayerVisibleProvider.notifier).state =
+                            value;
+                      },
                 title: const Text('Show notes layer'),
                 subtitle: Text(
                   pageStrokeCount == 0
@@ -1804,8 +1813,8 @@ class _NotesModuleState extends ConsumerState<_NotesModule> {
     }
     final notifier =
         ref.read(annotationPageProvider(annotationRequest).notifier);
-    if (!(annotationPageState?.isVisible ?? true)) {
-      notifier.setVisibility(true);
+    if (!ref.read(notesLayerVisibleProvider)) {
+      ref.read(notesLayerVisibleProvider.notifier).state = true;
     }
     notifier.setDrawing(!(annotationPageState?.isDrawing ?? false));
   }
@@ -1985,6 +1994,223 @@ class _AnnotationPainter extends CustomPainter {
     return tool == StrokeTool.highlighter
         ? baseColor.withValues(alpha: 0.42)
         : baseColor;
+  }
+}
+
+class _MediaModule extends ConsumerStatefulWidget {
+  const _MediaModule({required this.entry});
+
+  final LibraryEntry entry;
+
+  @override
+  ConsumerState<_MediaModule> createState() => _MediaModuleState();
+}
+
+class _MediaModuleState extends ConsumerState<_MediaModule> {
+  final AudioPlayer _audioPlayer = AudioPlayer();
+  MediaAsset? _selectedAsset;
+  bool _isPlaying = false;
+  double _playbackSpeed = 1.0;
+  Duration _position = Duration.zero;
+  Duration _duration = Duration.zero;
+  StreamSubscription? _playerStateSubscription;
+  StreamSubscription? _positionSubscription;
+  StreamSubscription? _durationSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _playerStateSubscription = _audioPlayer.playerStateStream.listen((state) {
+      if (mounted) {
+        setState(() {
+          _isPlaying = state.playing;
+        });
+      }
+    });
+    _positionSubscription = _audioPlayer.positionStream.listen((pos) {
+      if (mounted) {
+        setState(() {
+          _position = pos;
+        });
+      }
+    });
+    _durationSubscription = _audioPlayer.durationStream.listen((dur) {
+      if (mounted) {
+        setState(() {
+          _duration = dur ?? Duration.zero;
+        });
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _playerStateSubscription?.cancel();
+    _positionSubscription?.cancel();
+    _durationSubscription?.cancel();
+    _audioPlayer.dispose();
+    super.dispose();
+  }
+
+  Future<void> _playAsset(MediaAsset asset) async {
+    try {
+      await _audioPlayer.stop();
+      if (File(asset.filePath).existsSync()) {
+        await _audioPlayer.setFilePath(asset.filePath);
+      } else if (asset.remoteUrl != null && asset.remoteUrl!.isNotEmpty) {
+        await _audioPlayer.setUrl(asset.remoteUrl!);
+      } else {
+        return;
+      }
+      setState(() {
+        _selectedAsset = asset;
+      });
+      await _audioPlayer.play();
+    } catch (e) {
+      debugPrint('Error playing media asset: $e');
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final assetsAsync = ref.watch(mediaAssetsProvider(widget.entry.piece.id));
+
+    return assetsAsync.when(
+      data: (assets) {
+        if (assets.isEmpty) {
+          return const _PlaceholderModule(
+            title: 'Play media',
+            icon: Icons.headphones_outlined,
+            body: 'No approved practice accompaniment or reference recordings are available for this piece yet.',
+          );
+        }
+
+        return Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              'Practice Accompaniments',
+              style: theme.textTheme.headlineSmall?.copyWith(
+                fontWeight: FontWeight.w700,
+              ),
+            ),
+            const SizedBox(height: 16),
+            ...assets.map((asset) {
+              final isCurrent = _selectedAsset?.id == asset.id;
+              return Container(
+                margin: const EdgeInsets.only(bottom: 8),
+                decoration: BoxDecoration(
+                  color: isCurrent
+                      ? theme.colorScheme.primaryContainer.withValues(alpha: 0.3)
+                      : theme.colorScheme.surfaceContainerLow,
+                  borderRadius: BorderRadius.circular(12),
+                  border: Border.all(
+                    color: isCurrent
+                        ? theme.colorScheme.primary
+                        : theme.colorScheme.outlineVariant,
+                  ),
+                ),
+                child: ListTile(
+                  leading: Icon(
+                    isCurrent && _isPlaying
+                        ? Icons.pause_circle_filled
+                        : Icons.play_circle_fill,
+                    color: theme.colorScheme.primary,
+                    size: 36,
+                  ),
+                  title: Text(
+                    asset.filePath.split('/').last.split('\\').last,
+                    style: theme.textTheme.bodyMedium?.copyWith(
+                      fontWeight: isCurrent ? FontWeight.bold : FontWeight.normal,
+                    ),
+                  ),
+                  subtitle: Text(asset.durationString),
+                  onTap: () {
+                    if (isCurrent) {
+                      if (_isPlaying) {
+                        _audioPlayer.pause();
+                      } else {
+                        _audioPlayer.play();
+                      }
+                    } else {
+                      _playAsset(asset);
+                    }
+                  },
+                ),
+              );
+            }),
+            if (_selectedAsset != null) ...[
+              const SizedBox(height: 20),
+              const Divider(),
+              const SizedBox(height: 12),
+              Text(
+                'Playback Controls',
+                style: theme.textTheme.titleMedium?.copyWith(
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              Slider(
+                value: _position.inMilliseconds.toDouble().clamp(
+                      0.0,
+                      _duration.inMilliseconds.toDouble(),
+                    ),
+                max: _duration.inMilliseconds.toDouble(),
+                onChanged: (value) {
+                  _audioPlayer.seek(Duration(milliseconds: value.toInt()));
+                },
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Text(_formatDuration(_position)),
+                    Text(_formatDuration(_duration)),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 12),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                children: [
+                  DropdownButton<double>(
+                    value: _playbackSpeed,
+                    items: const [
+                      DropdownMenuItem(value: 0.5, child: Text('0.5x')),
+                      DropdownMenuItem(value: 0.75, child: Text('0.75x')),
+                      DropdownMenuItem(value: 1.0, child: Text('1.0x (Normal)')),
+                      DropdownMenuItem(value: 1.25, child: Text('1.25x')),
+                      DropdownMenuItem(value: 1.5, child: Text('1.5x')),
+                    ],
+                    onChanged: (val) {
+                      if (val != null) {
+                        setState(() {
+                          _playbackSpeed = val;
+                        });
+                        _audioPlayer.setSpeed(val);
+                      }
+                    },
+                  ),
+                ],
+              ),
+            ],
+          ],
+        );
+      },
+      loading: () => const Center(child: CircularProgressIndicator()),
+      error: (e, _) => Center(
+        child: Text('Error loading media: $e'),
+      ),
+    );
+  }
+
+  String _formatDuration(Duration d) {
+    final secs = d.inSeconds;
+    final mins = secs ~/ 60;
+    final remaining = secs % 60;
+    return '${mins.toString()}:${remaining.toString().padLeft(2, '0')}';
   }
 }
 

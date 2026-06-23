@@ -375,12 +375,22 @@ class PieceListNotifier extends AsyncNotifier<List<LibraryEntry>> {
   Future<List<LibraryEntry>> _performLoad({
     required SyncTrigger trigger,
   }) async {
+    print('DEBUG: _performLoad starting for trigger: $trigger');
     _repository = ref.read(libraryRepositoryProvider);
     final selectedStudent = ref.read(activeStudentProfileProvider);
-    var entries = await _libraryRepository.loadLibrary();
+    print('DEBUG: calling loadLibrary...');
+    List<LibraryEntry> entries;
+    try {
+      entries = await _libraryRepository.loadLibrary();
+      print('DEBUG: loadLibrary finished, entries count: ${entries.length}');
+    } catch (e, s) {
+      print('DEBUG: loadLibrary failed: $e\n$s');
+      rethrow;
+    }
     entries = await _normalizePendingUploadEntries(entries);
 
     if (!AppConfig.isServerPaired) {
+      print('DEBUG: server not paired, waiting for pairing');
       _setSyncBanner(
         LibrarySyncBannerState.waitingForServerPairing(trigger: trigger),
       );

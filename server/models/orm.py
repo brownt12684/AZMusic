@@ -191,7 +191,7 @@ class MediaAsset(Base):
 
     # YouTube reference fields (populated by youtube_search service)
     youtube_video_id: Mapped[Optional[str]] = mapped_column(
-        String(50), nullable=True, unique=True, index=True
+        String(50), nullable=True, unique=False, index=True
     )
     thumbnail_url: Mapped[Optional[str]] = mapped_column(String(1000), nullable=True)
     local_file_path: Mapped[Optional[str]] = mapped_column(  # path to saved audio file

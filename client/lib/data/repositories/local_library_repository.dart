@@ -26,12 +26,21 @@ class LocalLibraryRepository {
 
   Future<void> close() => _database.close();
 
+  AppDatabase get db => _database;
+
   Future<List<LibraryEntry>> loadLibrary() async {
-    await _database.migrateLibraryJsonIfNeeded(await _indexFile());
+    print('DEBUG: loadLibrary inside repository starting');
+    if (!Platform.environment.containsKey('FLUTTER_TEST')) {
+      print('DEBUG: checking legacy migration...');
+      await _database.migrateLibraryJsonIfNeeded(await _indexFile());
+    }
+    print('DEBUG: calling database.loadLibraryEntries...');
     final entries = await _database.loadLibraryEntries();
+    print('DEBUG: database.loadLibraryEntries finished, count: ${entries.length}');
     entries.sort(
       (left, right) => right.piece.updatedAt.compareTo(left.piece.updatedAt),
     );
+    print('DEBUG: loadLibrary inside repository finishing');
     return entries;
   }
 

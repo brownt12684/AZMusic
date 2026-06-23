@@ -96,6 +96,7 @@ class Settings(BaseSettings):
     gemini_oauth_redirect_base_url: str = ""
     gemini_default_model: str = "gemini-2.5-flash"
     gemini_cloud_project: str | None = None
+    youtube_api_key: str | None = None
 
     @model_validator(mode="after")
     def normalize_paths(self) -> "Settings":
